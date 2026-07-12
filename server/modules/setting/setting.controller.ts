@@ -4,7 +4,7 @@ import { SettingService, UserProfileData, UserPasswordData } from './setting.ser
 import { getLocalUserId } from '@server/common/utils/auth.helper';
 import type { Request } from 'express';
 
-@Controller('settings')
+@Controller('api/settings')
 export class SettingController {
   constructor(private readonly settingService: SettingService) {}
 
