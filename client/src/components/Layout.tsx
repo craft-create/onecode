@@ -157,6 +157,7 @@ const Layout = () => {
     try {
       await logout();
       await refreshUser();
+      localStorage.removeItem('token');
       setUserMenuOpen(false);
       navigate("/");
     } catch (err: unknown) {

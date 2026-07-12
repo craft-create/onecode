@@ -57,7 +57,8 @@ const LoginPage: React.FC = () => {
 
     setLoading(true);
     try {
-      await login(nickname.trim(), password);
+      const result = await login(nickname.trim(), password);
+      localStorage.setItem('token', result.token);
       await refreshUser();
       logger.info('登录成功');
       navigate('/');

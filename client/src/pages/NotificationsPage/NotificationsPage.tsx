@@ -24,10 +24,19 @@ export default function NotificationsPage() {
         api.get('/notifications', { params: { type: activeTab === 'unread' ? undefined : activeTab, isRead: activeTab === 'unread' ? 0 : undefined } }),
         api.get('/notifications/unread/count'),
       ]);
-      setNotifications(listRes.data.items || []);
-      setUnreadCount(countRes.data);
+      const listData = (listRes as { items?: Notification[]; } )?.items || [];
+      const countData = typeof countRes === 'number'
+        ? countRes
+        : (countRes as { count?: unknown })?.count;
+      setNotifications(Array.isArray(listData) ? listData : []);
+      const unreadCount = typeof countData === 'number'
+        ? countData
+        : Number(countData ?? 0);
+      setUnreadCount(Number.isFinite(unreadCount) ? unreadCount : 0);
     } catch (error) {
-      toast.error('加载通知失败');
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      console.error('[NotificationsPage] load failed', status, error);
+      toast.error(status ? `加载通知失败（HTTP ${status}）` : '加载通知失败');
     } finally {
       setLoading(false);
     }

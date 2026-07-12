@@ -182,3 +182,24 @@ CREATE TABLE IF NOT EXISTS user_material (
   _updated_at timestamptz(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   _updated_by user_profile DEFAULT NULL
 );
+-- 通知系统
+CREATE TABLE IF NOT EXISTS notification (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id user_profile NOT NULL,
+  type varchar(50) NOT NULL,
+  title varchar(255) NOT NULL,
+  content text,
+  source_type varchar(50),
+  source_id uuid,
+  from_user_id user_profile,
+  is_read integer NOT NULL DEFAULT 0,
+  metadata text,
+  _created_at timestamptz(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  _created_by user_profile DEFAULT NULL,
+  _updated_at timestamptz(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  _updated_by user_profile DEFAULT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_notification_user ON notification (((user_id).user_id));
+CREATE INDEX IF NOT EXISTS idx_notification_is_read ON notification (is_read);
+CREATE INDEX IF NOT EXISTS idx_notification_created_at ON notification (_created_at);

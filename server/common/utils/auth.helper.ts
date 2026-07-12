@@ -31,6 +31,11 @@ export function getLocalUserId(req: Request): string | undefined {
  * @param req - Express请求对象
  */
 export function getAuthTokenFromRequest(req: Request): string | undefined {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7).trim();
+  }
+
   if (req.cookies?.auth_token) {
     return req.cookies.auth_token;
   }

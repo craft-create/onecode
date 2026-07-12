@@ -49,7 +49,6 @@ tmp/
 temp/
 .playwright-cli/
 output/
-.spark_project/
 
 # Test and automatic scripts (not project requirements)
 *_SUMMARY.md
@@ -91,6 +90,3 @@ pnpm-lock.yaml
 .agent/
 .npm_cache
 .agents/
-
-# Keep Spark metadata out of repo
-.spark

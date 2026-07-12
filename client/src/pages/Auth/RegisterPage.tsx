@@ -66,7 +66,8 @@ const RegisterPage: React.FC = () => {
       await register(nickname.trim(), password);
       logger.info('注册成功，正在自动登录');
       // 注册成功后自动登录
-      await login(nickname.trim(), password);
+      const loginData = await login(nickname.trim(), password);
+      localStorage.setItem('token', loginData.token);
       await refreshUser();
       logger.info('自动登录成功');
       navigate('/');

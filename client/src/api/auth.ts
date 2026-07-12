@@ -19,6 +19,10 @@ export interface CurrentUser {
   nickname: string;
   avatarUrl: string | null;
 }
+export interface LoginResponse {
+  token: string;
+  user: UserInfo;
+}
 
 /**
  * 用户注册
@@ -46,7 +50,7 @@ export async function register(
 export async function login(
   nickname: string,
   password: string,
-): Promise<{ user: UserInfo }> {
+): Promise<LoginResponse> {
   const { data } = await axiosForBackend({
     url: '/api/auth/login',
     method: 'POST',
@@ -60,9 +64,11 @@ export async function login(
  * 未登录时返回 null
  */
 export async function getMe(): Promise<CurrentUser | null> {
+  const token = localStorage.getItem('token');
   const { data } = await axiosForBackend({
     url: '/api/auth/me',
     method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
   return data;
 }

@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
-import { eq, and, desc, count, sql } from 'drizzle-orm';
+import { eq, and, desc, count, sql, type SQLWrapper } from 'drizzle-orm';
 import { notification } from '@server/database/schema';
 
 @Injectable()
@@ -16,7 +16,10 @@ export class NotificationService {
       isRead?: number;
     },
   ) {
-    const conditions = [userId ? eq(notification.userId, userId) : undefined];
+    const conditions: SQLWrapper[] = [];
+    if (userId) {
+      conditions.push(sql`(${notification.userId}).user_id = ${userId}`);
+    }
     if (filters?.type) {
       conditions.push(eq(notification.type, filters.type));
     }
@@ -43,7 +46,12 @@ export class NotificationService {
     const [row] = await this.db
       .select({ count: count() })
       .from(notification)
-      .where(and(eq(notification.userId, userId), eq(notification.isRead, 0)));
+      .where(
+        and(
+          sql`(${notification.userId}).user_id = ${userId}`,
+          eq(notification.isRead, 0),
+        ),
+      );
 
     return Number(row?.count ?? 0);
   }
@@ -59,11 +67,16 @@ export class NotificationService {
     const [row] = await this.db
       .select({ count: count() })
       .from(notification)
-      .where(eq(notification.userId, userId));
+      .where(sql`(${notification.userId}).user_id = ${userId}`);
     const [unreadRow] = await this.db
       .select({ count: count() })
       .from(notification)
-      .where(and(eq(notification.userId, userId), eq(notification.isRead, 0)));
+      .where(
+        and(
+          sql`(${notification.userId}).user_id = ${userId}`,
+          eq(notification.isRead, 0),
+        ),
+      );
 
     const total = Number(row?.count ?? 0);
     const unread = Number(unreadRow?.count ?? 0);
@@ -79,7 +92,10 @@ export class NotificationService {
       return { affected: 0 };
     }
 
-    const conditions = [eq(notification.userId, userId), eq(notification.isRead, 0)];
+    const conditions: SQLWrapper[] = [
+      sql`(${notification.userId}).user_id = ${userId}`,
+      eq(notification.isRead, 0),
+    ];
     if (filters?.type) {
       conditions.push(eq(notification.type, filters.type));
     }
@@ -101,7 +117,7 @@ export class NotificationService {
     const result = await this.db
       .update(notification)
       .set({ isRead: 1, updatedAt: new Date() })
-      .where(and(eq(notification.userId, userId), eq(notification.id, id)))
+      .where(and(sql`(${notification.userId}).user_id = ${userId}`, eq(notification.id, id)))
       .returning();
     return result[0] || null;
   }
