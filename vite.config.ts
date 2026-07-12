@@ -1,5 +1,5 @@
 import path from 'path';
-import { defineConfig } from '@lark-apaas/fullstack-vite-preset';
+import { defineConfig } from 'vite';
 
 const serverPort = process.env.SERVER_PORT || '3000';
 

@@ -1,18 +1,18 @@
+const js = require('@eslint/js');
 const tseslint = require('typescript-eslint');
-const { eslintPresetsOfSimple } = require('@lark-apaas/fullstack-presets');
 
 module.exports = tseslint.config(
   { ignores: ['dist', 'dist-server', 'node_modules', 'client/src/api/gen', '**/*.d.ts', '**/*.js.map'] },
-  // Client configuration
   {
     files: ['client/**/*.{ts,tsx}', 'shared/**/*.{ts,tsx}'],
-    extends: [
-      ...eslintPresetsOfSimple.client,
-    ],
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: {
       parserOptions: {
         project: './tsconfig.app.json',
       },
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
     },
     settings: {
       'import/resolver': {
@@ -27,16 +27,16 @@ module.exports = tseslint.config(
       },
     },
   },
-  // Server configuration
   {
     files: ['server/**/*.{ts,tsx}', 'shared/**/*.{ts,tsx}'],
-    extends: [
-      ...eslintPresetsOfSimple.server,
-    ],
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: {
       parserOptions: {
         project: './tsconfig.node.json',
       }
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
     },
     settings: {
       'import/resolver': {
