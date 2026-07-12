@@ -6,7 +6,7 @@ export type PostgresJsDatabase = import('drizzle-orm/postgres-js').PostgresJsDat
 
 export class AppLogger extends Logger {
   constructor(context?: string) {
-    super(context);
+    super(context ?? 'AppLogger');
   }
 }
 
@@ -44,6 +44,7 @@ export async function configureApp(
     disableSwagger?: boolean;
   },
 ): Promise<void> {
+  void _options;
   app.enableCors({
     origin: true,
     credentials: true,

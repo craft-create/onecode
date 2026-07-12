@@ -530,7 +530,7 @@ export class ScriptService {
     const items: ScriptOutlineItem[] = [];
     let position = 0; // 字符位置偏移，用于编辑器跳转定位
 
-    lines.forEach((line: string, idx: number) => {
+    lines.forEach((line: string) => {
       // 匹配格式：数字. 场景标题 （如 "1. 开场 日外"）
       const match = line.match(/^(\d+)\.\s+(.+)$/);
       if (match) {
@@ -666,7 +666,7 @@ export class ScriptService {
     // 批量查询作者显示名称
     const authorIds = versions
       .map((v) => v.createdBy)
-      .filter((id) => !!id);
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
     const authorNames: Map<string, string> = new Map();
     if (authorIds.length > 0) {
       const authorIdList = authorIds

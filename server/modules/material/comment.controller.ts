@@ -14,7 +14,7 @@ export class CommentController {
     @Param('id') id: string,
     @Req() req: Request,
   ): Promise<CommentLikeStatusResponse> {
-    const { userId } = req.userContext;
+    const userId = req.userContext?.userId ?? '';
     return this.materialService.toggleCommentLike(id, userId);
   }
 }
