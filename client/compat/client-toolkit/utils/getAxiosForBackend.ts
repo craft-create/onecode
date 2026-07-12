@@ -35,7 +35,7 @@ const withBackendBase = <T,>(config: ToolkitAxiosConfig<T>): ToolkitAxiosConfig<
   return normalizedConfig;
 };
 
-export const axiosForBackend = async <T = unknown>(
+export const axiosForBackend = async <T = any>(
   config: ToolkitAxiosConfig,
 ): Promise<AxiosResponse<T>> => {
   return axios.request<T>(withBackendBase(config));

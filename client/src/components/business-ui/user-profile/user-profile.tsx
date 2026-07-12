@@ -218,16 +218,17 @@ function UserProfile(props: UserProfileProps) {
       const data = await fetchUserProfile(userId, accountType, controller.signal);
       setResponse(data as BaseUserProfileProps);
 
-      if (data.useLarkCard && !data.larkCardParam.needRedirect) {
+      if (data.useLarkCard && data.larkCardParam) {
+        if (data.larkCardParam.needRedirect) {
+          return;
+        }
         redirectURLRef.current = data.larkCardParam.redirectURL ?? '';
         await renderLarkProfile({
           ...data.larkCardParam,
           cardRef,
         });
-        setLoading(false);
-      } else {
-        setLoading(false);
       }
+      setLoading(false);
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {
         // 直接退出，不处理 AbortError
@@ -292,6 +293,7 @@ function BaseUserProfile(props: BaseUserProfileProps) {
   }
 
   const { larkCardParam } = props;
+  if (!larkCardParam) return null;
   const { needRedirect, redirectURL } = larkCardParam;
   if (needRedirect) {
     if (!redirectURL) {

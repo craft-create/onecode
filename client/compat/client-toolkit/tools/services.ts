@@ -3,7 +3,7 @@ import { axiosForBackend } from '../utils/getAxiosForBackend';
 export type AccountType = 'lark' | 'apaas';
 
 export interface I18nText {
-  zh_cn?: string;
+  zh_cn: string;
   en_us?: string;
   ja_jp?: string;
 }
@@ -431,9 +431,12 @@ export class UserService {
     const normalized = String(larkUserID || '').trim();
     const convertedId = `user-${normalized}`;
     externalUserMap.set(normalized, convertedId);
-    const userInfo = makeFallbackUserInfo(convertedId);
-    userInfo.userType = '_externalUser';
-    userInfo.name = `${toDisplayName(normalized)}（已开户）`;
+    const userInfo = makeFallbackUserInfo({
+      userID: convertedId,
+      larkUserID: normalized,
+      name: `${toDisplayName(normalized)}（已开户）`,
+      userType: '_externalUser',
+    });
     userInfo.larkUserID = normalized;
 
     return {

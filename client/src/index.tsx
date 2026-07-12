@@ -6,7 +6,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { AppContainer } from '@client/compat/client-toolkit/components/AppContainer';
 import { ErrorRender } from '@client/compat/client-toolkit/components/ErrorRender';
 
-import RoutesComponent from './app.tsx';
+import RoutesComponent from './app';
 import { AuthProvider } from '@client/src/hooks/useAuth';
 import './index.css';
 import { createPortal } from 'react-dom';

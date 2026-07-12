@@ -184,6 +184,16 @@ export interface UserProfileData {
   avatarUrl?: string;
 }
 
+export interface StorageStats {
+  used: number;
+  quota: number;
+  remaining: number;
+  usagePercent: number;
+  formattedUsed: string;
+  formattedQuota: string;
+  formattedRemaining: string;
+}
+
 export interface UserPasswordData {
   currentPassword: string;
   newPassword: string;
@@ -191,7 +201,10 @@ export interface UserPasswordData {
 
 export const settingApi = {
   // 获取用户资料
-  getProfile: () => api.get('/settings/profile'),
+  getProfile: async (): Promise<UserProfileData> => {
+    const response = await api.get<UserProfileData>('/settings/profile');
+    return response.data as UserProfileData;
+  },
 
   // 更新用户资料
   updateProfile: (data: UserProfileData) =>
@@ -202,7 +215,10 @@ export const settingApi = {
     api.post('/settings/password', data),
 
   // 获取存储统计
-  getStorageStats: () => api.get('/settings/storage/stats'),
+  getStorageStats: async (): Promise<StorageStats> => {
+    const response = await api.get<StorageStats>('/settings/storage/stats');
+    return response.data;
+  },
 
   // 获取设置
   getSettings: () => api.get('/settings'),

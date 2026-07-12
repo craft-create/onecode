@@ -16,7 +16,7 @@ interface ProfileSectionProps {
   avatarUploading: boolean;
   profileSaving: boolean;
   onSaveProfile: () => void;
-  avatarInputRef: RefObject<HTMLInputElement>;
+  avatarInputRef: RefObject<HTMLInputElement | null>;
   onAvatarUpload: (e: ChangeEvent<HTMLInputElement>) => void;
   onAvatarInputOpen: () => void;
   onFieldChange: (field: keyof ProfileFormData, value: string) => void;

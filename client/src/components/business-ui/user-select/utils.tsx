@@ -8,7 +8,12 @@ import type {
 import { getI18nText } from '@client/src/components/business-ui/utils/user';
 import type { User } from '@client/src/components/business-ui/types/user';
 
+type DisplayAvatar = string | SearchAvatar['avatar'];
+type UserInfoWithDisplayAvatar = Omit<UserInfo, 'avatar'> & { avatar?: DisplayAvatar };
+
 export function getUserDisplayName(name: UserInfo['name']): string {
+  if (!name) return '';
+  if (typeof name === 'string') return name;
   return name.zh_cn || name.en_us || '';
 }
 
@@ -41,15 +46,19 @@ export function createUnknownUser(id: string): UserSelectItemValue {
 }
 
 export function userInfoToUser(
-  userInfo: UserInfo & SearchAvatar,
+  userInfo: UserInfoWithDisplayAvatar,
   accountType: AccountType,
 ): UserSelectItemValue {
   // 构建统一的 User 类型作为 raw 数据
+  const avatar = typeof userInfo.avatar === 'string'
+    ? userInfo.avatar
+    : userInfo.avatar?.image?.large;
+
   const rawUser: User = {
     user_id: userInfo.userID || undefined,
     larkUserId: userInfo.larkUserID || undefined,
     name: userInfo.name,
-    avatar: userInfo.avatar?.image?.large,
+    avatar,
     user_type: userInfo.userType,
     department: userInfo.department as any,
   };
@@ -57,21 +66,26 @@ export function userInfoToUser(
   return {
     id: getUserId(userInfo, accountType),
     name: getI18nText(userInfo.name),
-    avatar: userInfo.avatar?.image?.large,
+    avatar,
     raw: rawUser,
   };
 }
 
 export function searchUserInfoToUser(
-  userInfo: UserInfo & { avatar?: string; tenantName?: string },
+  userInfo: UserInfoWithDisplayAvatar & { tenantName?: string },
   accountType: AccountType,
 ): UserSelectItemValue {
+  const avatar =
+    typeof userInfo.avatar === 'string'
+      ? userInfo.avatar
+      : userInfo.avatar?.image?.large;
+
   // 构建统一的 User 类型作为 raw 数据
   const rawUser: User = {
     user_id: userInfo.userID || undefined,
     larkUserId: userInfo.larkUserID || undefined,
     name: userInfo.name,
-    avatar: userInfo.avatar,
+    avatar,
     user_type: userInfo.userType,
     department: userInfo.department as any,
     tenantName: userInfo.tenantName,
@@ -80,7 +94,7 @@ export function searchUserInfoToUser(
   return {
     id: getUserId(userInfo, accountType),
     name: getI18nText(userInfo.name),
-    avatar: userInfo.avatar,
+    avatar,
     raw: rawUser,
   };
 }

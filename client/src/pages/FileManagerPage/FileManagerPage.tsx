@@ -105,9 +105,16 @@ const FileManagerPage: React.FC = () => {
       const [foldersRes, filesRes] = await Promise.all([
         fileApi.getFolders(currentFolderId || undefined),
         fileApi.getFiles({ folderId: currentFolderId || undefined, pageSize: 100 }),
-      ]) as [FolderItem[], { items: FileItem[]; total: number }];
-      setFolders(foldersRes);
-      setFiles(filesRes.items || []);
+      ]);
+      const foldersData = Array.isArray((foldersRes as { data?: FolderItem[] }).data)
+        ? (foldersRes as { data: FolderItem[] }).data
+        : [];
+      const filesData = (filesRes as { data?: { items?: FileItem[] } }).data || {
+        items: [],
+      };
+
+      setFolders(foldersData);
+      setFiles(filesData.items || []);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error('加载文件列表失败:', err);
@@ -197,11 +204,12 @@ const FileManagerPage: React.FC = () => {
     if (!shareItem) return;
 
     try {
-      const res = await fileApi.shareFile({
+      const response = await fileApi.shareFile({
         fileId: shareItem.id,
         expiresIn: shareExpiresIn,
         password: sharePassword || undefined,
-      }) as { shareToken: string; shareUrl: string; expiresAt: Date | null };
+      }) as { data: { shareToken: string; shareUrl: string; expiresAt: Date | string | null } };
+      const res = (response as { data: { shareToken: string; shareUrl: string; expiresAt: Date | string | null } }).data;
       toast.success('分享链接已生成', {
         description: res.shareUrl,
         action: {

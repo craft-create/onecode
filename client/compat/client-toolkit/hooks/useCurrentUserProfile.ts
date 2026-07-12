@@ -5,6 +5,7 @@ import { axiosForBackend } from '../utils/getAxiosForBackend';
 
 export interface CurrentUserProfile {
   userID: string;
+  user_id?: string;
   userId?: string;
   larkUserID?: string;
   name?: {
