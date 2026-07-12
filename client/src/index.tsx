@@ -12,12 +12,29 @@ import './index.css';
 import { createPortal } from 'react-dom';
 import { Toaster } from '@client/src/components/ui/sonner';
 
-const CLIENT_BASE_PATH = process.env.CLIENT_BASE_PATH || '/';
-const APP_ID_FALLBACK = process.env.CLIENT_APP_ID || process.env.APP_ID || 'local-app';
+const getEnv = (key: string, fallback: string): string => {
+  const browserValue =
+    (import.meta as ImportMeta & {
+      env?: {
+        [key: string]: string | undefined;
+      };
+    }).env?.[`VITE_${key}`];
 
-type WindowWithRuntime = Window &
-  Readonly<{}>
-  & {
+  if (browserValue !== undefined && browserValue !== '') {
+    return browserValue;
+  }
+
+  if (typeof process !== 'undefined' && (process as { env?: Record<string, string> }).env) {
+    return (process as { env?: Record<string, string> }).env[key] || fallback;
+  }
+
+  return fallback;
+};
+
+const CLIENT_BASE_PATH = getEnv('CLIENT_BASE_PATH', '/');
+const APP_ID_FALLBACK = getEnv('CLIENT_APP_ID', getEnv('APP_ID', 'local-app'));
+
+type WindowWithRuntime = Window & {
     appId?: string;
     __platform__?: {
       appId?: string;

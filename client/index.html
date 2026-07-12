@@ -7,10 +7,16 @@
   <link rel="icon" href="/favicon.svg">
   <title>光影工坊</title>
   <script>
-    try {
-      window.__platform__ = JSON.parse('{{{__platform__}}}');
-    } catch (e) {
-      console.error('Failed to parse __platform__', e);
+    const platformTemplate = '{{{__platform__}}}';
+    if (typeof platformTemplate === 'string' && platformTemplate.includes('{')) {
+      try {
+        const candidate = platformTemplate.trim();
+        if (candidate !== '' && candidate !== '{{{__platform__}}}') {
+          window.__platform__ = JSON.parse(candidate);
+        }
+      } catch (error) {
+        console.error('Failed to parse __platform__', error);
+      }
     }
   </script>
 </head>
