@@ -5,6 +5,7 @@ import { Card } from '@client/src/components/ui/card';
 import { Badge } from '@client/src/components/ui/badge';
 import { Skeleton } from '@client/src/components/ui/skeleton';
 import { api } from '@client/src/api';
+import { PageFrame } from '../shared/PageShell';
 
 export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
@@ -32,7 +33,13 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-8 max-w-6xl space-y-6">
+      <PageFrame
+        title="数据中心"
+        description="查看您的内容表现数据"
+        className="min-h-screen bg-background"
+        containerClassName="max-w-6xl mx-auto px-4 py-8"
+        contentClassName="space-y-6"
+      >
         <Skeleton className="h-12 w-64" />
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
@@ -40,7 +47,7 @@ export default function AnalyticsPage() {
           ))}
         </div>
         <Skeleton className="h-96" />
-      </div>
+      </PageFrame>
     );
   }
 
@@ -69,14 +76,13 @@ export default function AnalyticsPage() {
   ];
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <TrendingUp className="w-6 h-6" />
-          数据中心
-        </h1>
-        <p className="text-gray-500 mt-1">查看您的内容表现数据</p>
-      </div>
+    <PageFrame
+      title="数据中心"
+      description="查看您的内容表现数据"
+      className="min-h-screen bg-background"
+      containerClassName="max-w-6xl mx-auto px-4 py-8"
+      contentClassName="space-y-6"
+    >
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -179,6 +185,6 @@ export default function AnalyticsPage() {
           ))}
         </div>
       </Card>
-    </div>
+    </PageFrame>
   );
 }

@@ -11,11 +11,14 @@ export function useAppInfo(): AppInfo {
       return 'local-app';
     }
 
+    const viteEnv =
+      (import.meta as { env?: Record<string, string> }).env || {};
+
     return (
       window.__platform__?.appId ||
       window.appId ||
-      process.env.REACT_APP_APP_ID ||
-      process.env.NEXT_PUBLIC_APP_ID ||
+      viteEnv.VITE_CLIENT_APP_ID ||
+      viteEnv.VITE_APP_ID ||
       'local-app'
     );
   }, []);

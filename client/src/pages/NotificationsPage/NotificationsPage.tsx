@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@client/src/components
 import { Badge } from '@client/src/components/ui/badge';
 import { api } from '@client/src/api';
 import type { Notification } from '@shared/types';
-import { PageShell } from '../shared/PageShell';
+import { PageFrame } from '../shared/PageShell';
 import { PageErrorState } from '../shared/PageStatePanel';
 import { NotificationHeader } from './components/NotificationHeader';
 import { NotificationList } from './components/NotificationList';
@@ -82,8 +82,11 @@ export default function NotificationsPage() {
   }
 
   return (
-    <PageShell className="min-h-screen bg-background">
-      <div className="container mx-auto py-8 max-w-4xl">
+    <PageFrame
+      className="min-h-screen bg-background"
+      containerClassName="container mx-auto py-8 max-w-4xl"
+      contentClassName="space-y-6"
+    >
       <NotificationHeader unreadCount={unreadCount} onMarkAllAsRead={handleMarkAllAsRead} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -108,7 +111,6 @@ export default function NotificationsPage() {
           />
         </TabsContent>
       </Tabs>
-      </div>
-    </PageShell>
+    </PageFrame>
   );
 }

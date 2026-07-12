@@ -7,6 +7,7 @@ import { Card } from '@client/src/components/ui/card';
 import { Badge } from '@client/src/components/ui/badge';
 import { Skeleton } from '@client/src/components/ui/skeleton';
 import { api } from '@client/src/api';
+import { PageFrame } from '../shared/PageShell';
 
 export default function RequirementsPage() {
   const navigate = useNavigate();
@@ -46,20 +47,19 @@ export default function RequirementsPage() {
   };
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Briefcase className="w-6 h-6" />
-            需求大厅
-          </h1>
-          <p className="text-gray-500 mt-1">发现创作需求，开启合作</p>
-        </div>
+    <PageFrame
+      title="需求大厅"
+      description="发现创作需求，开启合作"
+      className="min-h-screen bg-background"
+      containerClassName="max-w-6xl mx-auto px-4 py-8"
+      contentClassName="space-y-6"
+      action={
         <Button onClick={() => navigate('/requirements/new')}>
           <Plus className="w-4 h-4 mr-2" />
           发布需求
         </Button>
-      </div>
+      }
+    >
 
       <div className="flex gap-4 mb-6">
         <div className="relative flex-1 max-w-md">
@@ -130,6 +130,6 @@ export default function RequirementsPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageFrame>
   );
 }

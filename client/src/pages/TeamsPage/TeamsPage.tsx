@@ -8,6 +8,7 @@ import { Badge } from '@client/src/components/ui/badge';
 import { Skeleton } from '@client/src/components/ui/skeleton';
 import { api } from '@client/src/api';
 import type { Team } from '@shared/types';
+import { PageFrame } from '../shared/PageShell';
 
 export default function TeamsPage() {
   const navigate = useNavigate();
@@ -35,20 +36,19 @@ export default function TeamsPage() {
   );
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Users className="w-6 h-6" />
-            团队协作
-          </h1>
-          <p className="text-gray-500 mt-1">与团队成员协同创作</p>
-        </div>
+    <PageFrame
+      title="团队协作"
+      description="与团队成员协同创作"
+      className="min-h-screen bg-background"
+      containerClassName="max-w-6xl mx-auto px-4 py-8"
+      contentClassName="space-y-6"
+      action={
         <Button onClick={() => navigate('/teams/new')}>
           <Plus className="w-4 h-4 mr-2" />
           创建团队
         </Button>
-      </div>
+      }
+    >
 
       <div className="mb-6">
         <div className="relative max-w-md">
@@ -106,6 +106,6 @@ export default function TeamsPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageFrame>
   );
 }

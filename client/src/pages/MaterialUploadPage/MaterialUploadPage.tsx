@@ -12,11 +12,12 @@ import {
   Music,
   Loader2,
 } from 'lucide-react';
-import { logger } from '@client/compat/client-toolkit/logger';
+import { logger } from '@/utils/logger';
 import { createMaterial } from '@client/src/api/materials';
 import { uploadFile } from '@client/src/api/upload';
 import { useAuth } from '@client/src/hooks/useAuth';
 import type { CreateMaterialRequest } from '@shared/material.interface';
+import { PageFrame } from '../shared/PageShell';
 
 interface FileEntry {
   id: string;
@@ -314,7 +315,12 @@ const MaterialUploadPage: React.FC = () => {
   const isVideoFile = (file: File): boolean => file.type.startsWith('video/');
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageFrame
+      title="上传素材"
+      description="将文件拖拽或选择上传"
+      className="min-h-screen bg-background"
+      containerClassName="max-w-3xl mx-auto px-4 py-8"
+    >
       <div className="max-w-3xl mx-auto px-4 py-8">
         <h1 className="text-xl font-semibold text-foreground mb-6">
           上传素材
@@ -713,7 +719,7 @@ const MaterialUploadPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </PageFrame>
   );
 };
 

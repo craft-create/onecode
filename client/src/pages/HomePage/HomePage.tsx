@@ -12,7 +12,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
-import { logger } from '@client/compat/client-toolkit/logger';
+import { logger } from '@/utils/logger';
 // UI骨架屏组件，加载时显示
 import { Skeleton } from '@client/src/components/ui/skeleton';
 // 首页各板块组件
@@ -35,7 +35,7 @@ import type {
   TopCreator,
   PlatformStatistics,
 } from '@shared/home.interface';
-import { PageShell, PageHeader } from '../shared/PageShell';
+import { PageFrame, PageHeader } from '../shared/PageShell';
 import { PageErrorState } from '../shared/PageStatePanel';
 
 /**
@@ -142,7 +142,11 @@ const HomePage: React.FC = () => {
 
   // ===== 正常渲染：首页完整内容 =====
   return (
-    <PageShell className="min-h-screen bg-background" containerClassName="max-w-7xl mx-auto px-4 py-8 space-y-12">
+    <PageFrame
+      className="min-h-screen bg-background"
+      containerClassName="max-w-7xl mx-auto px-4 py-8 space-y-12"
+      contentClassName=""
+    >
       <PageHeader title="光影工坊" />
         {/* 板块1：精选素材轮播 */}
         <section data-ai-section-type="carousel">
@@ -218,7 +222,7 @@ const HomePage: React.FC = () => {
             </div>
           )}
         </section>
-    </PageShell>
+    </PageFrame>
   );
 };
 

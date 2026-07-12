@@ -8,6 +8,7 @@ import { Badge } from '@client/src/components/ui/badge';
 import { Skeleton } from '@client/src/components/ui/skeleton';
 import { api } from '@client/src/api';
 import type { ScriptTemplate } from '@shared/types';
+import { PageFrame } from '../shared/PageShell';
 
 export default function TemplatesPage() {
   const navigate = useNavigate();
@@ -32,24 +33,25 @@ export default function TemplatesPage() {
   };
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <FileText className="w-6 h-6" />
-          剧本模板市场
-        </h1>
-        <p className="text-gray-500 mt-1">使用专业模板快速创建剧本</p>
-      </div>
+    <PageFrame
+      title="剧本模板市场"
+      description="使用专业模板快速创建剧本"
+      className="min-h-screen bg-background"
+      containerClassName="max-w-6xl mx-auto px-4 py-8"
+      contentClassName="space-y-6"
+      action={
+        <Button variant="outline">
+          <Filter className="w-4 h-4 mr-2" />
+          筛选
+        </Button>
+      }
+    >
 
       <div className="flex gap-4 mb-6">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input placeholder="搜索模板..." className="pl-9" />
         </div>
-        <Button variant="outline">
-          <Filter className="w-4 h-4 mr-2" />
-          筛选
-        </Button>
       </div>
 
       {loading ? (
@@ -100,6 +102,6 @@ export default function TemplatesPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageFrame>
   );
 }

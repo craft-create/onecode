@@ -11,8 +11,7 @@ import {
   AlertTriangle,
   RefreshCw,
 } from 'lucide-react';
-import { logger } from '@client/compat/client-toolkit/logger';
-import { PageShell } from '../shared/PageShell';
+import { logger } from '@/utils/logger';
 import {
   listMaterials,
   searchMaterials,
@@ -20,6 +19,7 @@ import {
 } from '@client/src/api/materials';
 import MaterialFilterPanel from './MaterialFilterPanel';
 import type { MaterialItem, MaterialFiltersResponse } from '@shared/material.interface';
+import { PageFrame } from '../shared/PageShell';
 
 const PAGE_SIZE = 20;
 
@@ -214,7 +214,7 @@ const MaterialsPage: React.FC = () => {
   };
 
   return (
-    <PageShell className="min-h-screen bg-background">
+    <PageFrame className="min-h-screen bg-background" containerClassName="w-full" contentClassName="">
       {/* Search Bar */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
@@ -535,7 +535,7 @@ const MaterialsPage: React.FC = () => {
           )}
         </div>
       </div>
-    </PageShell>
+    </PageFrame>
   );
 };
 

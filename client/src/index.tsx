@@ -24,8 +24,15 @@ const getEnv = (key: string, fallback: string): string => {
     return browserValue;
   }
 
-  if (typeof process !== 'undefined' && (process as { env?: Record<string, string> }).env) {
-    return (process as { env?: Record<string, string> }).env[key] || fallback;
+  const viteEnv =
+    (import.meta as ImportMeta & {
+      env?: {
+        [key: string]: string | undefined;
+      };
+    }).env;
+
+  if (viteEnv) {
+    return viteEnv[key] || fallback;
   }
 
   return fallback;

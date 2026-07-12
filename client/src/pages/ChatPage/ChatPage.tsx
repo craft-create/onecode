@@ -10,6 +10,7 @@ import { Separator } from '@client/src/components/ui/separator';
 import { Skeleton } from '@client/src/components/ui/skeleton';
 import { api } from '@client/src/api';
 import type { Conversation } from '@shared/types';
+import { PageFrame } from '../shared/PageShell';
 
 export default function ChatPage() {
   const navigate = useNavigate();
@@ -38,7 +39,14 @@ export default function ChatPage() {
   );
 
   return (
-    <div className="flex h-[calc(100vh-200px)] gap-4">
+    <PageFrame
+      title="消息"
+      description="管理你的聊天与通知"
+      className="min-h-screen bg-background"
+      containerClassName="max-w-7xl mx-auto px-4 py-8"
+      contentClassName="flex-1"
+    >
+      <div className="flex h-[calc(100vh-220px)] gap-4">
       {/* 会话列表 */}
       <div className="w-80 border rounded-lg flex flex-col">
         <div className="p-4 border-b">
@@ -124,7 +132,8 @@ export default function ChatPage() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </PageFrame>
   );
 }
 

@@ -8,6 +8,7 @@ import { Progress } from '@client/src/components/ui/progress';
 import { Skeleton } from '@client/src/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@client/src/components/ui/tabs';
 import { api } from '@client/src/api';
+import { PageFrame } from '../shared/PageShell';
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams();
@@ -34,24 +35,35 @@ export default function ProjectDetailPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-8 max-w-6xl">
+      <PageFrame
+        title="项目详情"
+        description="加载中"
+        className="min-h-screen bg-background"
+        containerClassName="max-w-6xl mx-auto px-4 py-8"
+        contentClassName="space-y-6"
+      >
         <Skeleton className="h-12 w-64 mb-6" />
         <div className="space-y-6">
           <Skeleton className="h-32" />
           <Skeleton className="h-96" />
         </div>
-      </div>
+      </PageFrame>
     );
   }
 
   if (!project) {
     return (
-      <div className="container mx-auto py-8 text-center">
+      <PageFrame
+        title="项目不存在"
+        className="min-h-screen bg-background"
+        containerClassName="max-w-6xl mx-auto px-4 py-8"
+        contentClassName="flex flex-col items-center"
+      >
         <p className="text-gray-500">项目不存在</p>
         <Button className="mt-4" onClick={() => navigate('/projects')}>
           返回项目列表
         </Button>
-      </div>
+      </PageFrame>
     );
   }
 
@@ -60,26 +72,23 @@ export default function ProjectDetailPage() {
   const doneTasks = tasks.filter(t => t.status === 'done').length;
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
+    <PageFrame
+      title={project.name}
+      description={project.description}
+      className="min-h-screen bg-background"
+      containerClassName="max-w-6xl mx-auto px-4 py-8"
+      contentClassName="space-y-6"
+      action={
+        <Button onClick={() => navigate(`/projects/${projectId}/tasks/new`)}>
+          <Plus className="w-4 h-4 mr-2" />
+          新建任务
+        </Button>
+      }
+    >
       <Button variant="ghost" onClick={() => navigate('/projects')} className="mb-4">
         <ArrowLeft className="w-4 h-4 mr-2" />
         返回
       </Button>
-
-      <div className="mb-6">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">{project.name}</h1>
-            {project.description && (
-              <p className="text-gray-600">{project.description}</p>
-            )}
-          </div>
-          <Button onClick={() => navigate(`/projects/${projectId}/tasks/new`)}>
-            <Plus className="w-4 h-4 mr-2" />
-            新建任务
-          </Button>
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <Card className="p-4">
@@ -181,6 +190,6 @@ export default function ProjectDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageFrame>
   );
 }

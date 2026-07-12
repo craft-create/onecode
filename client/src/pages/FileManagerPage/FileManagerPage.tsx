@@ -42,10 +42,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { logger } from '@client/compat/client-toolkit/logger';
-import { PageShell } from '../shared/PageShell';
+import { logger } from '@/utils/logger';
+import { PageFrame } from '../shared/PageShell';
 import { fileApi } from '@/api';
-import { axiosForBackend } from '@client/compat/client-toolkit/utils/getAxiosForBackend';
 
 type ViewMode = 'grid' | 'list';
 type FileType = 'file' | 'folder';
@@ -317,325 +316,323 @@ const FileManagerPage: React.FC = () => {
   };
 
   return (
-    <PageShell className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* ===== Header ===== */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">文件管理器</h1>
-            <p className="text-sm text-muted-foreground mt-1">管理你的所有文件</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setRecycleBinOpen(true)}>
-              <Trash2 className="w-4 h-4 mr-2" />
-              回收站
-            </Button>
-            <Button size="sm" onClick={() => setNewFolderDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              新建文件夹
-            </Button>
-            <Button size="sm" onClick={() => fileInputRef.current?.click()}>
-              <Upload className="w-4 h-4 mr-2" />
-              上传文件
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-          </div>
+    <PageFrame
+      title="文件管理器"
+      description="管理你的所有文件"
+      action={
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setRecycleBinOpen(true)}>
+            <Trash2 className="w-4 h-4 mr-2" />
+            回收站
+          </Button>
+          <Button size="sm" onClick={() => setNewFolderDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            新建文件夹
+          </Button>
+          <Button size="sm" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="w-4 h-4 mr-2" />
+            上传文件
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+        </div>
+      }
+      className="min-h-screen bg-background"
+      containerClassName="max-w-7xl mx-auto px-6 py-8"
+      contentClassName="space-y-6"
+    >
+      {/* ===== Breadcrumbs & Actions ===== */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={navigateToRoot}>
+            <Home className="w-4 h-4" />
+          </Button>
+          {breadcrumbs.map((crumb, idx) => (
+            <React.Fragment key={crumb.id}>
+              <span className="text-muted-foreground">/</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const newCrumbs = breadcrumbs.slice(0, idx + 1);
+                  setBreadcrumbs(newCrumbs);
+                  setCurrentFolderId(crumb.id);
+                  clearSelection();
+                }}
+              >
+                {crumb.name}
+              </Button>
+            </React.Fragment>
+          ))}
         </div>
 
-        {/* ===== Breadcrumbs & Actions ===== */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={navigateToRoot}>
-              <Home className="w-4 h-4" />
-            </Button>
-            {breadcrumbs.map((crumb, idx) => (
-              <React.Fragment key={crumb.id}>
-                <span className="text-muted-foreground">/</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    const newCrumbs = breadcrumbs.slice(0, idx + 1);
-                    setBreadcrumbs(newCrumbs);
-                    setCurrentFolderId(crumb.id);
-                    clearSelection();
-                  }}
-                >
-                  {crumb.name}
-                </Button>
-              </React.Fragment>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {selectedItems.size > 0 && (
-              <>
-                <span className="text-sm text-muted-foreground">已选 {selectedItems.size} 项</span>
-                <Button variant="destructive" size="sm" onClick={handleBatchDelete}>
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  删除
-                </Button>
-                <Button variant="outline" size="sm" onClick={clearSelection}>
-                  取消选择
-                </Button>
-              </>
-            )}
-            <Button variant="ghost" size="sm" onClick={selectAll}>
-              全选
-            </Button>
-            <div className="border-l pl-2 flex gap-1">
-              <Button
-                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-              >
-                <Grid3X3 className="w-4 h-4" />
+        <div className="flex items-center gap-2">
+          {selectedItems.size > 0 && (
+            <>
+              <span className="text-sm text-muted-foreground">已选 {selectedItems.size} 项</span>
+              <Button variant="destructive" size="sm" onClick={handleBatchDelete}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                删除
               </Button>
-              <Button
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-              >
-                <List className="w-4 h-4" />
+              <Button variant="outline" size="sm" onClick={clearSelection}>
+                取消选择
               </Button>
-            </div>
+            </>
+          )}
+          <Button variant="ghost" size="sm" onClick={selectAll}>
+            全选
+          </Button>
+          <div className="border-l pl-2 flex gap-1">
+            <Button
+              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+            >
+              <Grid3X3 className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+            >
+              <List className="w-4 h-4" />
+            </Button>
           </div>
         </div>
+      </div>
 
-        {/* ===== Content ===== */}
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          </div>
-        ) : (
-          <AnimatePresence mode="wait">
-            {folders.length === 0 && files.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex flex-col items-center justify-center py-20"
-              >
-                <Folder className="w-16 h-16 text-muted-foreground/30 mb-4" />
-                <p className="text-muted-foreground">此文件夹为空</p>
-                <Button className="mt-4" onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  上传文件
-                </Button>
-              </motion.div>
-            ) : (
-              <>
-                {/* Folders */}
-                {folders.length > 0 && (
-                  <div className="mb-6">
-                    <h2 className="text-lg font-semibold mb-3">文件夹</h2>
-                    {viewMode === 'grid' ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {folders.map((folder) => (
-                          <motion.div
-                            key={folder.id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="relative group"
-                          >
-                            <Card
-                              className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md"
-                              onClick={() => navigateToFolder(folder)}
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex flex-col items-center text-center">
-                                  <div
-                                    className="w-12 h-12 rounded-lg flex items-center justify-center mb-2"
-                                    style={{ backgroundColor: `${folder.color}20` }}
-                                  >
-                                    {folder.isStarred ? (
-                                      <FolderOpen className="w-6 h-6" style={{ color: folder.color }} />
-                                    ) : (
-                                      <Folder className="w-6 h-6" style={{ color: folder.color }} />
-                                    )}
-                                  </div>
-                                  <p className="text-sm font-medium truncate w-full">{folder.name}</p>
-                                  <p className="text-xs text-muted-foreground">{folder.itemCount} 项</p>
-                                </div>
-                              </CardContent>
-                            </Card>
-                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Checkbox
-                                checked={selectedItems.has(folder.id)}
-                                onCheckedChange={() => toggleSelect(folder.id)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {folders.map((folder) => (
+      {/* ===== Content ===== */}
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        </div>
+      ) : (
+        <AnimatePresence mode="wait">
+          {folders.length === 0 && files.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col items-center justify-center py-20"
+            >
+              <Folder className="w-16 h-16 text-muted-foreground/30 mb-4" />
+              <p className="text-muted-foreground">此文件夹为空</p>
+              <Button className="mt-4" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="w-4 h-4 mr-2" />
+                上传文件
+              </Button>
+            </motion.div>
+          ) : (
+            <>
+              {/* Folders */}
+              {folders.length > 0 && (
+                <div className="mb-6">
+                  <h2 className="text-lg font-semibold mb-3">文件夹</h2>
+                  {viewMode === 'grid' ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      {folders.map((folder) => (
+                        <motion.div
+                          key={folder.id}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          className="relative group"
+                        >
                           <Card
-                            key={folder.id}
-                            className="cursor-pointer hover:border-primary/50 transition-all"
+                            className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md"
                             onClick={() => navigateToFolder(folder)}
                           >
-                            <CardContent className="p-3 flex items-center gap-3">
-                              <Checkbox
-                                checked={selectedItems.has(folder.id)}
-                                onCheckedChange={() => toggleSelect(folder.id)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                              <Folder className="w-5 h-5 text-blue-500" />
-                              <span className="flex-1 font-medium">{folder.name}</span>
-                              <span className="text-sm text-muted-foreground">{folder.itemCount} 项</span>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Files */}
-                {files.length > 0 && (
-                  <div>
-                    <h2 className="text-lg font-semibold mb-3">文件</h2>
-                    {viewMode === 'grid' ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {files.map((file) => (
-                          <motion.div
-                            key={file.id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="relative group"
-                          >
-                            <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md overflow-hidden">
-                              <CardContent className="p-0">
+                            <CardContent className="p-4">
+                              <div className="flex flex-col items-center text-center">
                                 <div
-                                  className="aspect-square bg-accent/30 flex items-center justify-center relative"
-                                  onClick={() => window.open(file.url, '_blank')}
+                                  className="w-12 h-12 rounded-lg flex items-center justify-center mb-2"
+                                  style={{ backgroundColor: `${folder.color}20` }}
                                 >
-                                  {file.thumbnailUrl ? (
-                                    <img
-                                      src={file.thumbnailUrl}
-                                      alt={file.name}
-                                      className="w-full h-full object-cover"
-                                    />
+                                  {folder.isStarred ? (
+                                    <FolderOpen className="w-6 h-6" style={{ color: folder.color }} />
                                   ) : (
-                                    getFileIcon(file.type, file.mimeType)
-                                  )}
-                                  {file.isStarred === 1 && (
-                                    <Star className="absolute top-2 right-2 w-4 h-4 text-yellow-500 fill-yellow-500" />
+                                    <Folder className="w-6 h-6" style={{ color: folder.color }} />
                                   )}
                                 </div>
-                                <div className="p-3">
-                                  <p className="text-sm font-medium truncate">{file.name}</p>
-                                  <p className="text-xs text-muted-foreground">{formatSize(Number(file.size))}</p>
-                                </div>
-                              </CardContent>
-                            </Card>
-                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                              <Checkbox
-                                checked={selectedItems.has(file.id)}
-                                onCheckedChange={() => toggleSelect(file.id)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </div>
-                            <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="secondary"
-                                    size="icon"
-                                    className="w-8 h-8"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleToggleStar(file.id)}>
-                                    <Star className="w-4 h-4 mr-2" />
-                                    {file.isStarred ? '取消收藏' : '收藏'}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => { setShareItem(file); setShareDialogOpen(true); }}>
-                                    <Share2 className="w-4 h-4 mr-2" />
-                                    分享
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => window.open(file.url, '_blank')}>
-                                    <Download className="w-4 h-4 mr-2" />
-                                    下载
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleDelete(file)} className="text-destructive">
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    删除
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {files.map((file) => (
-                          <Card
-                            key={file.id}
-                            className="cursor-pointer hover:border-primary/50 transition-all"
-                            onClick={() => window.open(file.url, '_blank')}
-                          >
-                            <CardContent className="p-3 flex items-center gap-3">
-                              <Checkbox
-                                checked={selectedItems.has(file.id)}
-                                onCheckedChange={() => toggleSelect(file.id)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                              {getFileIcon(file.type, file.mimeType)}
-                              <span className="flex-1 font-medium truncate">{file.name}</span>
-                              <span className="text-sm text-muted-foreground">{formatSize(Number(file.size))}</span>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="w-8 h-8">
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleToggleStar(file.id)}>
-                                    <Star className="w-4 h-4 mr-2" />
-                                    {file.isStarred ? '取消收藏' : '收藏'}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => { setShareItem(file); setShareDialogOpen(true); }}>
-                                    <Share2 className="w-4 h-4 mr-2" />
-                                    分享
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => window.open(file.url, '_blank')}>
-                                    <Download className="w-4 h-4 mr-2" />
-                                    下载
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleDelete(file)} className="text-destructive">
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    删除
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                                <p className="text-sm font-medium truncate w-full">{folder.name}</p>
+                                <p className="text-xs text-muted-foreground">{folder.itemCount} 项</p>
+                              </div>
                             </CardContent>
                           </Card>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </AnimatePresence>
-        )}
-      </div>
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Checkbox
+                              checked={selectedItems.has(folder.id)}
+                              onCheckedChange={() => toggleSelect(folder.id)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {folders.map((folder) => (
+                        <Card
+                          key={folder.id}
+                          className="cursor-pointer hover:border-primary/50 transition-all"
+                          onClick={() => navigateToFolder(folder)}
+                        >
+                          <CardContent className="p-3 flex items-center gap-3">
+                            <Checkbox
+                              checked={selectedItems.has(folder.id)}
+                              onCheckedChange={() => toggleSelect(folder.id)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <Folder className="w-5 h-5 text-blue-500" />
+                            <span className="flex-1 font-medium">{folder.name}</span>
+                            <span className="text-sm text-muted-foreground">{folder.itemCount} 项</span>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Files */}
+              {files.length > 0 && (
+                <div>
+                  <h2 className="text-lg font-semibold mb-3">文件</h2>
+                  {viewMode === 'grid' ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      {files.map((file) => (
+                        <motion.div
+                          key={file.id}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          className="relative group"
+                        >
+                          <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md overflow-hidden">
+                            <CardContent className="p-0">
+                              <div
+                                className="aspect-square bg-accent/30 flex items-center justify-center relative"
+                                onClick={() => window.open(file.url, '_blank')}
+                              >
+                                {file.thumbnailUrl ? (
+                                  <img
+                                    src={file.thumbnailUrl}
+                                    alt={file.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  getFileIcon(file.type, file.mimeType)
+                                )}
+                                {file.isStarred === 1 && (
+                                  <Star className="absolute top-2 right-2 w-4 h-4 text-yellow-500 fill-yellow-500" />
+                                )}
+                              </div>
+                              <div className="p-3">
+                                <p className="text-sm font-medium truncate">{file.name}</p>
+                                <p className="text-xs text-muted-foreground">{formatSize(Number(file.size))}</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                            <Checkbox
+                              checked={selectedItems.has(file.id)}
+                              onCheckedChange={() => toggleSelect(file.id)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                          <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="secondary"
+                                  size="icon"
+                                  className="w-8 h-8"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleToggleStar(file.id)}>
+                                  <Star className="w-4 h-4 mr-2" />
+                                  {file.isStarred ? '取消收藏' : '收藏'}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => { setShareItem(file); setShareDialogOpen(true); }}>
+                                  <Share2 className="w-4 h-4 mr-2" />
+                                  分享
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => window.open(file.url, '_blank')}>
+                                  <Download className="w-4 h-4 mr-2" />
+                                  下载
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDelete(file)} className="text-destructive">
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  删除
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {files.map((file) => (
+                        <Card
+                          key={file.id}
+                          className="cursor-pointer hover:border-primary/50 transition-all"
+                          onClick={() => window.open(file.url, '_blank')}
+                        >
+                          <CardContent className="p-3 flex items-center gap-3">
+                            <Checkbox
+                              checked={selectedItems.has(file.id)}
+                              onCheckedChange={() => toggleSelect(file.id)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            {getFileIcon(file.type, file.mimeType)}
+                            <span className="flex-1 font-medium truncate">{file.name}</span>
+                            <span className="text-sm text-muted-foreground">{formatSize(Number(file.size))}</span>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="w-8 h-8">
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleToggleStar(file.id)}>
+                                  <Star className="w-4 h-4 mr-2" />
+                                  {file.isStarred ? '取消收藏' : '收藏'}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => { setShareItem(file); setShareDialogOpen(true); }}>
+                                  <Share2 className="w-4 h-4 mr-2" />
+                                  分享
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => window.open(file.url, '_blank')}>
+                                  <Download className="w-4 h-4 mr-2" />
+                                  下载
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDelete(file)} className="text-destructive">
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  删除
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </AnimatePresence>
+      )}
 
       {/* ===== New Folder Dialog ===== */}
       <Dialog open={newFolderDialogOpen} onOpenChange={setNewFolderDialogOpen}>
@@ -705,8 +702,7 @@ const FileManagerPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  </PageShell>
+    </PageFrame>
   );
 };
 

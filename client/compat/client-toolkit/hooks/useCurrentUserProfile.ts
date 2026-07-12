@@ -34,6 +34,7 @@ function toUserProfile(result: AxiosResponse<AuthMeResponse | null>): CurrentUse
   const { userId, nickname, avatarUrl } = data;
   return {
     userID: userId,
+    user_id: userId,
     userId,
     larkUserID: '',
     name: {
