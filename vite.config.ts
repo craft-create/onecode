@@ -34,10 +34,28 @@ const stripRuntimeInjectionPlugin = {
 export default defineConfig({
   root: path.resolve(__dirname, 'client'),
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, 'client/src'),
-      '@client': path.resolve(__dirname, 'client'),
-    },
+    alias: [
+      {
+        find: '@client/compat/',
+        replacement: `${path.resolve(__dirname, 'client/compat')}/`,
+      },
+      {
+        find: '@client/src/',
+        replacement: `${path.resolve(__dirname, 'client/src')}/`,
+      },
+      {
+        find: '@/',
+        replacement: `${path.resolve(__dirname, 'client/src')}/`,
+      },
+      {
+        find: '@client',
+        replacement: path.resolve(__dirname, 'client'),
+      },
+      {
+        find: '@',
+        replacement: path.resolve(__dirname, 'client/src'),
+      },
+    ],
   },
   plugins: [stripRuntimeInjectionPlugin],
   server: {
