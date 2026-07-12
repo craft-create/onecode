@@ -2,8 +2,11 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@client/src/components/ui/tabs';
+import { Badge } from '@client/src/components/ui/badge';
 import { api } from '@client/src/api';
 import type { Notification } from '@shared/types';
+import { PageShell } from '../shared/PageShell';
+import { PageErrorState } from '../shared/PageStatePanel';
 import { NotificationHeader } from './components/NotificationHeader';
 import { NotificationList } from './components/NotificationList';
 
@@ -13,9 +16,11 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
       const [listRes, countRes] = await Promise.all([
         api.get('/notifications', { params: { type: activeTab === 'unread' ? undefined : activeTab, isRead: activeTab === 'unread' ? 0 : undefined } }),
@@ -33,6 +38,7 @@ export default function NotificationsPage() {
     } catch (error) {
       const status = (error as { response?: { status?: number } })?.response?.status;
       console.error('[NotificationsPage] load failed', status, error);
+      setError(status ? `加载通知失败（HTTP ${status}）` : '加载通知失败');
       toast.error(status ? `加载通知失败（HTTP ${status}）` : '加载通知失败');
     } finally {
       setLoading(false);
@@ -71,8 +77,13 @@ export default function NotificationsPage() {
     }
   };
 
+  if (error) {
+    return <PageErrorState message={error} onRetry={fetchData} />;
+  }
+
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
+    <PageShell className="min-h-screen bg-background">
+      <div className="container mx-auto py-8 max-w-4xl">
       <NotificationHeader unreadCount={unreadCount} onMarkAllAsRead={handleMarkAllAsRead} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -97,6 +108,7 @@ export default function NotificationsPage() {
           />
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </PageShell>
   );
 }

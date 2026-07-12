@@ -11,6 +11,7 @@ import { Film, Loader2 } from 'lucide-react';
 import { Button } from '@client/src/components/ui/button';
 import { Input } from '@client/src/components/ui/input';
 import { Label } from '@client/src/components/ui/label';
+import { PageShell } from '../shared/PageShell';
 import {
   Card,
   CardContent,
@@ -81,7 +82,7 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <PageShell className="min-h-screen bg-background flex items-center justify-center px-4">
       {/* 背景装饰光斑 */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -left-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
@@ -186,7 +187,7 @@ const RegisterPage: React.FC = () => {
           </CardFooter>
         </form>
       </Card>
-    </div>
+    </PageShell>
   );
 };
 

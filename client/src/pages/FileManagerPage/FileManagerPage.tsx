@@ -43,6 +43,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { logger } from '@client/compat/client-toolkit/logger';
+import { PageShell } from '../shared/PageShell';
 import { fileApi } from '@/api';
 import { axiosForBackend } from '@client/compat/client-toolkit/utils/getAxiosForBackend';
 
@@ -316,7 +317,7 @@ const FileManagerPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageShell className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* ===== Header ===== */}
         <div className="flex items-center justify-between mb-6">
@@ -705,6 +706,7 @@ const FileManagerPage: React.FC = () => {
         </DialogContent>
       </Dialog>
     </div>
+  </PageShell>
   );
 };
 

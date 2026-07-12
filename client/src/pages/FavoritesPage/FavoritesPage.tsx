@@ -15,6 +15,7 @@ import {
 import { toast } from 'sonner';
 import { logger } from '@client/compat/client-toolkit/logger';
 import { useAuth } from '@client/src/hooks/useAuth';
+import { PageShell } from '../shared/PageShell';
 import {
   getFavoriteFolders,
   createFavoriteFolder,
@@ -189,7 +190,7 @@ const FavoritesPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[hsl(228_15%_8%)]">
+    <PageShell className="min-h-screen bg-[hsl(228_15%_8%)]">
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -507,7 +508,7 @@ const FavoritesPage: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 };
 
