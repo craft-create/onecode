@@ -31,6 +31,7 @@ import { logger } from '@client/compat/client-toolkit/logger';
 import { useAuth } from '@/hooks/useAuth';
 import { settingApi } from '@/api';
 import type { UserProfileData } from '@/api';
+import { PageShell } from '../shared/PageShell';
 
 type GenderOption = 'male' | 'female' | 'other' | 'prefer_not_to_say';
 
@@ -229,14 +230,14 @@ const SettingsPage: React.FC = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <PageShell className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageShell className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-6 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -584,7 +585,7 @@ const SettingsPage: React.FC = () => {
           </Tabs>
         </motion.div>
       </div>
-    </div>
+    </PageShell>
   );
 };
 

@@ -12,6 +12,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { logger } from '@client/compat/client-toolkit/logger';
+import { PageShell } from '../shared/PageShell';
 import {
   listMaterials,
   searchMaterials,
@@ -213,7 +214,7 @@ const MaterialsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageShell className="min-h-screen bg-background">
       {/* Search Bar */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
@@ -534,7 +535,7 @@ const MaterialsPage: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 };
 
