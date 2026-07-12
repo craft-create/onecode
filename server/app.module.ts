@@ -1,6 +1,9 @@
 import { APP_FILTER } from '@nestjs/core';
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
-import { PlatformModule } from '@lark-apaas/fullstack-nestjs-core';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { CommonModule } from '@lark-apaas/nestjs-common';
+import { DataPaasModule } from '@lark-apaas/nestjs-datapaas';
+import { LoggerModule } from '@lark-apaas/nestjs-logger';
 
 import { GlobalExceptionFilter } from './common/filters/exception.filter';
 import { HomeModule } from './modules/home/home.module';
@@ -31,15 +34,33 @@ import { ShareModule } from './modules/share/share.module';
 import { FileManagerModule } from './modules/file-manager/file-manager.module';
 
 const isDataPaasDisabled =
-  process.env.FORCE_FRAMEWORK_DISABLE_DATAPASS === 'true';
+  process.env.FORCE_FRAMEWORK_DISABLE_DATAPASS === 'true' ||
+  !(process.env.SUDA_DATABASE_URL || process.env.DATABASE_URL);
 
 @Module({
   imports: [
-    // 平台 Module，提供平台能力
-    PlatformModule.forRoot({
-      enableCsrf: process.env.NODE_ENV === 'production',
-    }),
-    ...(isDataPaasDisabled ? [LocalDatabaseModule] : []),
+    ConfigModule.forRoot({
+      isGlobal: true,
+        }),
+    CommonModule,
+    LoggerModule,
+    ...(isDataPaasDisabled
+      ? [LocalDatabaseModule]
+      : [
+          DataPaasModule.forRootAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService) => {
+              const connectionString =
+                configService.get<string>('SUDA_DATABASE_URL') ||
+                configService.get<string>('DATABASE_URL');
+              if (!connectionString) {
+                throw new Error('数据库未配置：请设置 SUDA_DATABASE_URL 或 DATABASE_URL');
+              }
+              return { connectionString };
+            },
+          }),
+        ]),
     // ====== @route-section: business-modules START ======
     HomeModule,
     MaterialModule,

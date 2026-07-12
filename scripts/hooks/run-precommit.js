@@ -54,7 +54,23 @@ function checkLockfileRegistry() {
 
 function runLint() {
   const cwd = process.cwd();
-  const res = spawnSync('npm', ['run', 'lint'], {
+
+  const staged = spawnSync('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR'], {
+    cwd,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: process.env,
+  });
+
+  if (staged.error || staged.status !== 0) {
+    failAndExit('lint', '无法读取 staged 文件列表');
+  }
+
+  const files = staged.stdout.toString().trim().split('\n').map((item) => item.trim()).filter(Boolean);
+  if (files.length === 0) {
+    return;
+  }
+
+  const res = spawnSync('node', ['./scripts/lint.js', '--files', ...files], {
     cwd,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: process.env,
