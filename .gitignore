@@ -1,0 +1,93 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Production builds
+dist/
+*/dist/
+build/
+*/build/
+
+# Environment files
+.env.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+/logs/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary folders
+tmp/
+temp/
+.playwright-cli/
+output/
+.spark_project/
+
+# Test and automatic scripts (not project requirements)
+*_SUMMARY.md
+*_REPORT.md
+*_PLAN.md
+*_FIX*.md
+*_ENHANCEMENT.md
+*_STATUS.md
+*_REDESIGN.md
+*_QUICKSTART*.md
+*_演示*.md
+*_清单*.md
+*_说明*.md
+check-*.js
+test-*.js
+health-*.sh
+full-*.sh
+configure*.sh
+test-*.sh
+fix-log.txt
+navigation-*.html
+
+# OS generated files
+.DS_Store
+._*
+
+# Lock files (keep package-lock.json for consistent installs)
+yarn.lock
+pnpm-lock.yaml
+
+# Cache files
+.eslintcache
+*.tsbuildinfo
+
+# swc wasm
+.swc
+
+# Agent files
+.agent/
+.npm_cache
+.agents/
