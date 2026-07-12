@@ -9,8 +9,101 @@ export class NotificationService {
 
   constructor(@Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase) {}
 
-  async findAll(userId?: string) {
-    return this.db.select().from(notification).orderBy(desc(notification.createdAt));
+  async findAll(
+    userId?: string,
+    filters?: {
+      type?: string;
+      isRead?: number;
+    },
+  ) {
+    const conditions = [userId ? eq(notification.userId, userId) : undefined];
+    if (filters?.type) {
+      conditions.push(eq(notification.type, filters.type));
+    }
+    if (typeof filters?.isRead === 'number' && !Number.isNaN(filters.isRead)) {
+      conditions.push(eq(notification.isRead, filters.isRead));
+    }
+
+    const items = await this.db
+      .select()
+      .from(notification)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(notification.createdAt));
+
+    return {
+      items,
+      total: items.length,
+    };
+  }
+
+  async getUnreadCount(userId?: string) {
+    if (!userId) {
+      return 0;
+    }
+    const [row] = await this.db
+      .select({ count: count() })
+      .from(notification)
+      .where(and(eq(notification.userId, userId), eq(notification.isRead, 0)));
+
+    return Number(row?.count ?? 0);
+  }
+
+  async getStatistics(userId?: string) {
+    if (!userId) {
+      return {
+        total: 0,
+        unread: 0,
+        read: 0,
+      };
+    }
+    const [row] = await this.db
+      .select({ count: count() })
+      .from(notification)
+      .where(eq(notification.userId, userId));
+    const [unreadRow] = await this.db
+      .select({ count: count() })
+      .from(notification)
+      .where(and(eq(notification.userId, userId), eq(notification.isRead, 0)));
+
+    const total = Number(row?.count ?? 0);
+    const unread = Number(unreadRow?.count ?? 0);
+    return {
+      total,
+      unread,
+      read: total - unread,
+    };
+  }
+
+  async markAllAsRead(userId?: string, filters?: { type?: string }) {
+    if (!userId) {
+      return { affected: 0 };
+    }
+
+    const conditions = [eq(notification.userId, userId), eq(notification.isRead, 0)];
+    if (filters?.type) {
+      conditions.push(eq(notification.type, filters.type));
+    }
+
+    const result = await this.db
+      .update(notification)
+      .set({ isRead: 1 })
+      .where(and(...conditions))
+      .returning({ id: notification.id });
+
+    return { affected: result.length };
+  }
+
+  async markAsRead(userId: string | undefined, id: string) {
+    if (!userId) {
+      return null;
+    }
+
+    const result = await this.db
+      .update(notification)
+      .set({ isRead: 1, updatedAt: new Date() })
+      .where(and(eq(notification.userId, userId), eq(notification.id, id)))
+      .returning();
+    return result[0] || null;
   }
 
   async findOne(id: string) {
