@@ -2,6 +2,7 @@ import path from 'path';
 import { defineConfig } from 'vite';
 
 const serverPort = process.env.SERVER_PORT || '3000';
+const clientPort = Number(process.env.CLIENT_DEV_PORT || process.env.PORT || '5173');
 
 const stripRuntimeInjectionPlugin = {
   name: 'strip-runtime-injection',
@@ -38,6 +39,7 @@ export default defineConfig({
   },
   plugins: [stripRuntimeInjectionPlugin],
   server: {
+    port: clientPort,
     proxy: {
       '/api': {
         target: `http://localhost:${serverPort}`,
