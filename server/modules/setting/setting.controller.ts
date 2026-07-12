@@ -10,41 +10,6 @@ export class SettingController {
 
   // ========== User Setting CRUD ==========
 
-  @Get()
-  @NeedLogin()
-  findAll(@Req() req: Request) {
-    const userId: string | undefined = getLocalUserId(req);
-    if (!userId) {
-      throw new UnauthorizedException('请先登录');
-    }
-    return this.settingService.findAll(userId);
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.settingService.findOne(id);
-  }
-
-  @Post()
-  @NeedLogin()
-  create(@Body() data: any, @Req() req: Request) {
-    const userId: string | undefined = getLocalUserId(req);
-    if (!userId) {
-      throw new UnauthorizedException('请先登录');
-    }
-    return this.settingService.create({ ...data, createdBy: userId });
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() data: any) {
-    return this.settingService.update(id, data);
-  }
-
-  @Delete(':id')
-  delete(@Param('id') id: string) {
-    return this.settingService.delete(id);
-  }
-
   // ========== User Profile Management ==========
 
   @Get('profile')
@@ -85,5 +50,40 @@ export class SettingController {
       throw new UnauthorizedException('请先登录');
     }
     return this.settingService.getStorageStats(userId);
+  }
+
+  @Get()
+  @NeedLogin()
+  findAll(@Req() req: Request) {
+    const userId: string | undefined = getLocalUserId(req);
+    if (!userId) {
+      throw new UnauthorizedException('请先登录');
+    }
+    return this.settingService.findAll(userId);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.settingService.findOne(id);
+  }
+
+  @Post()
+  @NeedLogin()
+  create(@Body() data: any, @Req() req: Request) {
+    const userId: string | undefined = getLocalUserId(req);
+    if (!userId) {
+      throw new UnauthorizedException('请先登录');
+    }
+    return this.settingService.create({ ...data, createdBy: userId });
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() data: any) {
+    return this.settingService.update(id, data);
+  }
+
+  @Delete(':id')
+  delete(@Param('id') id: string) {
+    return this.settingService.delete(id);
   }
 }

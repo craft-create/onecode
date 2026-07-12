@@ -2,7 +2,7 @@
  * 用户设置页面
  * 包含：个人资料编辑、密码修改、存储空间统计
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
