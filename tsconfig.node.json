@@ -3,6 +3,8 @@
     "target": "ES2022",
     "module": "CommonJS",
     "moduleResolution": "node",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "allowJs": false,
     "checkJs": false,
     "strict": true,
