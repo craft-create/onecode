@@ -32,6 +32,7 @@ const stripRuntimeInjectionPlugin = {
 };
 
 export default defineConfig({
+  root: path.resolve(__dirname, 'client'),
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'client/src'),
@@ -39,6 +40,7 @@ export default defineConfig({
   },
   plugins: [stripRuntimeInjectionPlugin],
   server: {
+    port: clientPort,
     port: clientPort,
     proxy: {
       '/api': {
