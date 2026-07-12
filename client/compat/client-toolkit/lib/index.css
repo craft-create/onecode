@@ -1,0 +1,40 @@
+@layer theme, base, components, utilities;
+@import "tailwindcss" source(none);
+
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: var(--ring);
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+
+  .container {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+.app-container {
+  min-height: 100vh;
+}
+
+.app-container--theme-light,
+.app-container--theme-dark {
+  min-height: 100vh;
+}
+
+.app-link,
+.app-link:visited {
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-link:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}

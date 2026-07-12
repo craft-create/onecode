@@ -1,5 +1,5 @@
 import { Injectable, Inject, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
-import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@lark-apaas/fullstack-nestjs-core';
+import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
 import { eq, and, sql } from 'drizzle-orm';
 import { localUsers } from '@server/database/local-schema';
 import { userSetting } from '@server/database/schema';
@@ -77,13 +77,13 @@ export class SettingService {
       phone: user.phone,
       bio: user.bio,
       gender: user.gender,
-      birthday: user.birthday?.toISOString() || null,
+      birthday: user.birthday ? new Date(user.birthday).toISOString() : null,
       avatarUrl: user.avatarUrl,
       role: user.role,
       isVerified: user.isVerified,
       storageQuota: user.storageQuota,
       storageUsed: user.storageUsed,
-      createdAt: user.createdAt?.toISOString(),
+      createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : null,
     };
   }
 
@@ -190,18 +190,18 @@ export class SettingService {
       throw new NotFoundException('用户不存在');
     }
 
-    const [materialStorageRows] = await this.db.execute<{ used: string }>(sql`
-      SELECT COALESCE(SUM(m.file_size), 0)::bigint AS used
+      const [materialStorageRows] = await this.db.execute<{ used: string }>(sql`
+      SELECT COALESCE(SUM(m.file_size), 0) AS used
       FROM material m
       INNER JOIN user_material um ON um.material_id = m.id
-      WHERE (um.user_id).user_id = ${userId}::uuid
+      WHERE (um.user_id).user_id = ${userId}
         AND um.relation_type = 'upload'
     `);
 
     const [fileStorageRows] = await this.db.execute<{ used: string }>(sql`
-      SELECT COALESCE(SUM(fi.size), 0)::bigint AS used
+      SELECT COALESCE(SUM(fi.size), 0) AS used
       FROM file_item fi
-      WHERE (fi.user_id).user_id = ${userId}::uuid
+      WHERE fi.user_id = ${userId}::uuid
     `);
 
     const calculatedUsed =

@@ -3,7 +3,7 @@
  * 功能：封装文件上传接口
  * 使用平台提供的axiosForBackend自动处理鉴权和跨域
  */
-import { axiosForBackend } from '@lark-apaas/client-toolkit/utils/getAxiosForBackend';
+import { axiosForBackend } from '@client/compat/client-toolkit/utils/getAxiosForBackend';
 
 /** 上传响应类型 */
 export interface UploadResponse {

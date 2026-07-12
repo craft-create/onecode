@@ -1,4 +1,4 @@
-import { axiosForBackend } from '@lark-apaas/client-toolkit/utils/getAxiosForBackend';
+import { axiosForBackend } from '@client/compat/client-toolkit/utils/getAxiosForBackend';
 import type {
   FavoriteFolderListResponse,
   FavoriteFolderItem,

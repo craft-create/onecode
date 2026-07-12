@@ -4,9 +4,9 @@ import type {
 } from '@client/src/components/business-ui/entity-combobox/shared-types';
 import type { User, I18nText, UserType, Department } from '@client/src/components/business-ui/types/user';
 
-// 统一从 @lark-apaas/client-toolkit 导入 AccountType
-export type { AccountType } from '@lark-apaas/client-toolkit/tools/services';
-import type { AccountType } from '@lark-apaas/client-toolkit/tools/services';
+// 统一从 @client/compat/client-toolkit 导入 AccountType
+export type { AccountType } from '@client/compat/client-toolkit/tools/services';
+import type { AccountType } from '@client/compat/client-toolkit/tools/services';
 
 // 重新导出统一的类型
 export type { User, I18nText, UserType, Department };

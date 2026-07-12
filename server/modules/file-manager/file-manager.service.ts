@@ -1,5 +1,5 @@
 import { Injectable, Inject, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
-import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@lark-apaas/fullstack-nestjs-core';
+import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
 import { eq, and, desc, sql, count } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import {

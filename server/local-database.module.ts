@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import { DRIZZLE_DATABASE } from '@lark-apaas/fullstack-nestjs-core';
+import { DRIZZLE_DATABASE } from '@server/common/compat/fullstack-nestjs-core';
 
 /**
  * 本地开发数据库存根模块

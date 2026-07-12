@@ -6,8 +6,7 @@
     "paths": {
       "@client/*": ["client/*"],
       "@shared/*": ["shared/*"],
-      "@/*": ["./client/src/*"],
-      "@lark-apaas/client-toolkit/tools/*": ["node_modules/@lark-apaas/client-toolkit/lib/apis/tools/*"]
+      "@/*": ["./client/src/*"]
     },
     "incremental": true,
   },

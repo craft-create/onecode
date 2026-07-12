@@ -3,7 +3,7 @@
  * 功能：封装剧本项目相关的所有后端接口调用
  * 使用平台提供的axiosForBackend自动处理鉴权和跨域
  */
-import { axiosForBackend } from '@lark-apaas/client-toolkit/utils/getAxiosForBackend';
+import { axiosForBackend } from '@client/compat/client-toolkit/utils/getAxiosForBackend';
 import type {
   ScriptProjectListResponse,
   CreateScriptProjectRequest,

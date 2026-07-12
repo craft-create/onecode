@@ -16,11 +16,39 @@ import type { Request } from 'express';
  * @returns 用户ID字符串，未登录或无效时返回 undefined
  */
 export function getLocalUserId(req: Request): string | undefined {
-  const localId: string = (req as any).__localUserId;
+  const localId = req.__localUserId;
   if (localId) {
     return localId;
   }
   // Fallback to userContext if __localUserId is not set
   const contextId: string | undefined = req.userContext?.userId;
   return contextId || undefined;
+}
+
+/**
+ * 从请求中提取 auth_token
+ * 兼容存在/不存在 cookie-parser 的情况
+ * @param req - Express请求对象
+ */
+export function getAuthTokenFromRequest(req: Request): string | undefined {
+  if (req.cookies?.auth_token) {
+    return req.cookies.auth_token;
+  }
+
+  const rawCookie = req.headers.cookie;
+  if (!rawCookie) {
+    return undefined;
+  }
+
+  const prefix = 'auth_token=';
+  const match = rawCookie
+    .split(';')
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(prefix));
+
+  if (!match) {
+    return undefined;
+  }
+
+  return decodeURIComponent(match.substring(prefix.length));
 }

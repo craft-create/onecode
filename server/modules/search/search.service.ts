@@ -1,5 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@lark-apaas/fullstack-nestjs-core';
+import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
 import { material, scriptProject } from '@server/database/schema';
 import { like, ilike, or, desc, sql } from 'drizzle-orm';
 import type { MaterialItem } from '@shared/material.interface';

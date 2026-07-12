@@ -2,7 +2,7 @@ import {
   DepartmentService,
   type SearchDepartmentsParams,
   type SearchDepartmentsResponse,
-} from '@lark-apaas/client-toolkit/tools/services';
+} from '@client/compat/client-toolkit/tools/services';
 
 const departmentService = new DepartmentService();
 

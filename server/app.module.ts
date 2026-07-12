@@ -1,9 +1,9 @@
 import { APP_FILTER } from '@nestjs/core';
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { CommonModule } from '@lark-apaas/nestjs-common';
-import { DataPaasModule } from '@lark-apaas/nestjs-datapaas';
-import { LoggerModule } from '@lark-apaas/nestjs-logger';
+import { CommonModule } from '@server/common/compat/nestjs-common';
+import { DataPaasModule } from '@server/common/compat/nestjs-datapaas';
+import { LoggerModule } from '@server/common/compat/nestjs-logger';
 
 import { GlobalExceptionFilter } from './common/filters/exception.filter';
 import { HomeModule } from './modules/home/home.module';
@@ -32,6 +32,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { ShareModule } from './modules/share/share.module';
 import { FileManagerModule } from './modules/file-manager/file-manager.module';
+import { RuntimeModule } from './modules/runtime/runtime.module';
 
 const isDataPaasDisabled =
   process.env.FORCE_FRAMEWORK_DISABLE_DATAPASS === 'true' ||
@@ -85,6 +86,7 @@ const isDataPaasDisabled =
     AiModule,
     AuditModule,
     ShareModule,
+    RuntimeModule,
     // ====== @route-section: business-modules END ======
 
     // ⚠️ @route-order: last

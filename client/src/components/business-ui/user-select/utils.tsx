@@ -1,4 +1,4 @@
-import type { UserInfo, SearchAvatar } from '@lark-apaas/client-toolkit/tools/services';
+import type { UserInfo, SearchAvatar } from '@client/compat/client-toolkit/tools/services';
 
 import type { AccountType } from '@client/src/components/business-ui/api/users/service';
 import type {

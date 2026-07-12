@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Heart } from 'lucide-react';
 import { toast } from 'sonner';
-import { logger } from '@lark-apaas/client-toolkit/logger';
+import { logger } from '@client/compat/client-toolkit/logger';
 import { toggleMaterialLike } from '@client/src/api/materials';
 import { toggleScriptLike } from '@client/src/api/scripts';
 import { useAuth } from '@client/src/hooks/useAuth';

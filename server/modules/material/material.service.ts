@@ -4,7 +4,7 @@
  * 包括：素材列表、搜索、筛选、详情、下载、相关推荐、创建、删除、评论、点赞等
  */
 import { Injectable, Logger, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@lark-apaas/fullstack-nestjs-core';
+import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
 // 导入数据库表定义：素材表、评论表、点赞表、收藏夹项表、用户素材关联表
 import { material, materialComment, materialLike, favoriteFolderItem, userMaterial } from '@server/database/schema';
 import { localUsers } from '@server/database/local-schema';

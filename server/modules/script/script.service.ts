@@ -5,7 +5,7 @@
  *       大纲、评论、角色分析、协作者、导出、下载、点赞等
  */
 import { Injectable, Logger, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@lark-apaas/fullstack-nestjs-core';
+import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
 // 导入Drizzle ORM操作符
 import { and, desc, eq, ilike, or, count, sql } from 'drizzle-orm';
 // 导入数据库表定义

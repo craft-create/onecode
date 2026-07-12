@@ -3,7 +3,7 @@ import {
   getAssetsUrl,
   type AccountType,
   type UserProfileData,
-} from '@lark-apaas/client-toolkit/tools/services';
+} from '@client/compat/client-toolkit/tools/services';
 
 const userProfileService = new UserProfileService();
 

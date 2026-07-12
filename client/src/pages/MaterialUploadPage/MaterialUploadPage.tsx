@@ -12,7 +12,7 @@ import {
   Music,
   Loader2,
 } from 'lucide-react';
-import { logger } from '@lark-apaas/client-toolkit/logger';
+import { logger } from '@client/compat/client-toolkit/logger';
 import { createMaterial } from '@client/src/api/materials';
 import { uploadFile } from '@client/src/api/upload';
 import { useAuth } from '@client/src/hooks/useAuth';

@@ -5,7 +5,7 @@ import {
   type SearchUsersResponse,
   type BatchGetUsersResponse,
   type ConvertExternalContactResponse,
-} from '@lark-apaas/client-toolkit/tools/services';
+} from '@client/compat/client-toolkit/tools/services';
 
 const userService = new UserService();
 

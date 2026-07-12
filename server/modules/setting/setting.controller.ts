@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Req, UnauthorizedException } from '@nestjs/common';
-import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@server/common/compat/fullstack-nestjs-core';
 import { SettingService, UserProfileData, UserPasswordData } from './setting.service';
 import { getLocalUserId } from '@server/common/utils/auth.helper';
 import type { Request } from 'express';

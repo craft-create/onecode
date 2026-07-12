@@ -30,7 +30,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import { logger } from '@lark-apaas/client-toolkit/logger';
+import { logger } from '@client/compat/client-toolkit/logger';
 import { toast } from 'sonner';
 import { getMe, uploadAvatar } from '@client/src/api/auth';
 import type { CurrentUser } from '@client/src/api/auth';

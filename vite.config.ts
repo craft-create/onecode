@@ -3,12 +3,40 @@ import { defineConfig } from '@lark-apaas/fullstack-vite-preset';
 
 const serverPort = process.env.SERVER_PORT || '3000';
 
+const stripRuntimeInjectionPlugin = {
+  name: 'strip-runtime-injection',
+  enforce: 'post' as const,
+  transformIndexHtml(html: string) {
+    const removed = html.replace(
+      /<script[^>]*\bsrc\s*=\s*(?:"[^"]*\/@runtime\.js[^"]*"|'[^']*\/@runtime\.js[^']*')[^>]*><\/script>\s*/g,
+      '',
+    );
+    return removed === html ? null : removed;
+  },
+  transform(code: string, id: string) {
+    if (!/[/\\]client[/\\]src[/\\]index\.(tsx?|jsx?)$/.test(id)) {
+      return null;
+    }
+
+    const marker = "import '@lark-apaas/client-toolkit/runtime';";
+    if (!code.includes(marker)) {
+      return null;
+    }
+
+    return {
+      code: code.split(marker).join(''),
+      map: null,
+    };
+  },
+};
+
 export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'client/src'),
     },
   },
+  plugins: [stripRuntimeInjectionPlugin],
   server: {
     proxy: {
       '/api': {

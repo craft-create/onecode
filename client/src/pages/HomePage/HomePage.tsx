@@ -12,7 +12,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { logger } from '@lark-apaas/client-toolkit/logger';
+import { logger } from '@client/compat/client-toolkit/logger';
 // UI骨架屏组件，加载时显示
 import { Skeleton } from '@client/src/components/ui/skeleton';
 // 首页各板块组件

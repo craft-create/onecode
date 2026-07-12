@@ -6,7 +6,7 @@
  */
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { logger } from '@lark-apaas/client-toolkit/logger';
+import { logger } from '@client/compat/client-toolkit/logger';
 import { Film, Loader2 } from 'lucide-react';
 import { Button } from '@client/src/components/ui/button';
 import { Input } from '@client/src/components/ui/input';

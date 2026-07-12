@@ -1,5 +1,5 @@
 import { Module, OnModuleInit, Inject, Logger } from '@nestjs/common';
-import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@lark-apaas/fullstack-nestjs-core';
+import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
 import { FileManagerController } from './file-manager.controller';
 import { FileManagerService } from './file-manager.service';
 

@@ -18,7 +18,7 @@ import {
   Check,
   ChevronDown,
 } from 'lucide-react';
-import { logger } from '@lark-apaas/client-toolkit/logger';
+import { logger } from '@client/compat/client-toolkit/logger';
 import {
   getMaterialById,
   getRelatedMaterials,

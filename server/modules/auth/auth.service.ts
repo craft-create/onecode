@@ -1,5 +1,5 @@
 import { Injectable, Inject, Logger, ConflictException, UnauthorizedException } from '@nestjs/common';
-import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@lark-apaas/fullstack-nestjs-core';
+import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
 import { eq, sql } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';

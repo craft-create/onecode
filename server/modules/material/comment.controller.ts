@@ -1,5 +1,5 @@
 import { Controller, Post, Param, Req } from '@nestjs/common';
-import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@server/common/compat/fullstack-nestjs-core';
 import type { Request } from 'express';
 import { MaterialService } from './material.service';
 import type { CommentLikeStatusResponse } from '@shared/material.interface';

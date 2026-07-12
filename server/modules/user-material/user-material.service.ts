@@ -4,7 +4,7 @@ import {
   Inject,
   BadRequestException,
 } from '@nestjs/common';
-import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@lark-apaas/fullstack-nestjs-core';
+import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
 import { material, userMaterial, favoriteCategory } from '@server/database/schema';
 import { eq, and, desc, count } from 'drizzle-orm';
 import type {

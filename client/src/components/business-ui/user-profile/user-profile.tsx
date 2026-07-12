@@ -1,6 +1,6 @@
 'use client';
 
-import { logger } from '@lark-apaas/client-toolkit/logger';
+import { logger } from '@client/compat/client-toolkit/logger';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import SHA1 from 'crypto-js/sha1';
@@ -10,7 +10,7 @@ import {
   getAssetsUrl,
 } from '@client/src/components/business-ui/api/user-profiles/service';
 import { ErrorImage } from '@client/src/components/business-ui/user-profile/error-image';
-import { getEnv } from '@lark-apaas/client-toolkit/utils/getEnv';
+import { getEnv } from '@client/compat/client-toolkit/utils/getEnv';
 import { useExternalScript } from '@client/src/components/business-ui/user-profile/user-external-script';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';

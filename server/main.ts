@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
-import { configureApp } from '@lark-apaas/fullstack-nestjs-core';
+import { configureApp } from '@server/common/compat/fullstack-nestjs-core';
 import { join } from 'path';
 import { __express as hbsExpressEngine } from 'hbs';
 

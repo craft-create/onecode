@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Clock, ArrowRight, Film, Clapperboard, User } from "lucide-react";
-import { logger } from "@lark-apaas/client-toolkit/logger";
+import { logger } from "@client/compat/client-toolkit/logger";
 import { globalSearch } from "@client/src/api/search";
 import type { SearchResponse } from "@shared/search.interface";
 import type { MaterialItem } from "@shared/material.interface";

@@ -31,7 +31,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 // 平台内置的登录鉴权装饰器，标注的接口必须登录才能访问
-import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@server/common/compat/fullstack-nestjs-core';
 import type { Request } from 'express';
 import { MaterialService } from './material.service';
 import { getLocalUserId } from '@server/common/utils/auth.helper';

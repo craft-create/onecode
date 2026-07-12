@@ -12,8 +12,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 // 平台Hook：获取应用信息
-import { useAppInfo } from "@lark-apaas/client-toolkit/hooks/useAppInfo";
-import { logger } from "@lark-apaas/client-toolkit/logger";
+import { useAppInfo } from "@client/compat/client-toolkit/hooks/useAppInfo";
+import { logger } from "@client/compat/client-toolkit/logger";
 // 认证Hook + 登出API
 import { useAuth } from "@client/src/hooks/useAuth";
 import { logout } from "@client/src/api/auth";

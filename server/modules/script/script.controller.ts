@@ -38,7 +38,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 // 平台登录鉴权装饰器
-import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@server/common/compat/fullstack-nestjs-core';
 import type { Request, Response } from 'express';
 import { ScriptService } from './script.service';
 import { getLocalUserId } from '@server/common/utils/auth.helper';

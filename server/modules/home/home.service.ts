@@ -8,7 +8,7 @@ import { Inject } from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
-} from '@lark-apaas/fullstack-nestjs-core';
+} from '@server/common/compat/fullstack-nestjs-core';
 // 导入数据库表
 import { material, scriptProject } from '@server/database/schema';
 import { localUsers } from '@server/database/local-schema';

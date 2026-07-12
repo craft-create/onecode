@@ -13,7 +13,7 @@ import {
   Bookmark,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { logger } from '@lark-apaas/client-toolkit/logger';
+import { logger } from '@client/compat/client-toolkit/logger';
 import { useAuth } from '@client/src/hooks/useAuth';
 import {
   getFavoriteFolders,

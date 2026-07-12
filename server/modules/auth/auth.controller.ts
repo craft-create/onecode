@@ -19,6 +19,7 @@ import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { AuthService } from './auth.service';
 import { getLocalUserId } from '@server/common/utils/auth.helper';
+import { getAuthTokenFromRequest } from '@server/common/utils/auth.helper';
 
 interface AuthDto {
   nickname: string;
@@ -63,7 +64,7 @@ export class AuthController {
 
   @Get('me')
   async me(@Req() req: Request) {
-    const token: string | undefined = req.cookies?.auth_token;
+    const token: string | undefined = getAuthTokenFromRequest(req);
     if (!token) {
       return null;
     }
