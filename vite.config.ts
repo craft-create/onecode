@@ -36,11 +36,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'client/src'),
+      '@client': path.resolve(__dirname, 'client'),
     },
   },
   plugins: [stripRuntimeInjectionPlugin],
   server: {
-    port: clientPort,
     port: clientPort,
     proxy: {
       '/api': {
