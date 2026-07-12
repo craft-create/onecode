@@ -190,7 +190,35 @@ export class SettingService {
       throw new NotFoundException('用户不存在');
     }
 
-    const used = Number(user.storageUsed || 0);
+    const [materialStorageRows] = await this.db.execute<{ used: string }>(sql`
+      SELECT COALESCE(SUM(m.file_size), 0)::bigint AS used
+      FROM material m
+      INNER JOIN user_material um ON um.material_id = m.id
+      WHERE (um.user_id).user_id = ${userId}::uuid
+        AND um.relation_type = 'upload'
+    `);
+
+    const [fileStorageRows] = await this.db.execute<{ used: string }>(sql`
+      SELECT COALESCE(SUM(fi.size), 0)::bigint AS used
+      FROM file_item fi
+      WHERE (fi.user_id).user_id = ${userId}::uuid
+    `);
+
+    const calculatedUsed =
+      Number(materialStorageRows?.used || 0) + Number(fileStorageRows?.used || 0);
+    const storedUsed = Number(user.storageUsed || 0);
+    const used = storedUsed > 0 ? storedUsed : calculatedUsed;
+
+    if (storedUsed !== used) {
+      await this.db
+        .update(localUsers)
+        .set({
+          storageUsed: used,
+          updatedAt: new Date(),
+        })
+        .where(eq(localUsers.id, userId));
+    }
+
     const quota = Number(user.storageQuota || 10737418240); // 10GB default
     const remaining = quota - used;
     const usagePercent = (used / quota) * 100;

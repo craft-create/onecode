@@ -374,6 +374,8 @@ export class MaterialService {
    * @returns 新创建的素材ID
    */
   async create(dto: CreateMaterialRequest, userId: string): Promise<CreateMaterialResponse> {
+    const fileSize = Math.max(0, Number(dto.file_size || 0));
+
     // 插入素材记录，返回生成的ID
     const [result] = await this.db
       .insert(material)
@@ -384,7 +386,7 @@ export class MaterialService {
         resolution: dto.resolution,
         duration: dto.duration,
         format: dto.format,
-        fileSize: dto.file_size,
+        fileSize,
         device: dto.device,
         tags: dto.tags,
         previewUrl: dto.preview_url,
@@ -403,6 +405,14 @@ export class MaterialService {
         userId: sql`ROW(${userId})::user_profile`,
         relationType: 'upload',
       });
+
+    if (fileSize > 0) {
+      await this.db.execute(sql`
+        UPDATE local_users
+        SET storage_used = COALESCE(storage_used, 0) + ${fileSize}
+        WHERE id = ${userId}::uuid
+      `);
+    }
 
     this.logger.log(`用户 ${userId} 与素材 ${result.id} 关联记录已创建`);
     return { id: result.id };
@@ -425,6 +435,7 @@ export class MaterialService {
       .select({
         id: material.id,
         createdBy: sql<string>`(${material.createdBy}).user_id`,
+        fileSize: material.fileSize,
       })
       .from(material)
       .where(eq(material.id, id));
@@ -449,6 +460,17 @@ export class MaterialService {
       }
     }
 
+    const [ownerRow] = await this.db
+      .select({ userId: sql<string>`(user_id).user_id` })
+      .from(userMaterial)
+      .where(
+        and(
+          eq(userMaterial.materialId, id),
+          eq(userMaterial.relationType, 'upload'),
+        ),
+      )
+      .limit(1);
+
     // 级联删除关联数据（顺序：先删子表，后删主表）
     await this.db.delete(materialComment).where(eq(materialComment.materialId, id));
     await this.db.delete(materialLike).where(eq(materialLike.materialId, id));
@@ -456,6 +478,16 @@ export class MaterialService {
     await this.db.delete(userMaterial).where(eq(userMaterial.materialId, id));
     // 最后删除素材主记录
     await this.db.delete(material).where(eq(material.id, id));
+
+    const fileSize = Number(existing.fileSize || 0);
+    if (fileSize > 0) {
+      const storageOwnerId = ownerRow?.userId || existing.createdBy || userId;
+      await this.db.execute(sql`
+        UPDATE local_users
+        SET storage_used = GREATEST(COALESCE(storage_used, 0) - ${fileSize}, 0)
+        WHERE id = ${storageOwnerId}::uuid
+      `);
+    }
 
     this.logger.log(`用户 ${userId} 删除素材 ${id} 及关联数据`);
   }
