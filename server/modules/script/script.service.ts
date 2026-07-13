@@ -1120,11 +1120,25 @@ export class ScriptService {
 
     try {
       pdfDoc.registerFontkit(fontkit);
-      return await pdfDoc.embedFont(source.fontBytes, { subset: false });
+      const shouldSubset = this.resolvePdfFontSubsetEnabled(source.fontPath);
+      return await pdfDoc.embedFont(source.fontBytes, { subset: shouldSubset });
     } catch (error) {
       this.logger.warn('Failed to embed Chinese PDF font, fallback to Helvetica.', error as Error);
       return pdfDoc.embedFont(StandardFonts.Helvetica);
     }
+  }
+
+  private resolvePdfFontSubsetEnabled(fontPath: string): boolean {
+    const envValue = process.env.ONECODE_PDF_FONT_SUBSET?.trim().toLowerCase();
+    if (envValue === 'true') {
+      return true;
+    }
+    if (envValue === 'false') {
+      return false;
+    }
+
+    const normalizedPath = fontPath.toLowerCase();
+    return !normalizedPath.endsWith('.ttc');
   }
 
   private wrapPdfLine(
