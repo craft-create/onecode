@@ -1009,15 +1009,18 @@ export class ScriptService {
 
   private getChineseFontPathCandidates(): string[] {
     const customPath = process.env.ONECODE_PDF_FONT_PATH?.trim();
+    const cwd = process.cwd();
+    const repoRoot = path.basename(cwd) === 'dist' ? path.resolve(cwd, '..') : cwd;
+
     const projectFontPath = path.join(
-      process.cwd(),
+      repoRoot,
       'server',
       'resources',
       'fonts',
       'NotoSansSC-Regular.otf',
     );
     const distFontPath = path.join(
-      process.cwd(),
+      repoRoot,
       'dist',
       'server',
       'resources',
