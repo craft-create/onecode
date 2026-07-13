@@ -262,7 +262,12 @@ export class ScriptController {
   async revertVersion(
     @Param('id') id: string,
     @Body() dto: RevertVersionRequest,
+    @Req() req: Request,
   ) {
+    const userId: string | undefined = getLocalUserId(req);
+    if (!userId) {
+      throw new UnauthorizedException('请先登录');
+    }
     return this.scriptService.revertVersion(id, dto.version_id);
   }
 
@@ -287,7 +292,12 @@ export class ScriptController {
   async inviteCollaborator(
     @Param('id') id: string,
     @Body() dto: InviteCollaboratorRequest,
+    @Req() req: Request,
   ) {
+    const userId: string | undefined = getLocalUserId(req);
+    if (!userId) {
+      throw new UnauthorizedException('请先登录');
+    }
     return this.scriptService.inviteCollaborator(id, dto.user_id);
   }
 
@@ -303,7 +313,12 @@ export class ScriptController {
   async exportScript(
     @Param('id') id: string,
     @Body() dto: ExportScriptRequest,
+    @Req() req: Request,
   ) {
+    const userId: string | undefined = getLocalUserId(req);
+    if (!userId) {
+      throw new UnauthorizedException('请先登录');
+    }
     return this.scriptService.exportScript(id, dto);
   }
 
