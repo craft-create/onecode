@@ -18,12 +18,12 @@ npm run dev
 - `SERVER_PORT`（默认：`3000`）
 - `CLIENT_DEV_PORT`（默认：`8080`）
 - `LOG_DIR`（日志目录）
-- `SUDA_DATABASE_URL` 或 `DATABASE_URL`
+- `DATABASE_URL`
 
 推荐 `.env.local` 内容示例：
 
 ```bash
-SUDA_DATABASE_URL=postgresql://postgres:<DB_PASSWORD>@localhost:5432/app_db
+DATABASE_URL=postgresql://postgres:<DB_PASSWORD>@localhost:5432/app_db
 SERVER_HOST=localhost
 SERVER_PORT=3000
 CLIENT_DEV_PORT=8080
@@ -43,4 +43,3 @@ LOG_DIR=logs
 
 3. 存储空间显示为 0B
    - 检查已上传素材/文件是否写入用户存储统计（已在后端修复统计逻辑）
-

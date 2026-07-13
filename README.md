@@ -22,14 +22,13 @@ npm install
 
 参考 `.env.example`，至少配置数据库：
 
-- `SUDA_DATABASE_URL`（推荐）
-- 或 `DATABASE_URL`
+- `DATABASE_URL`
 
 示例（仅本地）：
 
 ```bash
 cp .env.example .env.local
-# 编辑 SUDA_DATABASE_URL
+# 编辑 DATABASE_URL
 ```
 
 ### 3) 启动开发环境
