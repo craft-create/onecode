@@ -3,7 +3,6 @@
  * 功能：文件夹浏览、文件上传、批量操作、分享、回收站
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Folder,
@@ -21,18 +20,10 @@ import {
   MoreVertical,
   Plus,
   Upload,
-  ArrowLeft,
   Home,
   Grid3X3,
   List,
   Loader2,
-  AlertCircle,
-  CheckCircle2,
-  XCircle,
-  HardDrive,
-  Move,
-  Copy,
-  Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,7 +38,6 @@ import { PageFrame } from '../shared/PageShell';
 import { fileApi } from '@/api';
 
 type ViewMode = 'grid' | 'list';
-type FileType = 'file' | 'folder';
 
 interface FileItem {
   id: string;
@@ -75,8 +65,6 @@ interface FolderItem {
 }
 
 const FileManagerPage: React.FC = () => {
-  const navigate = useNavigate();
-
   // ========== State ==========
   const [folders, setFolders] = useState<FolderItem[]>([]);
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -93,8 +81,6 @@ const FileManagerPage: React.FC = () => {
   const [shareItem, setShareItem] = useState<FileItem | null>(null);
   const [shareExpiresIn, setShareExpiresIn] = useState(24);
   const [sharePassword, setSharePassword] = useState('');
-  const [recycleBinOpen, setRecycleBinOpen] = useState(false);
-
   // ========== Upload ==========
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -132,14 +118,6 @@ const FileManagerPage: React.FC = () => {
   const navigateToFolder = (folder: FolderItem) => {
     setCurrentFolderId(folder.id);
     setBreadcrumbs((prev) => [...prev, folder]);
-    setSelectedItems(new Set());
-  };
-
-  const navigateBack = () => {
-    if (breadcrumbs.length === 0) return;
-    const newBreadcrumbs = breadcrumbs.slice(0, -1);
-    setBreadcrumbs(newBreadcrumbs);
-    setCurrentFolderId(newBreadcrumbs.length === 0 ? null : newBreadcrumbs[newBreadcrumbs.length - 1].id);
     setSelectedItems(new Set());
   };
 
@@ -332,10 +310,6 @@ const FileManagerPage: React.FC = () => {
       description="管理你的所有文件"
       action={
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setRecycleBinOpen(true)}>
-            <Trash2 className="w-4 h-4 mr-2" />
-            回收站
-          </Button>
           <Button size="sm" onClick={() => setNewFolderDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             新建文件夹
