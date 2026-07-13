@@ -48,6 +48,10 @@ if [ -d ".git" ]; then
   git reset --hard "origin/$BRANCH"
 else
   echo "[deploy] bootstrap git repository"
+  find . -mindepth 1 -maxdepth 1 \
+    ! -name '.env' \
+    ! -name '.git' \
+    -exec rm -rf {} +
   rm -rf .git
   git init
   git remote add origin "$REPO_URL"
