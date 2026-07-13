@@ -83,9 +83,9 @@ const RegisterPage: React.FC = () => {
 
   return (
     <PageFrame
-      className="min-h-screen bg-background flex items-center justify-center"
-      containerClassName="w-full flex justify-center px-4"
-      contentClassName="w-full max-w-md"
+      className="w-full bg-background"
+      containerClassName="w-full flex items-center justify-center"
+      contentClassName="w-full max-w-lg"
     >
       {/* 背景装饰光斑 */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -93,7 +93,7 @@ const RegisterPage: React.FC = () => {
         <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
       </div>
 
-      <Card className="relative w-full shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5)]">
+      <Card className="relative w-full border-2 border-border shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5)]">
         <CardHeader className="text-center space-y-3">
           {/* Logo */}
           <div className="mx-auto w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">

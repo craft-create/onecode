@@ -178,7 +178,7 @@ const Layout = () => {
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-4rem)] bg-background text-foreground grid place-items-center pt-8 pb-10 px-6">
+        <main className="min-h-[calc(100vh-4rem)] bg-background text-foreground flex items-center justify-center px-4 sm:px-6 py-8 overflow-y-auto">
           <Outlet />
         </main>
       </div>
