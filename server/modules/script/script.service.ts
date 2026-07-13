@@ -999,10 +999,11 @@ export class ScriptService {
 
   private sanitizePdfText(text: string): string {
     return text
+      .replace(/[\u0080-\uFFFF]/g, '')
       .replace(/\\/g, '\\\\')
       .replace(/\(/g, '\\(')
       .replace(/\)/g, '\\)')
-      .replace(/[\u0080-\uFFFF]/g, '?');
+      .replace(/\r?\n/g, '\n');
   }
 
   /**
@@ -1010,14 +1011,13 @@ export class ScriptService {
    * @param text 原始剧本文本
    * @param title 项目标题
    */
-  private buildSimplePdf(text: string, title: string): Buffer {
-    const safeTitle = this.sanitizePdfText(title);
+  private buildSimplePdf(text: string, _title: string): Buffer {
     const rawLines = this.sanitizePdfText(text)
       .replace(/\r\n/g, '\n')
       .split('\n');
 
     const maxLineLength = 88;
-    const wrappedLines: string[] = [`剧本导出: ${safeTitle}`];
+    const wrappedLines: string[] = [];
 
     for (const rawLine of rawLines) {
       if (rawLine === '') {
