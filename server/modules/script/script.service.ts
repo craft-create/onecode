@@ -7,6 +7,10 @@
 import { Injectable, Logger, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
 import JSZip from 'jszip';
+import fontkit from '@pdf-lib/fontkit';
+import { PDFDocument, StandardFonts, type PDFFont } from 'pdf-lib';
+import { existsSync, readFileSync } from 'fs';
+import path from 'path';
 // 导入Drizzle ORM操作符
 import { and, desc, eq, ilike, or, count, sql } from 'drizzle-orm';
 // 导入数据库表定义
@@ -51,6 +55,8 @@ import type {
 export class ScriptService {
   // 日志记录器
   private readonly logger = new Logger(ScriptService.name);
+  private chineseFontBytesCache: Buffer | null | undefined;
+  private chineseFontWarned = false;
 
   /**
    * 构造函数：注入数据库实例
@@ -965,7 +971,7 @@ export class ScriptService {
     };
 
     if (format === 'pdf') {
-      const pdfBuffer = this.buildSimplePdf(text, project.title);
+      const pdfBuffer = await this.buildSimplePdf(text, project.title);
       return {
         content: pdfBuffer,
         contentType: contentTypeMap.pdf,
@@ -998,110 +1004,176 @@ export class ScriptService {
   }
 
   private sanitizePdfText(text: string): string {
-    return text
-      .replace(/[\u0080-\uFFFF]/g, '')
-      .replace(/\\/g, '\\\\')
-      .replace(/\(/g, '\\(')
-      .replace(/\)/g, '\\)')
-      .replace(/\r?\n/g, '\n');
+    return text.replace(/\r?\n/g, '\n');
   }
 
-  /**
-   * 生成简化 PDF 文本文件，确保浏览器按 PDF 打开
-   * @param text 原始剧本文本
-   * @param title 项目标题
-   */
-  private buildSimplePdf(text: string, _title: string): Buffer {
-    const rawLines = this.sanitizePdfText(text)
-      .replace(/\r\n/g, '\n')
-      .split('\n');
+  private getChineseFontPathCandidates(): string[] {
+    const customPath = process.env.ONECODE_PDF_FONT_PATH?.trim();
+    const projectFontPath = path.join(
+      process.cwd(),
+      'server',
+      'resources',
+      'fonts',
+      'NotoSansSC-Regular.otf',
+    );
+    const distFontPath = path.join(
+      process.cwd(),
+      'dist',
+      'server',
+      'resources',
+      'fonts',
+      'NotoSansSC-Regular.otf',
+    );
+    const fallbackFontPath = path.join(
+      __dirname,
+      '..',
+      '..',
+      'resources',
+      'fonts',
+      'NotoSansSC-Regular.otf',
+    );
 
-    const maxLineLength = 88;
-    const wrappedLines: string[] = [];
+    return [
+      customPath,
+      projectFontPath,
+      distFontPath,
+      fallbackFontPath,
+      '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+      '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
+      '/System/Library/Fonts/Hiragino Sans GB.ttc',
+      '/System/Library/Fonts/STHeiti Light.ttc',
+      '/System/Library/Fonts/PingFang.ttc',
+    ].filter((fontPath): fontPath is string => typeof fontPath === 'string' && fontPath.length > 0);
+  }
 
-    for (const rawLine of rawLines) {
-      if (rawLine === '') {
-        wrappedLines.push('');
+  private getChineseFontBytes(): Buffer | undefined {
+    if (this.chineseFontBytesCache !== undefined) {
+      return this.chineseFontBytesCache || undefined;
+    }
+
+    for (const fontPath of this.getChineseFontPathCandidates()) {
+      if (!existsSync(fontPath)) {
         continue;
       }
 
-      let start = 0;
-      while (start < rawLine.length) {
-        wrappedLines.push(rawLine.slice(start, start + maxLineLength));
-        start += maxLineLength;
+      try {
+        const fontBytes = readFileSync(fontPath);
+        if (fontBytes.byteLength > 0) {
+          this.chineseFontBytesCache = fontBytes;
+          this.logger.log(`Loaded Chinese PDF font: ${fontPath}`);
+          return fontBytes;
+        }
+      } catch (error) {
+        this.logger.warn(`Failed to load Chinese PDF font from ${fontPath}`, error as Error);
       }
     }
 
+    if (!this.chineseFontWarned) {
+      this.chineseFontWarned = true;
+      this.logger.warn('No Chinese-capable PDF font found. PDF export will fallback to Helvetica.');
+    }
+    this.chineseFontBytesCache = null;
+    return undefined;
+  }
+
+  private async getPdfFont(pdfDoc: PDFDocument): Promise<PDFFont> {
+    const fontBytes = this.getChineseFontBytes();
+    if (!fontBytes) {
+      return pdfDoc.embedFont(StandardFonts.Helvetica);
+    }
+
+    try {
+      pdfDoc.registerFontkit(fontkit);
+      return await pdfDoc.embedFont(fontBytes, { subset: true });
+    } catch (error) {
+      this.logger.warn('Failed to embed Chinese PDF font, fallback to Helvetica.', error as Error);
+      return pdfDoc.embedFont(StandardFonts.Helvetica);
+    }
+  }
+
+  private wrapPdfLine(
+    line: string,
+    font: PDFFont,
+    fontSize: number,
+    maxWidth: number,
+  ): string[] {
+    if (line.length === 0) {
+      return [''];
+    }
+
+    const wrappedLines: string[] = [];
+    let currentLine = '';
+    let currentWidth = 0;
+
+    for (const char of line) {
+      const charWidth = font.widthOfTextAtSize(char, fontSize);
+      if (currentLine.length > 0 && currentWidth + charWidth > maxWidth) {
+        wrappedLines.push(currentLine);
+        currentLine = '';
+        currentWidth = 0;
+      }
+
+      currentLine += char;
+      currentWidth += charWidth;
+    }
+
+    if (currentLine.length > 0) {
+      wrappedLines.push(currentLine);
+    }
+
+    return wrappedLines;
+  }
+
+  /**
+   * 生成中文友好PDF文本文件，确保浏览器按PDF打开
+   * @param text 原始剧本文本
+   */
+  private async buildSimplePdf(text: string, title: string): Promise<Buffer> {
+    const normalizedText = this.sanitizePdfText(text || '');
+    const lines = normalizedText.replace(/\r?\n/g, '\n').split('\n');
+    const fontSize = 12;
+    const lineHeight = 16;
+    const marginLeft = 48;
+    const marginTop = 56;
+    const marginBottom = 56;
     const pageWidth = 612;
     const pageHeight = 792;
-    const marginLeft = 48;
-    const marginTop = 742;
-    const lineHeight = 14;
+    const maxTextWidth = pageWidth - marginLeft * 2;
+
+    const pdfDoc = await PDFDocument.create();
+    const font = await this.getPdfFont(pdfDoc);
+    const wrappedLines: string[] = [];
+    for (const line of lines) {
+      wrappedLines.push(...this.wrapPdfLine(line, font, fontSize, maxTextWidth));
+    }
+
+    if (wrappedLines.length === 0) {
+      wrappedLines.push('');
+    }
+
     const linesPerPage = Math.max(
-      Math.floor((pageHeight - 2 * (pageHeight - marginTop) - 56) / lineHeight),
+      Math.floor((pageHeight - marginTop - marginBottom) / lineHeight),
       1,
     );
 
-    const chunks: string[][] = [];
     for (let i = 0; i < wrappedLines.length; i += linesPerPage) {
-      chunks.push(wrappedLines.slice(i, i + linesPerPage));
-    }
+      const page = pdfDoc.addPage([pageWidth, pageHeight]);
+      let cursorY = pageHeight - marginTop;
 
-    const objects: string[] = [''];
-
-    const addObject = (body: string) => {
-      objects.push(body);
-      return objects.length - 1;
-    };
-
-    const fontId = addObject(
-      '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
-    );
-    const pagesId = addObject('<< /Type /Pages /Kids [] /Count 0 >>');
-
-    const pageObjectIds: number[] = [];
-
-    for (const lines of chunks) {
-      const contentLines = ['BT', '/F1 12 Tf', `${marginLeft} ${marginTop} Td`];
-
-      for (const line of lines) {
-        const escapedLine = this.sanitizePdfText(line);
-        contentLines.push(`(${escapedLine}) Tj`);
-        contentLines.push(`0 -${lineHeight} Td`);
+      for (const line of wrappedLines.slice(i, i + linesPerPage)) {
+        page.drawText(line, {
+          x: marginLeft,
+          y: cursorY,
+          size: fontSize,
+          font,
+        });
+        cursorY -= lineHeight;
       }
-
-      const contentBody = `${contentLines.join('\n')}\nET`;
-      const contentLength = Buffer.byteLength(contentBody, 'utf8');
-      const contentId = addObject(
-        `<< /Length ${contentLength} >>\nstream\n${contentBody}\nendstream`,
-      );
-
-      const pageId = addObject(
-        `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${contentId} 0 R >>`,
-      );
-      pageObjectIds.push(pageId);
     }
 
-    objects[pagesId] = `<< /Type /Pages /Kids [${pageObjectIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pageObjectIds.length} >>`;
-    const catalogId = addObject(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
-
-    let body = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
-    const offsets: number[] = [];
-    for (let id = 1; id < objects.length; id += 1) {
-      offsets[id] = body.length;
-      body += `${id} 0 obj\n${objects[id]}\nendobj\n`;
-    }
-
-    const startXref = body.length;
-    body += `xref\n0 ${objects.length}\n`;
-    body += '0000000000 65535 f \n';
-    for (let id = 1; id < objects.length; id += 1) {
-      body += `${String(offsets[id]).padStart(10, '0')} 00000 n \n`;
-    }
-
-    body += `trailer\n<< /Size ${objects.length} /Root ${catalogId} 0 R >>\nstartxref\n${startXref}\n%%EOF`;
-
-    return Buffer.from(body, 'binary');
+    pdfDoc.setTitle(title || 'script');
+    const pdfBytes = await pdfDoc.save();
+    return Buffer.from(pdfBytes);
   }
 
   private sanitizeXmlText(text: string): string {
