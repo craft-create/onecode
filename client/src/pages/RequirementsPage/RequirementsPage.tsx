@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, Search, Plus, Filter, DollarSign } from 'lucide-react';
+import { Briefcase, Search, Plus, DollarSign } from 'lucide-react';
 import { Button } from '@client/src/components/ui/button';
 import { Input } from '@client/src/components/ui/input';
 import { Card } from '@client/src/components/ui/card';
@@ -22,22 +22,12 @@ export default function RequirementsPage() {
   const fetchRequirements = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/requirements', { params: { status } });
-      setRequirements(Array.isArray(res as unknown[]) ? (res as never[]) : []);
-    } catch (error) {
+      const res = await api.get<any[]>('/requirements', { params: { status } });
+      setRequirements(Array.isArray(res) ? res : []);
+    } catch {
       console.error('Failed to load requirements');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'open': return 'bg-green-500';
-      case 'in_progress': return 'bg-blue-500';
-      case 'completed': return 'bg-gray-500';
-      case 'cancelled': return 'bg-red-500';
-      default: return 'bg-gray-500';
     }
   };
 

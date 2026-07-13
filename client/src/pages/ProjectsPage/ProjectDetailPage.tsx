@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Calendar, Users, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Plus, Users, BarChart3, Calendar } from 'lucide-react';
 import { Button } from '@client/src/components/ui/button';
 import { Card } from '@client/src/components/ui/card';
 import { Badge } from '@client/src/components/ui/badge';
@@ -27,7 +27,7 @@ export default function ProjectDetailPage() {
       const projectRes = res as { project?: Record<string, unknown> } & { tasks?: unknown[] };
       setProject((projectRes as { project: any }).project ?? (projectRes as any));
       setTasks(Array.isArray(projectRes.tasks) ? projectRes.tasks : []);
-    } catch (error) {
+    } catch (_error) {
       console.error('Failed to load project');
     } finally {
       setLoading(false);

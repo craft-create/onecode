@@ -63,7 +63,7 @@ function supportWebp() {
         .toDataURL('image/webp')
         .indexOf('data:image/webp') === 0
     );
-  } catch (err) {
+  } catch (_err) {
     return false;
   }
 }

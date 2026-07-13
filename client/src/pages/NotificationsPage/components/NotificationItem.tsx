@@ -1,4 +1,4 @@
-import { Bell, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { Button } from '@client/src/components/ui/button';
 import { Card } from '@client/src/components/ui/card';
 import type { Notification } from '@shared/types';
@@ -70,4 +70,3 @@ export function NotificationItem({
     </Card>
   );
 }
-

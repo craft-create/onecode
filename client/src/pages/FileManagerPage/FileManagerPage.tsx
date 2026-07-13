@@ -88,16 +88,12 @@ const FileManagerPage: React.FC = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [foldersRes, filesRes] = await Promise.all([
+    const [foldersRes, filesRes] = await Promise.all([
         fileApi.getFolders(currentFolderId || undefined),
         fileApi.getFiles({ folderId: currentFolderId || undefined, pageSize: 100 }),
       ]);
-      const foldersData = Array.isArray((foldersRes as FolderItem[]))
-        ? (foldersRes as FolderItem[])
-        : [];
-      const filesData = (filesRes as { items?: FileItem[] }) || {
-        items: [],
-      };
+      const foldersData = Array.isArray(foldersRes) ? foldersRes : [];
+      const filesData = (filesRes as { items?: FileItem[] }) || {};
 
       setFolders(foldersData);
       setFiles(filesData.items || []);
@@ -181,18 +177,18 @@ const FileManagerPage: React.FC = () => {
   const handleShare = async () => {
     if (!shareItem) return;
 
-    try {
-      const response = await fileApi.shareFile({
+      try {
+      const { data: shareRes } = await fileApi.shareFile({
         fileId: shareItem.id,
         expiresIn: shareExpiresIn,
         password: sharePassword || undefined,
-      }) as { shareToken: string; shareUrl: string; expiresAt: Date | string | null };
-      const res = response as { shareToken: string; shareUrl: string; expiresAt: Date | string | null };
+      });
+      const { shareUrl } = shareRes;
       toast.success('分享链接已生成', {
-        description: res.shareUrl,
+        description: shareUrl,
         action: {
           label: '复制',
-          onClick: () => navigator.clipboard.writeText(window.location.origin + res.shareUrl),
+          onClick: () => navigator.clipboard.writeText(window.location.origin + shareUrl),
         },
       });
       setShareDialogOpen(false);

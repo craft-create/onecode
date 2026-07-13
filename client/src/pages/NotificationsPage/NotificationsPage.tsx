@@ -35,9 +35,9 @@ export default function NotificationsPage() {
         ? countData
         : Number(countData ?? 0);
       setUnreadCount(Number.isFinite(unreadCount) ? unreadCount : 0);
-    } catch (error) {
-      const status = (error as { response?: { status?: number } })?.response?.status;
-      console.error('[NotificationsPage] load failed', status, error);
+    } catch (_error) {
+      const status = (_error as { response?: { status?: number } })?.response?.status;
+      console.error('[NotificationsPage] load failed', status, _error);
       setError(status ? `加载通知失败（HTTP ${status}）` : '加载通知失败');
       toast.error(status ? `加载通知失败（HTTP ${status}）` : '加载通知失败');
     } finally {
@@ -55,7 +55,7 @@ export default function NotificationsPage() {
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: 1 } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
       toast.success('已标为已读');
-    } catch (error) {
+    } catch (_error) {
       toast.error('操作失败');
     }
   };
@@ -66,7 +66,7 @@ export default function NotificationsPage() {
       setNotifications(prev => prev.map(n => ({ ...n, isRead: 1 })));
       setUnreadCount(0);
       toast.success('已全部标为已读');
-    } catch (error) {
+    } catch (_error) {
       toast.error('操作失败');
     }
   };

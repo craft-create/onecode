@@ -447,7 +447,7 @@ export class FileManagerService {
       .where(eq(fileItem.id, data.fileId));
 
     // 创建分享记录
-    const [share] = await this.db
+    await this.db
       .insert(fileShare)
       .values({
         fileId: data.fileId,

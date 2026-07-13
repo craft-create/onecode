@@ -1,6 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
-import { execFile } from 'child_process';
+import { existsSync } from 'fs';
+import { execFile, execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
@@ -23,14 +24,14 @@ export class UploadService {
   private ensureFfmpegAvailable(): void {
     // Check if ffmpeg is available in PATH or use absolute path
     try {
-      const ffmpegWhich = require('child_process').execSync('which ffmpeg', { stdio: 'pipe' }).toString().trim();
+      const ffmpegWhich = execSync('which ffmpeg', { stdio: 'pipe' }).toString().trim();
       if (ffmpegWhich) {
         this.ffmpegPath = ffmpegWhich;
         this.logger.log(`FFmpeg found at: ${this.ffmpegPath}`);
       } else {
         this.tryCommonFfmpegPaths();
       }
-    } catch (error) {
+    } catch (_error) {
       // ffmpeg not in PATH, try common locations
       this.tryCommonFfmpegPaths();
     }
@@ -44,12 +45,12 @@ export class UploadService {
     ];
     for (const ffmpegPath of commonPaths) {
       try {
-        if (require('fs').existsSync(ffmpegPath)) {
+        if (existsSync(ffmpegPath)) {
           this.ffmpegPath = ffmpegPath;
           this.logger.log(`FFmpeg found at: ${this.ffmpegPath}`);
           return;
         }
-      } catch (error) {
+      } catch (_error) {
         // Continue to next path
       }
     }
@@ -124,7 +125,7 @@ export class UploadService {
 
     try {
       await runFfmpeg('1');
-    } catch (error) {
+    } catch (_error) {
       this.logger.warn(`Failed to capture thumbnail at 1s, retrying at 0.1s: ${videoPath}`);
       try {
         await runFfmpeg('0.1');
@@ -143,7 +144,7 @@ export class UploadService {
       const relativePath: string = url.replace(/^\/uploads\//, '');
       const filePath: string = path.join(this.uploadBaseDir, relativePath);
 
-      if (!fs.existsSync(filePath)) {
+    if (!fs.existsSync(filePath)) {
         this.logger.warn(`File not found for deletion: ${filePath}`);
         return false;
       }

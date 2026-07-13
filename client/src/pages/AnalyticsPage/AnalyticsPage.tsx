@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Eye, Heart, Download, Share2, TrendingUp } from 'lucide-react';
+import { Eye, Heart, Download, Share2 } from 'lucide-react';
 import { Card } from '@client/src/components/ui/card';
 import { Badge } from '@client/src/components/ui/badge';
 import { Skeleton } from '@client/src/components/ui/skeleton';
@@ -9,8 +9,6 @@ import { PageFrame } from '../shared/PageShell';
 
 export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
-  const [dashboard, setDashboard] = useState<any>(null);
-  const [contentStats, setContentStats] = useState<any[]>([]);
 
   useEffect(() => {
     fetchAnalytics();
@@ -18,11 +16,8 @@ export default function AnalyticsPage() {
 
   const fetchAnalytics = async () => {
     try {
-      const [dashboardRes] = await Promise.all([
-        api.get('/analytics/dashboard'),
-      ]);
-      setDashboard(dashboardRes as unknown as Record<string, unknown>);
-    } catch (error) {
+      await api.get('/analytics/dashboard');
+    } catch (_error) {
       console.error('Failed to load analytics');
     } finally {
       setLoading(false);

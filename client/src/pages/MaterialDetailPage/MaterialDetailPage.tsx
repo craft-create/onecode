@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
-  Clock,
   Play,
   Pause,
   Volume2,
@@ -297,8 +296,6 @@ const MaterialDetailPage: React.FC = () => {
     const s = Math.floor(seconds % 60);
     return `${m}:${String(s).padStart(2, '0')}`;
   }, []);
-
-  const hasMedia = detail?.preview_url && (isVideo || isAudio);
 
   const formatFileSize = useCallback((bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;

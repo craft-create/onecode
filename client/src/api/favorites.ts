@@ -3,7 +3,6 @@ import type {
   FavoriteFolderListResponse,
   FavoriteFolderItem,
   CreateFavoriteFolderRequest,
-  CreateFavoriteFolderResponse,
   UpdateFavoriteFolderRequest,
   FavoriteFolderContentItem,
   AddFavoriteItemRequest,

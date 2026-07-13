@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Film, Play, Music, Volume2 } from 'lucide-react';
+import { Film, Play, Music, Volume2 } from 'lucide-react';
 import type { MaterialFiltersResponse } from '@shared/material.interface';
 
 const TYPE_TABS = [

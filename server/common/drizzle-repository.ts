@@ -1,8 +1,7 @@
 /**
  * Drizzle ORM 通用 Repository 基类（简化版）
  */
-import { DRIZZLE_DATABASE } from '@server/common/compat/fullstack-nestjs-core';
-import { eq, and, desc, sql, inArray, SQL } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import type { PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
 
 export class BaseRepository<T = any> {

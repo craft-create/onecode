@@ -11,7 +11,6 @@ import {
 } from '@server/common/compat/fullstack-nestjs-core';
 // 导入数据库表
 import { material, scriptProject } from '@server/database/schema';
-import { localUsers } from '@server/database/local-schema';
 // 导入Drizzle ORM操作符
 import { desc, count, sql } from 'drizzle-orm';
 // 导入类型定义

@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { AuthMiddleware } from '../auth.middleware';
 
 /**
  * JWT 认证 Guard

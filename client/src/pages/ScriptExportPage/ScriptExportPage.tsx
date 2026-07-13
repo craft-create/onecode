@@ -163,7 +163,7 @@ const ScriptExportPage: React.FC = () => {
     setOptions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleReset = () => {
+  const _handleReset = () => {
     setExporting(false);
     setProgress(0);
     setResult(null);

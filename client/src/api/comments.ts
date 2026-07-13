@@ -3,7 +3,6 @@ import type {
   MaterialCommentListResponse,
   MaterialCommentItem,
   CreateMaterialCommentRequest,
-  CreateMaterialCommentResponse,
   CommentLikeStatusResponse,
 } from '@shared/material.interface';
 

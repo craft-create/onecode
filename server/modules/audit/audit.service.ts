@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
-import { eq, and, desc, count, sql } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { report } from '@server/database/schema';
 
 @Injectable()
@@ -9,7 +9,7 @@ export class AuditService {
 
   constructor(@Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase) {}
 
-  async findAll(userId?: string) {
+  async findAll(_userId?: string) {
     return this.db.select().from(report).orderBy(desc(report.createdAt));
   }
 

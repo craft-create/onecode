@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MessageCircle, Send, Search, Plus } from 'lucide-react';
 import { Button } from '@client/src/components/ui/button';
@@ -25,9 +25,9 @@ export default function ChatPage() {
 
   const fetchConversations = async () => {
     try {
-      const res = await api.get('/chat/conversations');
-      setConversations(Array.isArray(res as unknown[]) ? (res as Conversation[]) : []);
-    } catch (error) {
+      const res = await api.get<Conversation[]>('/chat/conversations');
+      setConversations(Array.isArray(res) ? res : []);
+    } catch {
       console.error('Failed to load conversations');
     } finally {
       setLoading(false);
@@ -153,9 +153,9 @@ function ChatDetail({ conversationId }: { conversationId: string }) {
 
   const fetchMessages = async () => {
     try {
-      const res = await api.get(`/chat/conversations/${conversationId}/messages`);
-      setMessages((res as { items?: any[] }).items || []);
-    } catch (error) {
+      const { data } = await api.get<{ items?: any[] }>(`/chat/conversations/${conversationId}/messages`);
+      setMessages(data?.items || []);
+    } catch (_error) {
       console.error('Failed to load messages');
     } finally {
       setLoading(false);
@@ -173,7 +173,7 @@ function ChatDetail({ conversationId }: { conversationId: string }) {
       });
       setInput('');
       fetchMessages();
-    } catch (error) {
+    } catch (_error) {
       console.error('Failed to send message');
     }
   };

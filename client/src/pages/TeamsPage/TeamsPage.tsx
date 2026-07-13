@@ -22,9 +22,9 @@ export default function TeamsPage() {
 
   const fetchTeams = async () => {
     try {
-      const res = await api.get('/teams');
-      setTeams(Array.isArray(res as unknown[]) ? (res as Team[]) : []);
-    } catch (error) {
+      const res = await api.get<Team[]>('/teams');
+      setTeams(Array.isArray(res) ? res : []);
+    } catch {
       console.error('Failed to load teams');
     } finally {
       setLoading(false);

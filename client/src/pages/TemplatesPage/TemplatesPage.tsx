@@ -14,7 +14,7 @@ export default function TemplatesPage() {
   const navigate = useNavigate();
   const [templates, setTemplates] = useState<ScriptTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [category, setCategory] = useState<string>('');
+  const [category, _setCategory] = useState<string>('');
 
   useEffect(() => {
     fetchTemplates();
@@ -23,9 +23,9 @@ export default function TemplatesPage() {
   const fetchTemplates = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/templates', { params: { category } });
-      setTemplates(Array.isArray(res as unknown[]) ? (res as ScriptTemplate[]) : []);
-    } catch (error) {
+      const res = await api.get<ScriptTemplate[]>('/templates', { params: { category } });
+      setTemplates(Array.isArray(res) ? res : []);
+    } catch {
       console.error('Failed to load templates');
     } finally {
       setLoading(false);

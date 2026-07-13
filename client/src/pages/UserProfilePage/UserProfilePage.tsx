@@ -5,7 +5,6 @@ import {
   Film,
   FileText,
   Users,
-  UserPlus,
   Grid3X3,
   Bookmark,
   Heart,
@@ -18,7 +17,7 @@ import {
   getFollowers,
   getFollowing,
 } from '@client/src/api/follow';
-import { getUserUploads, getUserUploadsByUserId } from '@client/src/api/user-materials';
+import { getUserUploadsByUserId } from '@client/src/api/user-materials';
 import { listProjects } from '@client/src/api/scripts';
 import type { FollowUserItem } from '@shared/follow.interface';
 import type { UserMaterialItem } from '@shared/material.interface';

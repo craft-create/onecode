@@ -9,8 +9,6 @@ import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat
 import {
   favoriteFolder,
   favoriteFolderItem,
-  material,
-  scriptProject,
 } from '@server/database/schema';
 import { eq, and, count, desc, sql } from 'drizzle-orm';
 import type {

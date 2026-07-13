@@ -1,6 +1,6 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
 
-export interface ToolkitAxiosConfig<T = unknown> extends AxiosRequestConfig<T> {}
+export type ToolkitAxiosConfig<T = unknown> = AxiosRequestConfig<T>;
 
 const withBackendBase = <T,>(config: ToolkitAxiosConfig<T>): ToolkitAxiosConfig<T> => {
   const normalizedConfig: ToolkitAxiosConfig<T> = {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bookmark, Check, Plus, FolderOpen, Trash2, Pencil } from 'lucide-react';
+import { Bookmark, Check, Plus, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/compat/client-toolkit/logger';
 import {

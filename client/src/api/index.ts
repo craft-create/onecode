@@ -424,7 +424,10 @@ export const fileApi = {
 
   // 分享文件
   shareFile: (data: { fileId: string; expiresIn?: number; maxDownloads?: number; password?: string }) =>
-    api.post('/files/share', data),
+    api.post<{ shareToken: string; shareUrl: string; expiresAt: string | null }>(
+      '/files/share',
+      data,
+    ),
 
   // 获取分享文件
   getSharedFile: (shareToken: string, password?: string) => api.get(`/files/share/${shareToken}`, { params: { password } }),

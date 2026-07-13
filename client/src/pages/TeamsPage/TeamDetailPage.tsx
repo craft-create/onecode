@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Users, FolderOpen, Calendar, ArrowLeft } from 'lucide-react';
+import { Plus, Users, FolderOpen, ArrowLeft } from 'lucide-react';
 import { Button } from '@client/src/components/ui/button';
 import { Card } from '@client/src/components/ui/card';
 import { Badge } from '@client/src/components/ui/badge';
@@ -23,7 +23,7 @@ export default function TeamDetailPage() {
       const res = await api.get(`/teams/${teamId}`);
       setTeam((res as { team?: unknown }).team || null);
       setMembers((res as { members?: unknown[] }).members || []);
-    } catch (error) {
+    } catch (_error) {
       console.error('Failed to load team');
     } finally {
       setLoading(false);

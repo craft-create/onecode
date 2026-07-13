@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FolderKanban, Calendar, BarChart3 } from 'lucide-react';
+import { Plus, FolderKanban, Calendar } from 'lucide-react';
 import { Button } from '@client/src/components/ui/button';
 import { Input } from '@client/src/components/ui/input';
 import { Card } from '@client/src/components/ui/card';
@@ -22,9 +22,9 @@ export default function ProjectsPage() {
 
   const fetchProjects = async () => {
     try {
-      const res = await api.get('/projects');
-      setProjects(Array.isArray(res as unknown[]) ? (res as Project[]) : []);
-    } catch (error) {
+      const res = await api.get<Project[]>('/projects');
+      setProjects(Array.isArray(res) ? res : []);
+    } catch {
       console.error('Failed to load projects');
     } finally {
       setLoading(false);

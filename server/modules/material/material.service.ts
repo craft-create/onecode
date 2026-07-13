@@ -288,7 +288,7 @@ export class MaterialService {
    * @returns 下载URL
    * @throws NotFoundException 素材不存在时抛出404
    */
-  async getDownloadUrl(id: string, userId?: string): Promise<MaterialDownloadResponse> {
+  async getDownloadUrl(id: string, _userId?: string): Promise<MaterialDownloadResponse> {
     const [result] = await this.db
       .select({ downloadUrl: material.downloadUrl })
       .from(material)
