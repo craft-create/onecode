@@ -56,6 +56,7 @@ export class ScriptService {
   // 日志记录器
   private readonly logger = new Logger(ScriptService.name);
   private chineseFontBytesCache: Buffer | null | undefined;
+  private chineseFontPathCache: string | null | undefined;
   private chineseFontWarned = false;
 
   /**
@@ -1036,22 +1037,52 @@ export class ScriptService {
       'NotoSansSC-Regular.otf',
     );
 
-    return [
+    const fontCandidates = [
       customPath,
+      '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
+      '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+      '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.otf',
+      '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.otf',
+      '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+      '/usr/share/fonts/wqy/wqy-zenhei.ttc',
+      '/usr/share/fonts/truetype/arphic/ukai.ttc',
+      '/usr/share/fonts/truetype/arphic/uming.ttc',
       projectFontPath,
       distFontPath,
       fallbackFontPath,
-      '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
-      '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
       '/System/Library/Fonts/Hiragino Sans GB.ttc',
       '/System/Library/Fonts/STHeiti Light.ttc',
       '/System/Library/Fonts/PingFang.ttc',
-    ].filter((fontPath): fontPath is string => typeof fontPath === 'string' && fontPath.length > 0);
+      '/Library/Fonts/Arial Unicode.ttf',
+      '/Library/Fonts/Arial Unicode MS.ttf',
+      '/Library/Fonts/STHeiti Medium.ttc',
+    ];
+
+    const normalizedCandidates: string[] = [];
+    const seen = new Set<string>();
+
+    for (const fontPath of fontCandidates) {
+      if (typeof fontPath !== 'string' || fontPath.length === 0) {
+        continue;
+      }
+      if (seen.has(fontPath)) {
+        continue;
+      }
+      seen.add(fontPath);
+      normalizedCandidates.push(fontPath);
+    }
+
+    return normalizedCandidates;
   }
 
-  private getChineseFontBytes(): Buffer | undefined {
+  private getChineseFontSource():
+    | { fontPath: string; fontBytes: Buffer }
+    | undefined {
     if (this.chineseFontBytesCache !== undefined) {
-      return this.chineseFontBytesCache || undefined;
+      if (!this.chineseFontBytesCache || !this.chineseFontPathCache) {
+        return undefined;
+      }
+      return { fontPath: this.chineseFontPathCache, fontBytes: this.chineseFontBytesCache };
     }
 
     for (const fontPath of this.getChineseFontPathCandidates()) {
@@ -1063,8 +1094,9 @@ export class ScriptService {
         const fontBytes = readFileSync(fontPath);
         if (fontBytes.byteLength > 0) {
           this.chineseFontBytesCache = fontBytes;
+          this.chineseFontPathCache = fontPath;
           this.logger.log(`Loaded Chinese PDF font: ${fontPath}`);
-          return fontBytes;
+          return { fontPath, fontBytes };
         }
       } catch (error) {
         this.logger.warn(`Failed to load Chinese PDF font from ${fontPath}`, error as Error);
@@ -1076,18 +1108,19 @@ export class ScriptService {
       this.logger.warn('No Chinese-capable PDF font found. PDF export will fallback to Helvetica.');
     }
     this.chineseFontBytesCache = null;
+    this.chineseFontPathCache = null;
     return undefined;
   }
 
   private async getPdfFont(pdfDoc: PDFDocument): Promise<PDFFont> {
-    const fontBytes = this.getChineseFontBytes();
-    if (!fontBytes) {
+    const source = this.getChineseFontSource();
+    if (!source) {
       return pdfDoc.embedFont(StandardFonts.Helvetica);
     }
 
     try {
       pdfDoc.registerFontkit(fontkit);
-      return await pdfDoc.embedFont(fontBytes, { subset: true });
+      return await pdfDoc.embedFont(source.fontBytes, { subset: false });
     } catch (error) {
       this.logger.warn('Failed to embed Chinese PDF font, fallback to Helvetica.', error as Error);
       return pdfDoc.embedFont(StandardFonts.Helvetica);
