@@ -185,7 +185,12 @@ export class ScriptController {
   async saveContent(
     @Param('id') id: string,
     @Body() dto: SaveScriptContentRequest,
+    @Req() req: Request,
   ) {
+    const userId: string | undefined = getLocalUserId(req);
+    if (!userId) {
+      throw new UnauthorizedException('请先登录');
+    }
     return this.scriptService.saveContent(id, dto);
   }
 
