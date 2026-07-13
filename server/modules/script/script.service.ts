@@ -7,8 +7,8 @@
 import { Injectable, Logger, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
 import JSZip from 'jszip';
-import fontkit from '@pdf-lib/fontkit';
-import { PDFDocument, StandardFonts, type PDFFont } from 'pdf-lib';
+import PDFDocument from 'pdfkit';
+import { PassThrough } from 'stream';
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 // 导入Drizzle ORM操作符
@@ -55,7 +55,6 @@ import type {
 export class ScriptService {
   // 日志记录器
   private readonly logger = new Logger(ScriptService.name);
-  private chineseFontBytesCache: Buffer | null | undefined;
   private chineseFontPathCache: string | null | undefined;
   private chineseFontWarned = false;
 
@@ -1075,13 +1074,13 @@ export class ScriptService {
   }
 
   private getChineseFontSource():
-    | { fontPath: string; fontBytes: Buffer }
+    | { fontPath: string }
     | undefined {
-    if (this.chineseFontBytesCache !== undefined) {
-      if (!this.chineseFontBytesCache || !this.chineseFontPathCache) {
+    if (this.chineseFontPathCache !== undefined) {
+      if (!this.chineseFontPathCache) {
         return undefined;
       }
-      return { fontPath: this.chineseFontPathCache, fontBytes: this.chineseFontBytesCache };
+      return { fontPath: this.chineseFontPathCache };
     }
 
     for (const fontPath of this.getChineseFontPathCandidates()) {
@@ -1092,10 +1091,9 @@ export class ScriptService {
       try {
         const fontBytes = readFileSync(fontPath);
         if (fontBytes.byteLength > 0) {
-          this.chineseFontBytesCache = fontBytes;
           this.chineseFontPathCache = fontPath;
           this.logger.log(`Loaded Chinese PDF font: ${fontPath}`);
-          return { fontPath, fontBytes };
+          return { fontPath };
         }
       } catch (error) {
         this.logger.warn(`Failed to load Chinese PDF font from ${fontPath}`, error as Error);
@@ -1106,71 +1104,24 @@ export class ScriptService {
       this.chineseFontWarned = true;
       this.logger.warn('No Chinese-capable PDF font found. PDF export will fallback to Helvetica.');
     }
-    this.chineseFontBytesCache = null;
     this.chineseFontPathCache = null;
     return undefined;
   }
 
-  private async getPdfFont(pdfDoc: PDFDocument): Promise<PDFFont> {
+  private registerChineseFont(pdfDoc: PDFKit.PDFDocument): string {
     const source = this.getChineseFontSource();
     if (!source) {
-      return pdfDoc.embedFont(StandardFonts.Helvetica);
+      return 'Helvetica';
     }
 
     try {
-      pdfDoc.registerFontkit(fontkit);
-      const shouldSubset = this.resolvePdfFontSubsetEnabled(source.fontPath);
-      return await pdfDoc.embedFont(source.fontBytes, { subset: shouldSubset });
+      const fontFamily = 'NotoSansSC';
+      pdfDoc.registerFont(fontFamily, source.fontPath);
+      return fontFamily;
     } catch (error) {
       this.logger.warn('Failed to embed Chinese PDF font, fallback to Helvetica.', error as Error);
-      return pdfDoc.embedFont(StandardFonts.Helvetica);
+      return 'Helvetica';
     }
-  }
-
-  private resolvePdfFontSubsetEnabled(fontPath: string): boolean {
-    const envValue = process.env.ONECODE_PDF_FONT_SUBSET?.trim().toLowerCase();
-    if (envValue === 'true') {
-      return !fontPath.toLowerCase().endsWith('.ttc');
-    }
-    if (envValue === 'false') {
-      return false;
-    }
-
-    const normalizedPath = fontPath.toLowerCase();
-    return !normalizedPath.endsWith('.ttc');
-  }
-
-  private wrapPdfLine(
-    line: string,
-    font: PDFFont,
-    fontSize: number,
-    maxWidth: number,
-  ): string[] {
-    if (line.length === 0) {
-      return [''];
-    }
-
-    const wrappedLines: string[] = [];
-    let currentLine = '';
-    let currentWidth = 0;
-
-    for (const char of line) {
-      const charWidth = font.widthOfTextAtSize(char, fontSize);
-      if (currentLine.length > 0 && currentWidth + charWidth > maxWidth) {
-        wrappedLines.push(currentLine);
-        currentLine = '';
-        currentWidth = 0;
-      }
-
-      currentLine += char;
-      currentWidth += charWidth;
-    }
-
-    if (currentLine.length > 0) {
-      wrappedLines.push(currentLine);
-    }
-
-    return wrappedLines;
   }
 
   /**
@@ -1179,50 +1130,44 @@ export class ScriptService {
    */
   private async buildSimplePdf(text: string, title: string): Promise<Buffer> {
     const normalizedText = this.sanitizePdfText(text || '');
-    const lines = normalizedText.replace(/\r?\n/g, '\n').split('\n');
-    const fontSize = 12;
-    const lineHeight = 16;
-    const marginLeft = 48;
-    const marginTop = 56;
-    const marginBottom = 56;
     const pageWidth = 612;
     const pageHeight = 792;
-    const maxTextWidth = pageWidth - marginLeft * 2;
+    const fontSize = 12;
+    const margin = 48;
 
-    const pdfDoc = await PDFDocument.create();
-    const font = await this.getPdfFont(pdfDoc);
-    const wrappedLines: string[] = [];
-    for (const line of lines) {
-      wrappedLines.push(...this.wrapPdfLine(line, font, fontSize, maxTextWidth));
-    }
+    const pdfDoc = new PDFDocument({
+      size: [pageWidth, pageHeight],
+      margins: {
+        top: margin + 8,
+        bottom: margin + 8,
+        left: margin,
+        right: margin,
+      },
+    });
+    const chunks: Buffer[] = [];
+    const passthrough = new PassThrough();
+    const fontFamily = this.registerChineseFont(pdfDoc);
 
-    if (wrappedLines.length === 0) {
-      wrappedLines.push('');
-    }
+    return await new Promise<Buffer>((resolve, reject) => {
+      passthrough.on('data', (chunk: Buffer) => {
+        chunks.push(chunk);
+      });
+      passthrough.on('error', reject);
+      passthrough.on('end', () => {
+        resolve(Buffer.concat(chunks));
+      });
+      pdfDoc.on('error', reject);
 
-    const linesPerPage = Math.max(
-      Math.floor((pageHeight - marginTop - marginBottom) / lineHeight),
-      1,
-    );
-
-    for (let i = 0; i < wrappedLines.length; i += linesPerPage) {
-      const page = pdfDoc.addPage([pageWidth, pageHeight]);
-      let cursorY = pageHeight - marginTop;
-
-      for (const line of wrappedLines.slice(i, i + linesPerPage)) {
-        page.drawText(line, {
-          x: marginLeft,
-          y: cursorY,
-          size: fontSize,
-          font,
-        });
-        cursorY -= lineHeight;
-      }
-    }
-
-    pdfDoc.setTitle(title || 'script');
-    const pdfBytes = await pdfDoc.save();
-    return Buffer.from(pdfBytes);
+      pdfDoc.pipe(passthrough);
+      pdfDoc.info.Title = title || 'script';
+      pdfDoc.font(fontFamily);
+      pdfDoc.fontSize(fontSize);
+      pdfDoc.text(normalizedText, {
+        align: 'left',
+        lineGap: 4,
+      });
+      pdfDoc.end();
+    });
   }
 
   private sanitizeXmlText(text: string): string {
