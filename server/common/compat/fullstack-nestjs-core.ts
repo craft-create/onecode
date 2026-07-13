@@ -12,13 +12,13 @@ export class AppLogger extends Logger {
 
 export function NeedLogin(): MethodDecorator {
   return (_target: object, _propertyKey: string | symbol | undefined, descriptor: PropertyDescriptor) => {
-    const original: PropertyDescriptor['value'] = descriptor.value;
+    const original: PropertyDescriptor['value'] = descriptor?.value;
 
     if (typeof original !== 'function') {
       return descriptor;
     }
 
-    descriptor.value = async function (...args: unknown[]) {
+    const wrapped = async function (this: unknown, ...args: unknown[]) {
       const request: any = args.find((item: unknown) =>
         item && typeof item === 'object' &&
         ('userContext' in (item as Record<string, unknown>) ||
@@ -34,6 +34,13 @@ export function NeedLogin(): MethodDecorator {
       return original.apply(this, args);
     };
 
+    // Preserve NestJS method-level metadata (HTTP method/route/param decorators),
+    // since we replace the method function above.
+    Reflect.getOwnMetadataKeys(original).forEach((key: string | symbol) => {
+      Reflect.defineMetadata(key, Reflect.getMetadata(key, original), wrapped);
+    });
+
+    descriptor.value = wrapped;
     return descriptor;
   };
 }

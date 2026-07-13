@@ -4,6 +4,7 @@ import {
   Get,
   Delete,
   Req,
+  HttpException,
   Res,
   Query,
   UseInterceptors,
@@ -11,7 +12,6 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { NeedLogin } from '@server/common/compat/fullstack-nestjs-core';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import type { Request, Response } from 'express';
@@ -40,7 +40,6 @@ export class UploadController {
     private readonly authService: AuthService,
   ) {}
 
-  @NeedLogin()
   @Post('api/upload')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -55,7 +54,37 @@ export class UploadController {
       },
     }),
   )
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+  async uploadFile(@Req() req: Request, @UploadedFile() file: Express.Multer.File) {
+    const userId: string | undefined = getLocalUserId(req);
+    if (!userId) {
+      throw new HttpException('请先登录', 401);
+    }
+    return this.handleUpload(file);
+  }
+
+  @Post('upload')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: (_req: any, file: Express.Multer.File, callback: any) => {
+        if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+          callback(null, true);
+        } else {
+          callback(new BadRequestException(`Unsupported file type: ${file.mimetype}`), false);
+        }
+      },
+    }),
+  )
+  async uploadCompatFile(@Req() req: Request, @UploadedFile() file: Express.Multer.File) {
+    const userId: string | undefined = getLocalUserId(req);
+    if (!userId) {
+      throw new HttpException('请先登录', 401);
+    }
+    return this.handleUpload(file);
+  }
+
+  async handleUpload(file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
@@ -81,9 +110,17 @@ export class UploadController {
     res.sendFile(filePath);
   }
 
-  @NeedLogin()
   @Delete('api/upload')
   async deleteFile(@Req() req: Request, @Query('url') url?: string): Promise<{ success: boolean }> {
+    return this.handleDelete(req, url);
+  }
+
+  @Delete('upload')
+  async deleteCompatFile(@Req() req: Request, @Query('url') url?: string): Promise<{ success: boolean }> {
+    return this.handleDelete(req, url);
+  }
+
+  private async handleDelete(@Req() req: Request, @Query('url') url?: string): Promise<{ success: boolean }> {
     const userId: string | undefined = getLocalUserId(req);
     if (!userId) {
       throw new ForbiddenException('请先登录');

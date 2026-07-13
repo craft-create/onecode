@@ -31,8 +31,8 @@ run_with_env() {
 run_with_env
 
 if [ ! -d "$APP_DIR" ]; then
-  echo "[deploy] APP_DIR not found: $APP_DIR" >&2
-  exit 1
+  echo "[deploy] APP_DIR not found, creating it: $APP_DIR" >&2
+  mkdir -p "$APP_DIR"
 fi
 
 if [ -f "$APP_DIR/.env" ]; then
@@ -42,17 +42,15 @@ fi
 cd "$APP_DIR"
 
 if [ -d ".git" ]; then
-  echo "[deploy] repo exists, pulling $BRANCH"
-  git clean -fdx
+  echo "[deploy] repo exists, fetching $BRANCH"
+  git clean -fd
   git fetch --depth=1 origin "$BRANCH"
   git checkout -f -B "$BRANCH" "origin/$BRANCH"
 else
   echo "[deploy] bootstrap git repository"
   find . -mindepth 1 -maxdepth 1 \
     ! -name '.env' \
-    ! -name '.git' \
     -exec rm -rf {} +
-  rm -rf .git
   git init
   git remote add origin "$REPO_URL"
   git fetch --depth=1 origin "$BRANCH"
@@ -66,7 +64,24 @@ if [ -f /tmp/onecode.env.backup ]; then
   rm -f /tmp/onecode.env.backup
 fi
 
-npm ci --no-audit --no-fund
+# 缓存依赖，减少重复部署耗时（依赖不变则走快速路径）
+NPM_CACHE_DIR="/opt/.onecode_npm_cache"
+CURRENT_LOCK_SHA="$(sha256sum package-lock.json | awk '{print $1}')"
+mkdir -p "$NPM_CACHE_DIR"
+
+if [ -f "package-lock.json" ]; then
+  if [ -f "node_modules/.package-lock.sha256" ] && [ "$CURRENT_LOCK_SHA" = "$(cat node_modules/.package-lock.sha256 2>/dev/null || true)" ]; then
+    echo "[deploy] package-lock 未变，跳过 npm ci（提升部署速度）"
+    npm install --prefer-offline --no-audit --no-fund
+  else
+    echo "[deploy] package-lock 已变或首次部署，执行 npm ci"
+    npm ci --no-audit --no-fund --cache "$NPM_CACHE_DIR"
+    echo "$CURRENT_LOCK_SHA" > node_modules/.package-lock.sha256
+  fi
+else
+  npm ci --no-audit --no-fund --cache "$NPM_CACHE_DIR"
+fi
+
 npm run build:prod
 
 if command -v sudo >/dev/null 2>&1; then

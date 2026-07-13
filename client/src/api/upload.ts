@@ -1,9 +1,9 @@
 /**
  * 文件上传API调用层
  * 功能：封装文件上传接口
- * 使用平台提供的axiosForBackend自动处理鉴权和跨域
+ * 上传请求会自动带 token 与跨域凭据
  */
-import { axiosForBackend } from '@client/compat/client-toolkit/utils/getAxiosForBackend';
+import axios from 'axios';
 
 /** 上传响应类型 */
 export interface UploadResponse {
@@ -22,11 +22,30 @@ export interface UploadResponse {
 export async function uploadFile(file: File): Promise<UploadResponse> {
   const formData: FormData = new FormData();
   formData.append('file', file);
-  const { data } = await axiosForBackend({
-    url: '/api/upload',
-    method: 'POST',
-    data: formData,
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return data;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'multipart/form-data',
+    'X-Requested-With': 'XMLHttpRequest',
+  };
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const requestConfig = {
+    headers,
+    withCredentials: true,
+  };
+
+  try {
+    const { data } = await axios.post('/api/upload', formData, requestConfig);
+    return data as UploadResponse;
+  } catch (error: unknown) {
+    const axiosError: any = error as any;
+    if (axiosError?.response?.status === 404) {
+      const { data } = await axios.post('/upload', formData, requestConfig);
+      return data as UploadResponse;
+    }
+    throw error;
+  }
 }

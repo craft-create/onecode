@@ -237,7 +237,10 @@ const FileManagerPage: React.FC = () => {
         // 1. Upload to server
         const formData = new FormData();
         formData.append('file', file);
-        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+        let uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (uploadRes.status === 404) {
+          uploadRes = await fetch('/upload', { method: 'POST', body: formData });
+        }
         const uploadData = await uploadRes.json();
 
         // 2. Create file record
