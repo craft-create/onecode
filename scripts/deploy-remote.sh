@@ -4,6 +4,7 @@ set -euo pipefail
 APP_DIR="/opt/onecode"
 REPO_URL="https://github.com/craft-create/onecode.git"
 BRANCH="${DEPLOY_BRANCH:-main}"
+PERSISTENT_DATA_DIR="$APP_DIR/data"
 if ! git ls-remote --exit-code --heads "$REPO_URL" "$BRANCH" >/dev/null 2>&1; then
   if [ "$BRANCH" != "master" ] && git ls-remote --exit-code --heads "$REPO_URL" "master" >/dev/null 2>&1; then
     BRANCH="master"
@@ -39,17 +40,25 @@ if [ -f "$APP_DIR/.env" ]; then
   cp "$APP_DIR/.env" /tmp/onecode.env.backup
 fi
 
+if [ -d "$PERSISTENT_DATA_DIR/uploads" ]; then
+  rm -rf /tmp/onecode-uploads-backup
+  mkdir -p /tmp/onecode-uploads-backup
+  cp -a "$PERSISTENT_DATA_DIR/uploads/." /tmp/onecode-uploads-backup/ || true
+fi
+
 cd "$APP_DIR"
 
 if [ -d ".git" ]; then
   echo "[deploy] repo exists, fetching $BRANCH"
-  git clean -fd
+  git clean -fd -e data
   git fetch --depth=1 origin "$BRANCH"
   git checkout -f -B "$BRANCH" "origin/$BRANCH"
+  git clean -fd -e data
 else
   echo "[deploy] bootstrap git repository"
   find . -mindepth 1 -maxdepth 1 \
     ! -name '.env' \
+    ! -name 'data' \
     -exec rm -rf {} +
   git init
   git remote add origin "$REPO_URL"
@@ -57,7 +66,13 @@ else
   git checkout -B "$BRANCH" "origin/$BRANCH"
 fi
 
-git clean -fd
+if [ -d /tmp/onecode-uploads-backup ]; then
+  mkdir -p "$PERSISTENT_DATA_DIR/uploads"
+  cp -a /tmp/onecode-uploads-backup/. "$PERSISTENT_DATA_DIR/uploads/" || true
+  rm -rf /tmp/onecode-uploads-backup
+fi
+
+git clean -fd -e data
 
 if [ -f /tmp/onecode.env.backup ]; then
   cp /tmp/onecode.env.backup .env
