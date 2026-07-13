@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { ErrorBoundary } from 'react-error-boundary';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { AppContainer } from '@/compat/client-toolkit/components/AppContainer';
 import { ErrorRender } from '@/compat/client-toolkit/components/ErrorRender';
@@ -41,6 +42,16 @@ const getEnv = (key: string, fallback: string): string => {
 const CLIENT_BASE_PATH = getEnv('CLIENT_BASE_PATH', '/');
 const APP_ID_FALLBACK = getEnv('CLIENT_APP_ID', getEnv('APP_ID', 'local-app'));
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
 type WindowWithRuntime = Window & {
     appId?: string;
     __platform__?: {
@@ -75,19 +86,21 @@ const MainApp = () => {
   return (
     <BrowserRouter basename={CLIENT_BASE_PATH}>
       <AuthProvider>
-        <AppContainer defaultTheme="light">
-          <ErrorBoundary
-            fallbackRender={({ error, resetErrorBoundary }) => (
-              <ErrorRender
-                error={error as Error}
-                resetErrorBoundary={resetErrorBoundary}
-              />
-            )}
-          >
-            <RoutesComponent />
-            {createPortal(<Toaster />, document.body)}
-          </ErrorBoundary>
-        </AppContainer>
+        <QueryClientProvider client={queryClient}>
+          <AppContainer defaultTheme="light">
+            <ErrorBoundary
+              fallbackRender={({ error, resetErrorBoundary }) => (
+                <ErrorRender
+                  error={error as Error}
+                  resetErrorBoundary={resetErrorBoundary}
+                />
+              )}
+            >
+              <RoutesComponent />
+              {createPortal(<Toaster />, document.body)}
+            </ErrorBoundary>
+          </AppContainer>
+        </QueryClientProvider>
       </AuthProvider>
     </BrowserRouter>
   );

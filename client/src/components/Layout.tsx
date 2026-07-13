@@ -166,7 +166,19 @@ const Layout = () => {
   if (isAuthPage) {
     return (
       <div className="min-h-screen bg-background text-foreground">
-        <main className="min-h-screen bg-background text-foreground grid place-items-center">
+        <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
+            <NavLink
+              to="/"
+              className="flex items-center gap-2 font-bold text-lg text-foreground"
+            >
+              <Film className="w-6 h-6 text-primary" />
+              <span className="hidden sm:inline">{appName || "光影工坊"}</span>
+            </NavLink>
+          </div>
+        </header>
+
+        <main className="min-h-[calc(100vh-4rem)] bg-background text-foreground grid place-items-center pt-8 pb-10 px-6">
           <Outlet />
         </main>
       </div>
