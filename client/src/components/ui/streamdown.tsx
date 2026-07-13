@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { Streamdown as StreamdownPrimitive } from 'streamdown';
 
+import '@client/src/styles/prose.css';
+
 import { cn } from '@/lib/utils';
 import { omit } from 'es-toolkit';
 

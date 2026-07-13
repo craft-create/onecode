@@ -15,6 +15,7 @@ import { LinkHoverToolbar } from '@/components/business-ui/tiptap-editor/compone
 import { CompleteKit } from '@/components/business-ui/tiptap-editor/extensions/complete-kit';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import '@client/src/styles/prose.css';
 
 export interface TiptapEditorProps extends React.ComponentProps<'div'> {
   /** 受控 value (HTML)。 */
