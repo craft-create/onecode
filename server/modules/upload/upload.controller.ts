@@ -31,7 +31,7 @@ const ALLOWED_MIME_TYPES: string[] = [
   'video/quicktime',
 ];
 
-const MAX_FILE_SIZE: number = 100 * 1024 * 1024; // 100MB
+const MAX_FILE_SIZE: number = 512 * 1024 * 1024; // 512MB
 
 @Controller()
 export class UploadController {

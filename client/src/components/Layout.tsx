@@ -8,7 +8,7 @@
  *   - 回到顶部按钮
  *   - 子路由内容渲染（Outlet）
  */
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 // 平台Hook：获取应用信息
@@ -29,14 +29,7 @@ import {
   ChevronDown,
   Bell,
   MessageCircle,
-  Users,
-  FolderKanban,
-  FileText,
-  Briefcase,
-  BarChart3,
   FolderOpen,
-  Sparkles,
-  Search,
   MoreHorizontal,
 } from "lucide-react";
 // 全局搜索组件
@@ -168,6 +161,17 @@ const Layout = () => {
 
   // 是否已登录
   const isLoggedIn = !!user;
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+
+  if (isAuthPage) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <main className="min-h-screen">
+          <Outlet />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
