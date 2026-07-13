@@ -45,8 +45,7 @@ if [ -d ".git" ]; then
   echo "[deploy] repo exists, pulling $BRANCH"
   git clean -fdx
   git fetch --depth=1 origin "$BRANCH"
-  git checkout -B "$BRANCH" "origin/$BRANCH"
-  git reset --hard "origin/$BRANCH"
+  git checkout -f -B "$BRANCH" "origin/$BRANCH"
 else
   echo "[deploy] bootstrap git repository"
   find . -mindepth 1 -maxdepth 1 \
