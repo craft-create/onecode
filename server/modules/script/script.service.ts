@@ -1039,17 +1039,16 @@ export class ScriptService {
 
     const fontCandidates = [
       customPath,
+      projectFontPath,
+      distFontPath,
+      fallbackFontPath,
       '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
       '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
       '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.otf',
       '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.otf',
       '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
-      '/usr/share/fonts/wqy/wqy-zenhei.ttc',
       '/usr/share/fonts/truetype/arphic/ukai.ttc',
       '/usr/share/fonts/truetype/arphic/uming.ttc',
-      projectFontPath,
-      distFontPath,
-      fallbackFontPath,
       '/System/Library/Fonts/Hiragino Sans GB.ttc',
       '/System/Library/Fonts/STHeiti Light.ttc',
       '/System/Library/Fonts/PingFang.ttc',
@@ -1131,7 +1130,7 @@ export class ScriptService {
   private resolvePdfFontSubsetEnabled(fontPath: string): boolean {
     const envValue = process.env.ONECODE_PDF_FONT_SUBSET?.trim().toLowerCase();
     if (envValue === 'true') {
-      return true;
+      return !fontPath.toLowerCase().endsWith('.ttc');
     }
     if (envValue === 'false') {
       return false;
