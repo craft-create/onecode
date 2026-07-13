@@ -1,4 +1,4 @@
-@import '../compat/client-toolkit/lib/index.css';
+@import './compat/client-toolkit/lib/index.css';
 @import './tailwind-theme.css';
 
 @source '../../client/src';
