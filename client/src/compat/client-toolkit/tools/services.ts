@@ -1,6 +1,6 @@
 import { axiosForBackend } from '../utils/getAxiosForBackend';
 
-export type AccountType = 'lark' | 'apaas';
+export type AccountType = 'platform';
 
 export interface I18nText {
   zh_cn: string;
@@ -28,7 +28,7 @@ export interface SearchAvatar {
 
 export interface DepartmentInfo {
   departmentID: string;
-  larkDepartmentID: string;
+  externalDepartmentId: string;
   name: I18nText;
 }
 
@@ -42,7 +42,7 @@ export interface ChatInfo {
 
 export interface UserInfo {
   userID: string;
-  larkUserID?: string;
+  externalUserId?: string;
   name: I18nText | string;
   avatar?: SearchAvatar['avatar'];
   email?: string;
@@ -57,7 +57,7 @@ export interface UserInfo {
 }
 
 export interface UserProfileData {
-  useLarkCard: boolean;
+  useProfileCard: boolean;
   userProfileInfo?: {
     name?: string;
     avatar?: string;
@@ -65,13 +65,13 @@ export interface UserProfileData {
     userStatus: number;
     userType: '_employee' | '_externalUser';
   };
-  larkCardParam?: {
+  profileCardParam?: {
     needRedirect?: boolean;
     redirectURL?: string;
-    larkAppID: string;
-    jsAPITicket: string;
-    larkOpenID: string;
-    targetLarkOpenID: string;
+    appId?: string;
+    jsAPITicket?: string;
+    openId?: string;
+    targetOpenId?: string;
   };
 }
 
@@ -161,17 +161,17 @@ const isTextMatch = (name: string, query: string): boolean => {
 const fakeDepartments: DepartmentInfo[] = [
   {
     departmentID: 'dept-100',
-    larkDepartmentID: 'ld-100',
+    externalDepartmentId: 'ext-dept-100',
     name: { zh_cn: '创意组', en_us: 'Creative' },
   },
   {
     departmentID: 'dept-200',
-    larkDepartmentID: 'ld-200',
+    externalDepartmentId: 'ext-dept-200',
     name: { zh_cn: '制作组', en_us: 'Production' },
   },
   {
     departmentID: 'dept-300',
-    larkDepartmentID: 'ld-300',
+    externalDepartmentId: 'ext-dept-300',
     name: { zh_cn: '运营组', en_us: 'Operations' },
   },
 ];
@@ -204,7 +204,7 @@ const externalUserMap = new Map<string, string>();
 
 const makeFallbackUserInfo = (source: {
   userID: string;
-  larkUserID?: string;
+  externalUserId?: string;
   name: string;
   email?: string;
   userType?: '_employee' | '_externalUser' | '_anonymousUser';
@@ -213,7 +213,7 @@ const makeFallbackUserInfo = (source: {
 }): UserInfo => {
   return {
     userID: source.userID,
-    larkUserID: source.larkUserID,
+    externalUserId: source.externalUserId,
     name: normalizeText(source.name) ?? source.name,
     email: source.email,
     userType: source.userType ?? '_employee',
@@ -255,7 +255,7 @@ const toUserProfilePayload = (user: {
   avatarUrl?: string;
 }): UserProfileData => {
   return {
-    useLarkCard: false,
+    useProfileCard: false,
     userProfileInfo: {
       name: user.nickname || '未命名用户',
       avatar: user.avatarUrl || '',
@@ -296,7 +296,7 @@ const filterByQuery = <T extends { name: I18nText | string }>(
 export class UserProfileService {
   async getUserProfile(
     userId: string,
-    _accountType: AccountType = 'apaas',
+    _accountType: AccountType = 'platform',
     _signal?: AbortSignal,
   ): Promise<UserProfileData> {
     const me = await fetchMeUser();
@@ -344,13 +344,13 @@ export class UserService {
       ? filterByQuery(searchSeed.concat([
           makeFallbackUserInfo({
             userID: `${INTERNAL_PREFIX}-a`,
-            larkUserID: `${EXTERNAL_PREFIX}-a`,
+            externalUserId: `${EXTERNAL_PREFIX}-a`,
             name: '示例用户A',
             email: 'sample-a@example.com',
           }),
           makeFallbackUserInfo({
             userID: `${INTERNAL_PREFIX}-b`,
-            larkUserID: `${EXTERNAL_PREFIX}-b`,
+            externalUserId: `${EXTERNAL_PREFIX}-b`,
             name: '示例用户B',
             email: 'sample-b@example.com',
             userType: '_externalUser',
@@ -360,13 +360,13 @@ export class UserService {
       : searchSeed.concat([
           makeFallbackUserInfo({
             userID: `${INTERNAL_PREFIX}-a`,
-            larkUserID: `${EXTERNAL_PREFIX}-a`,
+            externalUserId: `${EXTERNAL_PREFIX}-a`,
             name: '示例用户A',
             email: 'sample-a@example.com',
           }),
           makeFallbackUserInfo({
             userID: `${INTERNAL_PREFIX}-b`,
-            larkUserID: `${EXTERNAL_PREFIX}-b`,
+            externalUserId: `${EXTERNAL_PREFIX}-b`,
             name: '示例用户B',
             email: 'sample-b@example.com',
             userType: '_externalUser',
@@ -427,17 +427,17 @@ export class UserService {
     };
   }
 
-  async convertExternalContact(larkUserID: string): Promise<ConvertExternalContactResponse> {
-    const normalized = String(larkUserID || '').trim();
+  async convertExternalContact(externalUserId: string): Promise<ConvertExternalContactResponse> {
+    const normalized = String(externalUserId || '').trim();
     const convertedId = `user-${normalized}`;
     externalUserMap.set(normalized, convertedId);
     const userInfo = makeFallbackUserInfo({
       userID: convertedId,
-      larkUserID: normalized,
+      externalUserId: normalized,
       name: `${toDisplayName(normalized)}（已开户）`,
       userType: '_externalUser',
     });
-    userInfo.larkUserID = normalized;
+    userInfo.externalUserId = normalized;
 
     return {
       data: {

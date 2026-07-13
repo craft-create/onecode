@@ -22,7 +22,7 @@ export function getI18nText(
  */
 export function normalizeUser(input: UserInput): User {
   if (!input) {
-    return { user_id: '', larkUserId: undefined, name: undefined, avatar: undefined, email: undefined, user_type: undefined, department: undefined };
+    return { user_id: '', externalUserId: undefined, name: undefined, avatar: undefined, email: undefined, user_type: undefined, department: undefined };
   }
   const data = input as any;
 
@@ -30,7 +30,7 @@ export function normalizeUser(input: UserInput): User {
   const user_id = data.user_id || data.userId || '';
 
   // 提取其他字段
-  const larkUserId = data.larkUserId;  // larkUserId 保持驼峰
+  const externalUserId = data.externalUserId;
   const name = data.name;
   const avatar = data.avatar;
   const email = data.email;
@@ -42,7 +42,7 @@ export function normalizeUser(input: UserInput): User {
 
   return {
     user_id,
-    larkUserId,
+    externalUserId,
     name,
     avatar,
     email,

@@ -7,7 +7,7 @@ export interface CurrentUserProfile {
   userID: string;
   user_id?: string;
   userId?: string;
-  larkUserID?: string;
+  externalUserId?: string;
   name?: {
     zh_cn?: string;
     en_us?: string;
@@ -37,7 +37,7 @@ function toUserProfile(result: AxiosResponse<AuthMeResponse | null>): CurrentUse
     userID: userId,
     user_id: userId,
     userId,
-    larkUserID: '',
+    externalUserId: '',
     name: {
       zh_cn: nickname,
       en_us: nickname,

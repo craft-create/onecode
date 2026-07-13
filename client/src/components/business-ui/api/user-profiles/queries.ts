@@ -6,7 +6,7 @@ import { fetchUserProfile, type AccountType } from './service';
 
 export const userProfileQueries = {
   all: () => ['userProfiles'] as const,
-  byId: (userId: string, accountType: AccountType = 'apaas') =>
+  byId: (userId: string, accountType: AccountType = 'platform') =>
     queryOptions({
       queryKey: [...userProfileQueries.all(), 'byId', accountType, userId],
       queryFn: ({ signal }) => fetchUserProfile(userId, accountType, signal),
@@ -26,7 +26,7 @@ export type UseUserProfileOptions = {
  * 获取用户 Profile 卡片数据的 hook
  */
 export function useUserProfile(options: UseUserProfileOptions) {
-  const { userId, accountType = 'apaas', enabled = true } = options;
+  const { userId, accountType = 'platform', enabled = true } = options;
 
   return useQuery({
     ...userProfileQueries.byId(userId, accountType),

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { logger } from '@client/compat/client-toolkit/logger';
+import { logger } from '@/compat/client-toolkit/logger';
 import { toast } from 'sonner';
 import { useAuth } from '@client/src/hooks/useAuth';
 import {

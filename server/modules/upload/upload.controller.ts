@@ -20,6 +20,7 @@ import * as fs from 'fs';
 import { UploadService } from './upload.service';
 import { AuthService } from '../auth/auth.service';
 import { getLocalUserId } from '@server/common/utils/auth.helper';
+import { resolveUploadBaseDir } from '@server/common/utils/upload-path';
 
 const ALLOWED_MIME_TYPES: string[] = [
   'image/jpeg',
@@ -95,8 +96,8 @@ export class UploadController {
   @Get('uploads/*')
   async serveFile(@Req() req: Request, @Res() res: Response) {
     const relativePath: string = req.params[0] || req.url.replace(/^\/uploads\//, '');
-    const filePath: string = path.resolve(process.cwd(), 'output/uploads', relativePath);
-    const uploadsBase: string = path.resolve(process.cwd(), 'output/uploads');
+    const uploadsBase: string = resolveUploadBaseDir();
+    const filePath: string = path.resolve(uploadsBase, relativePath);
 
     // Prevent path traversal
     if (!filePath.startsWith(uploadsBase)) {

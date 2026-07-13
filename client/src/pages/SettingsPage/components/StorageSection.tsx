@@ -99,6 +99,12 @@ export const StorageSection: FC<StorageSectionProps> = ({ storageStats, storageL
             <Loader2 className="w-6 h-6 text-primary animate-spin" />
           </div>
         )}
+
+        {!storageLoading && !storageStats && (
+          <div className="text-sm text-muted-foreground text-center py-8">
+            暂无可用存储统计数据，请刷新后重试
+          </div>
+        )}
       </CardContent>
     </Card>
   );

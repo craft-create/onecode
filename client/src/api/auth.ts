@@ -3,7 +3,7 @@
  * 功能：封装用户注册、登录、登出、获取当前用户等接口
  * 使用平台提供的axiosForBackend自动处理鉴权和跨域
  */
-import { axiosForBackend } from '@client/compat/client-toolkit/utils/getAxiosForBackend';
+import { axiosForBackend } from '@/compat/client-toolkit/utils/getAxiosForBackend';
 
 /** 用户信息类型 */
 export interface UserInfo {

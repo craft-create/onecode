@@ -21,7 +21,7 @@ export const UserSelectTag = ({
   size = 'medium',
   disabled,
   isLoading,
-  accountType = 'apaas',
+  accountType = 'platform',
 }: {
   userValue: UserSelectItemValue;
   onClose: (value: UserSelectItemValue, e: React.MouseEvent) => void;

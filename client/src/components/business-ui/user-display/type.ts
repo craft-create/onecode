@@ -1,4 +1,4 @@
-import type { AccountType } from '@client/compat/client-toolkit/tools/services';
+import type { AccountType } from '@/compat/client-toolkit/tools/services';
 import type { UserInput } from '@client/src/components/business-ui/types/user';
 
 export interface UserWithAvatarProps {
@@ -21,7 +21,7 @@ export interface UserWithAvatarProps {
   showLabel?: boolean;
   /**
    * 账户类型，用于查询用户信息
-   * @default 'apaas'
+   * @default 'platform'
    */
   accountType?: AccountType;
 }

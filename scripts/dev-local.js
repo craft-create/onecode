@@ -4,9 +4,8 @@
 // Stack: nestjs-react-fullstack
 //
 // 流程:
-//   1. action-plugin init —— 装 user app 在 package.json.actionPlugins 里声明的插件
-//   2. dotenv 加载 .env / .env.local 到 process.env（含 SUDA_WEBUSER 适配）
-//   3. concurrently 并发起 dev:server + dev:client,整体 stdout/stderr tee 到
+//   1. dotenv 加载 .env / .env.local 到 process.env（含 SUDA_WEBUSER 适配）
+//   2. concurrently 并发起 dev:server + dev:client,整体 stdout/stderr tee 到
 //      logs/dev.std.log;server / client 输出靠 concurrently 自带 [server]/[client] 前缀区分
 //
 // 关键设计：本脚本在 spawn 子进程之前先把 .env / .env.local 加载到 process.env，
@@ -21,7 +20,7 @@
 // ============================================================================
 const fs = require('node:fs');
 const path = require('node:path');
-const { execSync, spawn } = require('node:child_process');
+const { spawn } = require('node:child_process');
 
 process.chdir(path.resolve(__dirname, '..'));
 
@@ -34,18 +33,10 @@ function warn(msg) {
 const LOG_DIR = process.env.LOG_DIR || 'logs';
 fs.mkdirSync(LOG_DIR, { recursive: true });
 
-// 1. action-plugin init —— 装 user app 在 package.json.actionPlugins 里声明的插件
-console.log('[dev-local] (1/3) action-plugin init...');
-try {
-  execSync('npx -y @lark-apaas/fullstack-cli@latest action-plugin init', { stdio: 'inherit' });
-} catch {
-  warn('action-plugin init 失败，继续启动');
-}
-
-// 2. 加载 .env / .env.local 到 process.env
+// 1. 加载 .env / .env.local 到 process.env
 // dotenv 默认 override:false，先到先得 → 先 .env.local 让它优先于 .env；
 // shell env 已在 process.env，两次 config 都不会覆盖。
-console.log('[dev-local] (2/3) loading .env / .env.local...');
+console.log('[dev-local] (1/2) loading .env / .env.local...');
 const dotenv = require('dotenv');
 dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env' });
@@ -77,7 +68,7 @@ if (process.env.SUDA_WEBUSER) {
 
 // 3. 并发起前后端 dev server,整体 tee 到 logs/dev.std.log
 const devLogPath = path.join(LOG_DIR, 'dev.std.log');
-console.log('[dev-local] (3/3) 并发起 dev:server + dev:client');
+console.log('[dev-local] (2/2) 并发起 dev:server + dev:client');
 console.log(`[dev-local] 日志: ${devLogPath}`);
 
 const logFd = fs.openSync(devLogPath, 'a');

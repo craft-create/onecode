@@ -18,16 +18,7 @@ const stripRuntimeInjectionPlugin = {
     if (!/[/\\]client[/\\]src[/\\]index\.(tsx?|jsx?)$/.test(id)) {
       return null;
     }
-
-    const marker = "import '@lark-apaas/client-toolkit/runtime';";
-    if (!code.includes(marker)) {
-      return null;
-    }
-
-    return {
-      code: code.split(marker).join(''),
-      map: null,
-    };
+    return null;
   },
 };
 
@@ -63,9 +54,6 @@ export default defineConfig({
             if (id.includes('/node_modules/react-router-dom')) {
               return 'vendor-router';
             }
-            if (id.includes('/node_modules/react')) {
-              return 'vendor-react';
-            }
             if (id.includes('/node_modules/sonner')) {
               return 'vendor-sonner';
             }
@@ -77,10 +65,6 @@ export default defineConfig({
   },
   resolve: {
     alias: [
-      {
-        find: '@client/compat/',
-        replacement: `${path.resolve(__dirname, 'client/compat')}/`,
-      },
       {
         find: '@client/src/',
         replacement: `${path.resolve(__dirname, 'client/src')}/`,

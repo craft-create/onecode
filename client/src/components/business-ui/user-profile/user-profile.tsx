@@ -1,17 +1,12 @@
 'use client';
 
-import { logger } from '@client/compat/client-toolkit/logger';
-
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import SHA1 from 'crypto-js/sha1';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   fetchUserProfile,
   getAssetsUrl,
 } from '@client/src/components/business-ui/api/user-profiles/service';
 import { ErrorImage } from '@client/src/components/business-ui/user-profile/error-image';
-import { getEnv } from '@client/compat/client-toolkit/utils/getEnv';
-import { useExternalScript } from '@client/src/components/business-ui/user-profile/user-external-script';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,52 +14,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { UserInput } from '@client/src/components/business-ui/types/user';
 
-type WebComponentAPI = {
-  config(params: {
-    openId: string;
-    signature: string;
-    appId: string;
-    timestamp: string;
-    nonceStr: string;
-    url: string;
-    jsApiList: string[];
-    locale?: string[];
-    env?: string;
-  }): Promise<void>;
-  render(
-    name: string,
-    props: Record<string, unknown>,
-    container: HTMLElement | null,
-  ): Promise<unknown>;
-  onAuthError(cb: (error: Error) => void): void;
-  onError(cb: (error: Error) => void): void;
-};
-
 declare global {
   // 运行环境标识（可根据需要扩展实际取值范围）
   var ENVIRONMENT: 'staging' | 'local' | 'production' | string;
-  // 飞书 H5 webComponent SDK
-  var webComponent: WebComponentAPI;
 }
 
 interface UserProfileProps {
   readonly value?: string | UserInput;
   readonly userId?: string | undefined;
   readonly user_id?: string | undefined;
-  readonly accountType?: 'apaas' | 'lark' | undefined;
-}
-
-function generateRandomString(length: number): string {
-  const characters =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-
-  for (let i = 0; i < length; i += 1) {
-    const randomIndex = Math.floor(Math.random() * characters.length);
-    result += characters.charAt(randomIndex);
-  }
-
-  return result;
+  readonly accountType?: 'platform' | undefined;
 }
 
 type BaseUserProfileProps = BaseSimpleProfileProps | BaseOfficialProfileProps;
@@ -91,7 +50,7 @@ const AccountStatusMap: Record<AccountStatus, string> = {
 };
 
 interface BaseSimpleProfileProps {
-  readonly useLarkCard: false;
+  readonly useProfileCard: false;
   readonly userProfileInfo: {
     readonly name?: string;
     readonly avatar?: string;
@@ -103,67 +62,37 @@ interface BaseSimpleProfileProps {
 }
 
 interface BaseOfficialProfileProps {
-  readonly useLarkCard: true;
-  readonly larkCardParam: {
+  readonly useProfileCard: true;
+  readonly profileCardParam: {
     readonly needRedirect?: boolean;
     readonly redirectURL?: string;
-    readonly larkAppID: string;
-    readonly jsAPITicket: string;
-    readonly larkOpenID: string;
-    readonly targetLarkOpenID: string;
+    readonly appId?: string;
+    readonly jsAPITicket?: string;
+    readonly openId?: string;
+    readonly targetOpenId?: string;
   };
 }
 
-/**
- * 通用响应结构
- * 用于标准化 API 响应格式
- */
 export interface WithCommonResponse<T> {
   data: T;
 }
 
-async function renderLarkProfile({
-  larkAppID,
-  jsAPITicket,
-  larkOpenID,
-  cardRef,
-  targetLarkOpenID,
-}: BaseOfficialProfileProps['larkCardParam'] & {
-  cardRef: React.RefObject<HTMLDivElement | null>;
-}) {
-  const timestamp = Date.now().toString();
-  const nonceStr = generateRandomString(10);
-  const url = globalThis.location.href.split('#')[0] ?? '';
-  const message = `jsapi_ticket=${jsAPITicket}&noncestr=${nonceStr}&timestamp=${timestamp}&url=${url}`;
-  const signature = SHA1(message).toString();
-
-  await globalThis.webComponent.config({
-    openId: larkOpenID,
-    signature,
-    appId: larkAppID,
-    timestamp,
-    nonceStr,
-    url,
-    jsApiList: ['user_profile'],
-    locale: ['zh_cn'],
-    ...(getEnv() === 'BOE'
-      ? { env: 'feishu_boe' }
-      : {}),
-  });
-
-  const myComponent = await globalThis.webComponent.render(
-    'UserProfile',
-    {
-      openId: targetLarkOpenID,
-    },
-    cardRef.current,
-  );
-
-  return myComponent;
+function normalizeIdCardData(data: BaseUserProfileProps): BaseUserProfileProps {
+  if (data.useProfileCard && !data.profileCardParam) {
+    return {
+      useProfileCard: false,
+      userProfileInfo: {
+        userStatus: ACCOUNT_STATUS.UNSPECIFIED,
+        userType: '_employee',
+        name: '用户信息不可用',
+      },
+    };
+  }
+  return data;
 }
 
 function UserProfile(props: UserProfileProps) {
-  const { value, userId: originUserId, user_id, accountType = 'apaas' } = props;
+  const { value, userId: originUserId, user_id, accountType = 'platform' } = props;
 
   const userId =
     (typeof value === 'string'
@@ -174,37 +103,17 @@ function UserProfile(props: UserProfileProps) {
 
   const cardRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const redirectURLRef = useRef<string>('');
   const [response, setResponse] = useState<BaseUserProfileProps>(
-    {} as BaseUserProfileProps,
+    () => ({
+      useProfileCard: false,
+      userProfileInfo: {
+        userStatus: ACCOUNT_STATUS.UNSPECIFIED,
+        userType: '_employee',
+        name: '用户信息加载中',
+      },
+    }),
   );
   const [error, setError] = useState<boolean>(false);
-
-  const onAuthError = useCallback(() => {
-    globalThis.webComponent.onAuthError(function (error: Error) {
-      const errorMessage = JSON.parse(error.message);
-      // 存在token过期情况，但后端无法识别，需要前端这边主动识别error，并进行鉴权重定向
-      if (
-        errorMessage?.msg?.code === 20442 &&
-        errorMessage?.msg?.msg === 'jsapi-ticket not exist'
-      ) {
-        globalThis.location.replace(redirectURLRef.current);
-      }
-    });
-
-    globalThis.webComponent.onError(function (error: Error) {
-      logger.info('webComponent onError', error);
-    });
-  }, []);
-
-  // 按需注入飞书 H5 JS SDK，仅在组件使用时加载
-  const larkSdkURl =
-    'https://lf3-cdn-tos.bytegoofy.com/obj/goofy/locl/lark/external_js_sdk/h5-js-sdk-1.2.21.js';
-  const scriptOptions = useMemo(
-    () => ({ onloadCallback: onAuthError }),
-    [onAuthError],
-  );
-  const scriptStatus = useExternalScript(larkSdkURl, scriptOptions);
 
   const fetchData = useCallback(async () => {
     if (!userId) return;
@@ -216,24 +125,28 @@ function UserProfile(props: UserProfileProps) {
 
     try {
       const data = await fetchUserProfile(userId, accountType, controller.signal);
-      setResponse(data as BaseUserProfileProps);
-
-      if (data.useLarkCard && data.larkCardParam) {
-        if (data.larkCardParam.needRedirect) {
+      if (data.useProfileCard && data.profileCardParam?.needRedirect) {
+        if (data.profileCardParam.redirectURL) {
+          globalThis.location.replace(data.profileCardParam.redirectURL);
           return;
         }
-        redirectURLRef.current = data.larkCardParam.redirectURL ?? '';
-        await renderLarkProfile({
-          ...data.larkCardParam,
-          cardRef,
+
+        setResponse({
+          useProfileCard: false,
+          userProfileInfo: {
+            userStatus: ACCOUNT_STATUS.UNSPECIFIED,
+            userType: '_employee',
+            name: '用户信息不可用',
+          },
         });
+      } else {
+        setResponse(normalizeIdCardData(data as BaseUserProfileProps));
       }
       setLoading(false);
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {
-        // 直接退出，不处理 AbortError
+        // 忽略请求终止
       } else {
-        // 最终的UI反馈
         setError(true);
         setLoading(false);
       }
@@ -241,10 +154,8 @@ function UserProfile(props: UserProfileProps) {
   }, [userId, accountType]);
 
   useEffect(() => {
-    if (scriptStatus !== 'ready') return;
-
     void fetchData();
-  }, [fetchData, scriptStatus]);
+  }, [fetchData]);
 
   if (error) {
     return (
@@ -253,9 +164,6 @@ function UserProfile(props: UserProfileProps) {
         className="flex min-h-124 w-80 flex-col items-center justify-center gap-4 border-0 p-0"
       >
         <ErrorImage />
-        {/* <Button variant="outline" className="border-red-500 text-black hover:bg-red-50" onClick={fetchData}>
-        加载失败 请重试
-      </Button> */}
         <div>
           <span className="text-sm">加载失败 请</span>
           <Button
@@ -270,6 +178,7 @@ function UserProfile(props: UserProfileProps) {
       </Card>
     );
   }
+
   return (
     <Card
       ref={cardRef}
@@ -285,24 +194,40 @@ function LoadingComponent() {
 }
 
 function BaseUserProfile(props: BaseUserProfileProps) {
-  const { useLarkCard } = props;
-  if (!useLarkCard) {
+  const { useProfileCard } = props;
+  if (!useProfileCard) {
     const { userProfileInfo } = props as BaseSimpleProfileProps;
-
     return <SimpleUserProfile userProfileInfo={userProfileInfo} />;
   }
 
-  const { larkCardParam } = props;
-  if (!larkCardParam) return null;
-  const { needRedirect, redirectURL } = larkCardParam;
-  if (needRedirect) {
-    if (!redirectURL) {
-      return null;
-    }
+  const { profileCardParam } = props as BaseOfficialProfileProps;
+  if (!profileCardParam) {
+    return (
+      <SimpleUserProfile
+        userProfileInfo={{
+          name: '用户信息不可用',
+          userStatus: ACCOUNT_STATUS.UNSPECIFIED,
+          userType: '_employee',
+        }}
+      />
+    );
+  }
 
+  const { needRedirect, redirectURL } = profileCardParam;
+  if (needRedirect && redirectURL) {
     globalThis.location.replace(redirectURL);
     return null;
   }
+
+  return (
+    <SimpleUserProfile
+      userProfileInfo={{
+        name: '用户信息不可用',
+        userStatus: ACCOUNT_STATUS.UNSPECIFIED,
+        userType: '_employee',
+      }}
+    />
+  );
 }
 
 function SimpleUserProfile(props: {

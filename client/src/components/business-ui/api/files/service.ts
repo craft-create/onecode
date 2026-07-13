@@ -1,6 +1,6 @@
 'use client';
-import { getDataloom } from '@client/compat/client-toolkit/dataloom';
-import { getDefaultBucketId } from '@client/compat/client-toolkit/tools/storage';
+import { getDataloom } from '@/compat/client-toolkit/dataloom';
+import { getDefaultBucketId } from '@/compat/client-toolkit/tools/storage';
 
 export interface UploadFileData {
   id: string;

@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, MessageSquare, Heart, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { logger } from '@client/compat/client-toolkit/logger';
-import { useCurrentUserProfile } from '@client/compat/client-toolkit/hooks/useCurrentUserProfile';
+import { logger } from '@/compat/client-toolkit/logger';
+import { useCurrentUserProfile } from '@/compat/client-toolkit/hooks/useCurrentUserProfile';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import { useAuth } from '@client/src/hooks/useAuth';
 import {

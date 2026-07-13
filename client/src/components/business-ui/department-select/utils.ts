@@ -1,4 +1,4 @@
-import type { DepartmentInfo } from '@client/compat/client-toolkit/tools/services';
+import type { DepartmentInfo } from '@/compat/client-toolkit/tools/services';
 
 import type { Department } from './types';
 

@@ -26,7 +26,7 @@ export default function ChatPage() {
   const fetchConversations = async () => {
     try {
       const res = await api.get('/chat/conversations');
-      setConversations(res.data || []);
+      setConversations(Array.isArray(res as unknown[]) ? (res as Conversation[]) : []);
     } catch (error) {
       console.error('Failed to load conversations');
     } finally {
@@ -154,7 +154,7 @@ function ChatDetail({ conversationId }: { conversationId: string }) {
   const fetchMessages = async () => {
     try {
       const res = await api.get(`/chat/conversations/${conversationId}/messages`);
-      setMessages(res.data.items || []);
+      setMessages((res as { items?: any[] }).items || []);
     } catch (error) {
       console.error('Failed to load messages');
     } finally {

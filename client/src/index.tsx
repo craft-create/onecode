@@ -3,8 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { ErrorBoundary } from 'react-error-boundary';
 
-import { AppContainer } from '@client/compat/client-toolkit/components/AppContainer';
-import { ErrorRender } from '@client/compat/client-toolkit/components/ErrorRender';
+import { AppContainer } from '@/compat/client-toolkit/components/AppContainer';
+import { ErrorRender } from '@/compat/client-toolkit/components/ErrorRender';
 
 import RoutesComponent from './app';
 import { AuthProvider } from '@client/src/hooks/useAuth';

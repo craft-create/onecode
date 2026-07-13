@@ -6,7 +6,7 @@
  */
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { logger } from '@client/compat/client-toolkit/logger';
+import { logger } from '@/compat/client-toolkit/logger';
 import { Film, Loader2 } from 'lucide-react';
 import { Button } from '@client/src/components/ui/button';
 import { Input } from '@client/src/components/ui/input';
@@ -75,8 +75,8 @@ const LoginPage: React.FC = () => {
   return (
     <PageFrame
       className="min-h-screen bg-background flex items-center justify-center"
-      containerClassName="w-full px-4"
-      contentClassName=""
+      containerClassName="w-full flex justify-center px-4"
+      contentClassName="w-full max-w-md"
     >
       {/* 背景装饰光斑 */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -84,7 +84,7 @@ const LoginPage: React.FC = () => {
         <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
       </div>
 
-      <Card className="relative w-full max-w-md shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5)]">
+      <Card className="relative w-full shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5)]">
         <CardHeader className="text-center space-y-3">
           {/* Logo */}
           <div className="mx-auto w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">

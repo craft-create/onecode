@@ -6,7 +6,7 @@ import type { I18nText } from '@client/src/components/business-ui/entity-combobo
 
 export type DepartmentInfo = {
   departmentID: string;
-  larkDepartmentID: string;
+  externalDepartmentId: string;
   name: I18nText;
 };
 

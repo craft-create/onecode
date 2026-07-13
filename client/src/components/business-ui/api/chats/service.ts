@@ -4,7 +4,7 @@ import {
   type ChatInfo,
   type SearchChatsParams,
   type SearchChatsResponse,
-} from '@client/compat/client-toolkit/tools/services';
+} from '@/compat/client-toolkit/tools/services';
 
 const chatService = new ChatService();
 

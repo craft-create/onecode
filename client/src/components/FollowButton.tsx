@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { UserPlus, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
-import { logger } from '@client/compat/client-toolkit/logger';
+import { logger } from '@/compat/client-toolkit/logger';
 import { toggleFollow, getFollowStatus } from '@client/src/api/follow';
 import { useAuth } from '@client/src/hooks/useAuth';
 

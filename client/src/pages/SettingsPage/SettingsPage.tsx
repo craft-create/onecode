@@ -46,11 +46,14 @@ const SettingsPage: React.FC = () => {
   const [avatarUploading, setAvatarUploading] = useState(false);
 
   const loadProfile = useCallback(async () => {
-    if (!user?.userId) return;
+    if (!user) return;
 
     setProfileLoading(true);
     try {
       const data = await settingApi.getProfile();
+      if (!data) {
+        throw new Error('未获取到用户资料');
+      }
       setProfileData({
         nickname: data.nickname || '',
         email: data.email || '',
@@ -69,11 +72,14 @@ const SettingsPage: React.FC = () => {
   }, [user]);
 
   const loadStorageStats = useCallback(async () => {
-    if (!user?.userId) return;
+    if (!user) return;
 
     setStorageLoading(true);
     try {
       const data = await settingApi.getStorageStats();
+      if (!data) {
+        throw new Error('未获取到存储统计数据');
+      }
       setStorageStats(data);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

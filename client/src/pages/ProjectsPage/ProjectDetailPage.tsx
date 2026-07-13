@@ -24,8 +24,9 @@ export default function ProjectDetailPage() {
   const fetchProjectDetail = async () => {
     try {
       const res = await api.get(`/projects/${projectId}`);
-      setProject(res.data.project);
-      setTasks(res.data.tasks || []);
+      const projectRes = res as { project?: Record<string, unknown> } & { tasks?: unknown[] };
+      setProject((projectRes as { project: any }).project ?? (projectRes as any));
+      setTasks(Array.isArray(projectRes.tasks) ? projectRes.tasks : []);
     } catch (error) {
       console.error('Failed to load project');
     } finally {

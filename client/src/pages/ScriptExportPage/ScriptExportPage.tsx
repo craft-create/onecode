@@ -14,11 +14,11 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { logger } from '@client/compat/client-toolkit/logger';
+import { logger } from '@/compat/client-toolkit/logger';
 import { useAuth } from '@client/src/hooks/useAuth';
 import { exportScript, getLatestContent } from '@/api/scripts';
 import type { ExportScriptRequest, ExportScriptResponse, ScriptContentLatest } from '@shared/script.interface';
-import { UniversalLink } from '@client/compat/client-toolkit/components/UniversalLink';
+import { UniversalLink } from '@/compat/client-toolkit/components/UniversalLink';
 
 interface FormatOption {
   key: ExportScriptRequest['format'];

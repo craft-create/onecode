@@ -23,7 +23,7 @@ export default function ProjectsPage() {
   const fetchProjects = async () => {
     try {
       const res = await api.get('/projects');
-      setProjects(res.data || []);
+      setProjects(Array.isArray(res as unknown[]) ? (res as Project[]) : []);
     } catch (error) {
       console.error('Failed to load projects');
     } finally {

@@ -4,9 +4,9 @@ import type {
 } from '@client/src/components/business-ui/entity-combobox/shared-types';
 import type { User, I18nText, UserType, Department } from '@client/src/components/business-ui/types/user';
 
-// 统一从 @client/compat/client-toolkit 导入 AccountType
-export type { AccountType } from '@client/compat/client-toolkit/tools/services';
-import type { AccountType } from '@client/compat/client-toolkit/tools/services';
+// 统一从 @/compat/client-toolkit 导入 AccountType
+export type { AccountType } from '@/compat/client-toolkit/tools/services';
+import type { AccountType } from '@/compat/client-toolkit/tools/services';
 
 // 重新导出统一的类型
 export type { User, I18nText, UserType, Department };
@@ -67,7 +67,7 @@ type UserSelectBaseProps<
   multiple?: M;
   /**
    * 账户类型，决定 value 中 id 字段的来源
-   * @default 'apaas'
+   * @default 'platform'
    */
   accountType?: AccountType;
   /**

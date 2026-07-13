@@ -24,7 +24,7 @@ export default function TemplatesPage() {
     setLoading(true);
     try {
       const res = await api.get('/templates', { params: { category } });
-      setTemplates(res.data || []);
+      setTemplates(Array.isArray(res as unknown[]) ? (res as ScriptTemplate[]) : []);
     } catch (error) {
       console.error('Failed to load templates');
     } finally {

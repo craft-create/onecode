@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { axiosForBackend } from '@client/compat/client-toolkit/utils/getAxiosForBackend';
 
 // 获取配置好的 axios 实例
 export const api = axios.create({
@@ -37,25 +36,25 @@ api.interceptors.response.use(
 export const notificationApi = {
   // 获取通知列表
   list: (params?: { type?: string; isRead?: number; page?: number; limit?: number }) =>
-    axiosForBackend({ url: '/notifications', method: 'GET', params }),
+    api.get('/notifications', { params }),
 
   // 获取未读数量
-  getUnreadCount: () => axiosForBackend({ url: '/notifications/unread/count', method: 'GET' }),
+  getUnreadCount: () => api.get('/notifications/unread/count'),
 
   // 获取统计
-  getStatistics: () => axiosForBackend({ url: '/notifications/statistics', method: 'GET' }),
+  getStatistics: () => api.get('/notifications/statistics'),
 
   // 标为已读
-  markAsRead: (id: string) => axiosForBackend({ url: `/notifications/${id}/read`, method: 'PATCH' }),
+  markAsRead: (id: string) => api.patch(`/notifications/${id}/read`),
 
   // 全部标为已读
-  markAllAsRead: (type?: string) => axiosForBackend({ url: '/notifications/read-all', method: 'POST', params: { type } }),
+  markAllAsRead: (type?: string) => api.post('/notifications/read-all', {}, { params: { type } }),
 
   // 删除通知
-  delete: (id: string) => axiosForBackend({ url: `/notifications/${id}`, method: 'DELETE' }),
+  delete: (id: string) => api.delete(`/notifications/${id}`),
 
   // 批量删除
-  batchDelete: (type?: string) => axiosForBackend({ url: '/notifications', method: 'DELETE', params: { type } }),
+  batchDelete: (type?: string) => api.delete('/notifications', { params: { type } }),
 };
 
 // ==================== 聊天系统 ====================
@@ -194,6 +193,16 @@ export interface StorageStats {
   formattedRemaining: string;
 }
 
+const formatBytes = (bytes: number): string => {
+  const normalizedBytes = Math.max(0, bytes);
+  if (normalizedBytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.max(0, Math.floor(Math.log(normalizedBytes) / Math.log(k)));
+  const value = normalizedBytes / Math.pow(k, i);
+  return `${parseFloat(value.toFixed(2))} ${sizes[i]}`;
+};
+
 export interface UserPasswordData {
   currentPassword: string;
   newPassword: string;
@@ -202,8 +211,7 @@ export interface UserPasswordData {
 export const settingApi = {
   // 获取用户资料
   getProfile: async (): Promise<UserProfileData> => {
-    const response = await api.get<UserProfileData>('/settings/profile');
-    return response.data as UserProfileData;
+    return (await api.get<UserProfileData>('/settings/profile')) as UserProfileData;
   },
 
   // 更新用户资料
@@ -216,8 +224,39 @@ export const settingApi = {
 
   // 获取存储统计
   getStorageStats: async (): Promise<StorageStats> => {
-    const response = await api.get<StorageStats>('/settings/storage/stats');
-    return response.data;
+    const response = (await api.get<StorageStats | { data: StorageStats } | { used: number }>(
+      '/settings/storage/stats'
+    )) as unknown as StorageStats | { data: StorageStats } | Record<string, unknown>;
+    const raw = (response as { data?: StorageStats }).data ?? response;
+    const toNumber = (v: unknown): number => {
+      if (typeof v === 'number' && Number.isFinite(v)) return v;
+      if (typeof v === 'string') {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 0;
+      }
+      return 0;
+    };
+    const used = toNumber((raw as Partial<StorageStats>).used);
+    const quota = toNumber((raw as Partial<StorageStats>).quota);
+    const remaining = Number.isFinite(toNumber((raw as Partial<StorageStats>).remaining))
+      ? toNumber((raw as Partial<StorageStats>).remaining)
+      : quota - used;
+    const normalizedRemaining = Math.max(0, remaining);
+    const usagePercent = Number.isFinite(toNumber((raw as Partial<StorageStats>).usagePercent))
+      ? toNumber((raw as Partial<StorageStats>).usagePercent)
+      : quota > 0
+        ? (used / quota) * 100
+        : 0;
+
+    return {
+      used,
+      quota,
+      remaining: normalizedRemaining,
+      usagePercent: Math.max(0, Math.min(100, usagePercent)),
+      formattedUsed: (raw as Partial<StorageStats>).formattedUsed || formatBytes(used),
+      formattedQuota: (raw as Partial<StorageStats>).formattedQuota || formatBytes(quota),
+      formattedRemaining: (raw as Partial<StorageStats>).formattedRemaining || formatBytes(normalizedRemaining),
+    };
   },
 
   // 获取设置

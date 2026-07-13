@@ -6,7 +6,7 @@ import { listUsersByIds, type AccountType } from './service';
 
 export const userQueries = {
   all: () => ['users'] as const,
-  byIds: (userIds: string[], accountType: AccountType = 'apaas') =>
+  byIds: (userIds: string[], accountType: AccountType = 'platform') =>
     queryOptions({
       queryKey: [...userQueries.all(), 'byIds', accountType, userIds.join(',')],
       queryFn: () => listUsersByIds(userIds),
@@ -21,7 +21,7 @@ export const userQueries = {
  */
 export function useUsersByIds(
   userIds: string[],
-  accountType: AccountType = 'apaas',
+  accountType: AccountType = 'platform',
 ) {
   return useQuery(userQueries.byIds(userIds, accountType));
 }

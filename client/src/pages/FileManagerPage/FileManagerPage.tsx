@@ -92,10 +92,10 @@ const FileManagerPage: React.FC = () => {
         fileApi.getFolders(currentFolderId || undefined),
         fileApi.getFiles({ folderId: currentFolderId || undefined, pageSize: 100 }),
       ]);
-      const foldersData = Array.isArray((foldersRes as { data?: FolderItem[] }).data)
-        ? (foldersRes as { data: FolderItem[] }).data
+      const foldersData = Array.isArray((foldersRes as FolderItem[]))
+        ? (foldersRes as FolderItem[])
         : [];
-      const filesData = (filesRes as { data?: { items?: FileItem[] } }).data || {
+      const filesData = (filesRes as { items?: FileItem[] }) || {
         items: [],
       };
 
@@ -186,8 +186,8 @@ const FileManagerPage: React.FC = () => {
         fileId: shareItem.id,
         expiresIn: shareExpiresIn,
         password: sharePassword || undefined,
-      }) as { data: { shareToken: string; shareUrl: string; expiresAt: Date | string | null } };
-      const res = (response as { data: { shareToken: string; shareUrl: string; expiresAt: Date | string | null } }).data;
+      }) as { shareToken: string; shareUrl: string; expiresAt: Date | string | null };
+      const res = response as { shareToken: string; shareUrl: string; expiresAt: Date | string | null };
       toast.success('分享链接已生成', {
         description: res.shareUrl,
         action: {

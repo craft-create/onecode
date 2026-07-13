@@ -21,7 +21,7 @@ export default function AnalyticsPage() {
       const [dashboardRes] = await Promise.all([
         api.get('/analytics/dashboard'),
       ]);
-      setDashboard(dashboardRes.data);
+      setDashboard(dashboardRes as unknown as Record<string, unknown>);
     } catch (error) {
       console.error('Failed to load analytics');
     } finally {

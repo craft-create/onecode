@@ -23,7 +23,7 @@ import {
 } from '@client/src/components/business-ui/user-select/utils';
 
 function createUsersFetcher(options: { accountType?: AccountType; pageSize?: number } = {}) {
-  const { accountType = 'apaas', pageSize = 100 } = options;
+  const { accountType = 'platform', pageSize = 100 } = options;
 
   return async (search: string) => {
     const response = await searchUsers({ query: search, pageSize });
@@ -76,7 +76,7 @@ const UserSelectTagWrapper = ({
   className?: string;
   disabled?: boolean;
   isLoading?: boolean;
-  accountType?: 'apaas' | 'lark';
+  accountType?: AccountType;
 }) => {
   const { size } = useEntityComboboxContext();
   return (
@@ -100,7 +100,7 @@ export const UserSelect: React.FC<UserSelectProps> = (props) => {
     multiple = false,
     value,
     valueType = 'string',
-    accountType = 'apaas',
+    accountType = 'platform',
     defaultValue,
     onChange,
     defaultOpen,
@@ -230,8 +230,8 @@ export const UserSelect: React.FC<UserSelectProps> = (props) => {
         return;
       }
 
-      const larkUserID = user.raw?.larkUserId;
-      if (!larkUserID) return;
+      const externalUserId = user.raw?.externalUserId;
+      if (!externalUserId) return;
       if (convertingSet.has(user.id)) return;
 
       setConvertingSet((prev) => new Set(prev).add(user.id));
@@ -239,7 +239,7 @@ export const UserSelect: React.FC<UserSelectProps> = (props) => {
 
       void (async () => {
         try {
-          const result = await convertExternalContact(larkUserID);
+          const result = await convertExternalContact(externalUserId);
           const { userInfo } = result.data;
           const forceUserID = String(userInfo.userID);
           const convertedUser: UserSelectItemValue = {

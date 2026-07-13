@@ -20,6 +20,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { AuthService } from './auth.service';
 import { getLocalUserId } from '@server/common/utils/auth.helper';
 import { getAuthTokenFromRequest } from '@server/common/utils/auth.helper';
+import { resolveUploadBaseDir } from '@server/common/utils/upload-path';
 
 interface AuthDto {
   nickname: string;
@@ -28,7 +29,7 @@ interface AuthDto {
 
 const AVATAR_ALLOWED_MIMES: string[] = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const AVATAR_MAX_SIZE: number = 5 * 1024 * 1024; // 5MB
-const AVATAR_DIR: string = path.resolve(process.cwd(), 'output/uploads/avatars');
+const AVATAR_DIR: string = path.join(resolveUploadBaseDir(), 'avatars');
 
 @Controller('api/auth')
 export class AuthController {

@@ -15,14 +15,14 @@ export type UserType = '_employee' | '_externalUser' | '_anonymousUser';
 
 /**
  * 统一的标准用户类型（单一事实来源）
- * 使用下划线命名（与后端统一），larkUserId 除外
+ * 使用下划线命名（与后端统一）
  */
 export interface User {
   /** 用户 ID（未注册外部联系人可能没有） */
   user_id?: string;
 
-  /** 飞书用户 ID（保持驼峰） */
-  larkUserId?: string;
+  /** 外部联系人 ID（平台统一标识） */
+  externalUserId?: string;
 
   /**
    * 用户名称
@@ -63,7 +63,7 @@ export type UserInput =
   | {
       user_id?: string;
       userId?: string;         // 兼容驼峰
-      larkUserId?: string;
+      externalUserId?: string;
       name?: I18nText | string;
       avatar?: string;
       email?: string;

@@ -32,7 +32,6 @@ import { AiModule } from './modules/ai/ai.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { ShareModule } from './modules/share/share.module';
 import { FileManagerModule } from './modules/file-manager/file-manager.module';
-import { RuntimeModule } from './modules/runtime/runtime.module';
 
 const isDataPaasDisabled =
   process.env.FORCE_FRAMEWORK_DISABLE_DATAPASS === 'true' ||
@@ -86,7 +85,6 @@ const isDataPaasDisabled =
     AiModule,
     AuditModule,
     ShareModule,
-    RuntimeModule,
     // ====== @route-section: business-modules END ======
 
     // ⚠️ @route-order: last

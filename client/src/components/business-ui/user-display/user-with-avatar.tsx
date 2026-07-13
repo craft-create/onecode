@@ -99,7 +99,7 @@ export function UserWithAvatar({
   mode = 'tag',
   className,
   showLabel = true,
-  accountType = 'apaas',
+  accountType = 'platform',
 }: UserWithAvatarProps) {
   // 统一转换为标准 User 类型
   const user: User = normalizeUser(data);

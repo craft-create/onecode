@@ -1,6 +1,6 @@
 'use client';
 
-import { logger } from '@client/compat/client-toolkit/logger';
+import { logger } from '@/compat/client-toolkit/logger';
 import { useCallback, useEffect, useState } from 'react';
 
 export type UseFetchDataOptions<T> = {

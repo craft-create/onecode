@@ -1,4 +1,4 @@
-import type { UserInfo, SearchAvatar } from '@client/compat/client-toolkit/tools/services';
+import type { UserInfo, SearchAvatar } from '@/compat/client-toolkit/tools/services';
 
 import type { AccountType } from '@client/src/components/business-ui/api/users/service';
 import type {
@@ -18,14 +18,9 @@ export function getUserDisplayName(name: UserInfo['name']): string {
 }
 
 export function getUserId(
-  user: Pick<UserInfo, 'userID' | 'larkUserID'>,
-  accountType: AccountType,
+  user: Pick<UserInfo, 'userID' | 'externalUserId'>,
 ): string {
-  if (accountType === 'lark') {
-    return user.larkUserID || `_unknown_${Math.random().toString(36).slice(2)}`;
-  }
-  // 未注册外部联系人没有 userID，暂用 larkUserID 作为临时标识
-  return user.userID || user.larkUserID || `_unknown_${Math.random().toString(36).slice(2)}`;
+  return user.userID || user.externalUserId || `_unknown_${Math.random().toString(36).slice(2)}`;
 }
 
 /**
@@ -33,7 +28,7 @@ export function getUserId(
  */
 export function isUnregisteredExternalContact(user: UserSelectItemValue): boolean {
   const raw = user.raw;
-  return !!raw && !raw.user_id && !!raw.larkUserId;
+  return !!raw && !raw.user_id && !!raw.externalUserId;
 }
 
 export function createUnknownUser(id: string): UserSelectItemValue {
@@ -47,7 +42,7 @@ export function createUnknownUser(id: string): UserSelectItemValue {
 
 export function userInfoToUser(
   userInfo: UserInfoWithDisplayAvatar,
-  accountType: AccountType,
+  _accountType: AccountType,
 ): UserSelectItemValue {
   // 构建统一的 User 类型作为 raw 数据
   const avatar = typeof userInfo.avatar === 'string'
@@ -56,7 +51,7 @@ export function userInfoToUser(
 
   const rawUser: User = {
     user_id: userInfo.userID || undefined,
-    larkUserId: userInfo.larkUserID || undefined,
+    externalUserId: userInfo.externalUserId || undefined,
     name: userInfo.name,
     avatar,
     user_type: userInfo.userType,
@@ -64,7 +59,7 @@ export function userInfoToUser(
   };
 
   return {
-    id: getUserId(userInfo, accountType),
+    id: getUserId(userInfo),
     name: getI18nText(userInfo.name),
     avatar,
     raw: rawUser,
@@ -73,7 +68,7 @@ export function userInfoToUser(
 
 export function searchUserInfoToUser(
   userInfo: UserInfoWithDisplayAvatar & { tenantName?: string },
-  accountType: AccountType,
+  _accountType: AccountType,
 ): UserSelectItemValue {
   const avatar =
     typeof userInfo.avatar === 'string'
@@ -83,7 +78,7 @@ export function searchUserInfoToUser(
   // 构建统一的 User 类型作为 raw 数据
   const rawUser: User = {
     user_id: userInfo.userID || undefined,
-    larkUserId: userInfo.larkUserID || undefined,
+    externalUserId: userInfo.externalUserId || undefined,
     name: userInfo.name,
     avatar,
     user_type: userInfo.userType,
@@ -92,7 +87,7 @@ export function searchUserInfoToUser(
   };
 
   return {
-    id: getUserId(userInfo, accountType),
+    id: getUserId(userInfo),
     name: getI18nText(userInfo.name),
     avatar,
     raw: rawUser,
@@ -132,8 +127,6 @@ export function getAppId(path: string): string | null | undefined {
   // 检查路径是否以固定前缀开头
   if (path.includes('/ai/feida/runtime/')) {
     prefix = '/ai/feida/runtime/';
-  } else if (path.includes('/spark/r/')) {
-    prefix = '/spark/r/';
   } else {
     prefix = '/ai/miaoda/';
   }

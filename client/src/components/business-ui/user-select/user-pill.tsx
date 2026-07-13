@@ -24,7 +24,7 @@ export type UserPillProps = {
 
   /**
    * 账户类型
-   * @default "apaas"
+   * @default "platform"
    */
   accountType?: AccountType;
 
@@ -75,7 +75,7 @@ export type UserPillProps = {
 
 export const UserPill: React.FC<UserPillProps> = ({
   userId,
-  accountType = 'apaas',
+  accountType = 'platform',
   label,
   avatarUrl,
   size = 'medium',

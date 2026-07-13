@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { axiosForBackend } from '@client/compat/client-toolkit/utils/getAxiosForBackend';
+import { axiosForBackend } from '@/compat/client-toolkit/utils/getAxiosForBackend';
 
 // 获取配置好的 axios 实例
 export const api = axios.create({

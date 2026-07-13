@@ -21,8 +21,8 @@ export default function TeamDetailPage() {
   const fetchTeamDetail = async () => {
     try {
       const res = await api.get(`/teams/${teamId}`);
-      setTeam(res.data.team);
-      setMembers(res.data.members || []);
+      setTeam((res as { team?: unknown }).team || null);
+      setMembers((res as { members?: unknown[] }).members || []);
     } catch (error) {
       console.error('Failed to load team');
     } finally {

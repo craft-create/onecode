@@ -23,7 +23,7 @@ export default function RequirementsPage() {
     setLoading(true);
     try {
       const res = await api.get('/requirements', { params: { status } });
-      setRequirements(res.data || []);
+      setRequirements(Array.isArray(res as unknown[]) ? (res as never[]) : []);
     } catch (error) {
       console.error('Failed to load requirements');
     } finally {

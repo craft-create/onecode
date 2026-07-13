@@ -10,7 +10,7 @@ import {
   Bookmark,
   Heart,
 } from 'lucide-react';
-import { logger } from '@client/compat/client-toolkit/logger';
+import { logger } from '@/compat/client-toolkit/logger';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import FollowButton from '@/components/FollowButton';
 import {

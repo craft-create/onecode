@@ -1,4 +1,4 @@
-import { axiosForBackend } from '@client/compat/client-toolkit/utils/getAxiosForBackend';
+import { axiosForBackend } from '@/compat/client-toolkit/utils/getAxiosForBackend';
 import type {
   UserMaterialListResponse,
   FavoriteMaterialListResponse,

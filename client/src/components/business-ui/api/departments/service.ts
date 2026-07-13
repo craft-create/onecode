@@ -2,7 +2,7 @@ import {
   DepartmentService,
   type SearchDepartmentsParams,
   type SearchDepartmentsResponse,
-} from '@client/compat/client-toolkit/tools/services';
+} from '@/compat/client-toolkit/tools/services';
 
 const departmentService = new DepartmentService();
 

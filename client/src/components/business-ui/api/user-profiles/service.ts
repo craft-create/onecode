@@ -3,7 +3,7 @@ import {
   getAssetsUrl,
   type AccountType,
   type UserProfileData,
-} from '@client/compat/client-toolkit/tools/services';
+} from '@/compat/client-toolkit/tools/services';
 
 const userProfileService = new UserProfileService();
 
@@ -12,7 +12,7 @@ const userProfileService = new UserProfileService();
  */
 export async function fetchUserProfile(
   userId: string,
-  accountType: AccountType = 'apaas',
+  accountType: AccountType = 'platform',
   signal?: AbortSignal,
 ): Promise<UserProfileData> {
   return userProfileService.getUserProfile(userId, accountType, signal);

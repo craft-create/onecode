@@ -5,13 +5,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
 import { v4 as uuidv4 } from 'uuid';
+import { resolveUploadBaseDir } from '@server/common/utils/upload-path';
 
 const execFileAsync = promisify(execFile);
 
 @Injectable()
 export class UploadService {
   private readonly logger = new Logger(UploadService.name);
-  private readonly uploadBaseDir: string = path.resolve(process.cwd(), 'output/uploads');
+  private readonly uploadBaseDir: string = resolveUploadBaseDir();
   private ffmpegPath: string = process.env.FFMPEG_PATH || 'ffmpeg';
 
   constructor(@Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase) {

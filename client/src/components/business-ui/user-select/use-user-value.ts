@@ -20,9 +20,9 @@ import type { User } from '@client/src/components/business-ui/types/user';
 /**
  * 将 User 转换为 UserSelectItemValue
  */
-function userToItemValue(user: User, accountType: AccountType): UserSelectItemValue {
+function userToItemValue(user: User, _accountType: AccountType): UserSelectItemValue {
   return {
-    id: accountType === 'lark' ? (user.larkUserId || user.user_id || '') : (user.user_id || user.larkUserId || ''),
+    id: user.user_id || user.externalUserId || '',
     name: getI18nText(user.name) || '未知用户',
     avatar: user.avatar,
     raw: user,
@@ -66,7 +66,7 @@ export type UseUserValueResult = {
 export function useUserValue(
   value: UserSelectValue,
   multiple: boolean = false,
-  accountType: AccountType = 'apaas',
+  accountType: AccountType = 'platform',
   valueType: ValueType = 'string',
 ): UseUserValueResult {
   const isIdMode = valueType === 'string';
