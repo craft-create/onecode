@@ -10,6 +10,11 @@
         "include": "capabilities/**/*.json",
         "outDir": "dist/server",
         "watchAssets": true
+      },
+      {
+        "include": "resources/fonts/*.otf",
+        "outDir": "dist/server",
+        "watchAssets": true
       }
     ],
     "plugins": []
