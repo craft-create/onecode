@@ -43,6 +43,7 @@ cd "$APP_DIR"
 
 if [ -d ".git" ]; then
   echo "[deploy] repo exists, pulling $BRANCH"
+  git clean -fdx
   git fetch --depth=1 origin "$BRANCH"
   git checkout -B "$BRANCH" "origin/$BRANCH"
   git reset --hard "origin/$BRANCH"
