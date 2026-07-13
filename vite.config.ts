@@ -35,6 +35,45 @@ export default defineConfig({
   root: path.resolve(__dirname, 'client'),
   build: {
     outDir: path.resolve(__dirname, 'dist/client'),
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('/node_modules/framer-motion')) {
+              return 'vendor-motion';
+            }
+            if (
+              id.includes('/node_modules/@tiptap') ||
+              id.includes('/node_modules/tiptap')
+            ) {
+              return 'vendor-editor';
+            }
+            if (
+              id.includes('/node_modules/@tanstack/react-query') ||
+              id.includes('/node_modules/react-query')
+            ) {
+              return 'vendor-query';
+            }
+            if (id.includes('/node_modules/recharts')) {
+              return 'vendor-charts';
+            }
+            if (id.includes('/node_modules/@radix-ui')) {
+              return 'vendor-radix';
+            }
+            if (id.includes('/node_modules/react-router-dom')) {
+              return 'vendor-router';
+            }
+            if (id.includes('/node_modules/react')) {
+              return 'vendor-react';
+            }
+            if (id.includes('/node_modules/sonner')) {
+              return 'vendor-sonner';
+            }
+            return 'vendor';
+          }
+        },
+      },
+    },
   },
   resolve: {
     alias: [
