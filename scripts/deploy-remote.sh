@@ -70,5 +70,14 @@ fi
 npm ci --no-audit --no-fund
 npm run build:prod
 
-systemctl restart onecode
-systemctl status onecode --no-pager -l | sed -n '1,30p'
+if command -v sudo >/dev/null 2>&1; then
+  if [ -z "${SUDO_PASSWORD:-}" ]; then
+    echo "SUDO_PASSWORD is required to restart service"
+    exit 1
+  fi
+  echo "$SUDO_PASSWORD" | sudo -S -p '' systemctl restart onecode
+  echo "$SUDO_PASSWORD" | sudo -S -p '' systemctl status onecode --no-pager -l | sed -n '1,30p'
+else
+  systemctl restart onecode
+  systemctl status onecode --no-pager -l | sed -n '1,30p'
+fi

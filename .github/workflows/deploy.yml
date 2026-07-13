@@ -17,8 +17,10 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           password: ${{ secrets.DEPLOY_PASSWORD }}
           port: 22
+          envs: SUDO_PASSWORD=${{ secrets.DEPLOY_PASSWORD }}
           command_timeout: 20m
           script: |
             set -euo pipefail
             export DEPLOY_BRANCH=${{ github.ref_name }}
+            export SUDO_PASSWORD
             /opt/onecode/scripts/deploy-remote.sh
