@@ -292,6 +292,16 @@ const FileManagerPage: React.FC = () => {
     return <File className="w-8 h-8 text-gray-500" />;
   };
 
+  const getFilePreviewUrl = (file: FileItem): string | null => {
+    if (file.mimeType?.startsWith('image/')) {
+      return file.thumbnailUrl || file.url;
+    }
+    if (file.type === 'video' && file.thumbnailUrl) {
+      return file.thumbnailUrl;
+    }
+    return null;
+  };
+
   const formatSize = (bytes?: number) => {
     if (!bytes) return '-';
     const k = 1024;
@@ -500,9 +510,9 @@ const FileManagerPage: React.FC = () => {
                                 className="aspect-square bg-accent/30 flex items-center justify-center relative"
                                 onClick={() => window.open(file.url, '_blank')}
                               >
-                                {file.thumbnailUrl ? (
+                                {getFilePreviewUrl(file) ? (
                                   <img
-                                    src={file.thumbnailUrl}
+                                    src={getFilePreviewUrl(file) as string}
                                     alt={file.name}
                                     className="w-full h-full object-cover"
                                   />
