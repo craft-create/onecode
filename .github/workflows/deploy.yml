@@ -3,6 +3,7 @@ name: Deploy onecode
 on:
   push:
     branches:
+      - main
       - master
 
 jobs:
@@ -19,4 +20,5 @@ jobs:
           command_timeout: 20m
           script: |
             set -euo pipefail
+            export DEPLOY_BRANCH=${{ github.ref_name }}
             /opt/onecode/scripts/deploy-remote.sh

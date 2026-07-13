@@ -2,8 +2,17 @@
 set -euo pipefail
 
 APP_DIR="/opt/onecode"
-BRANCH="master"
 REPO_URL="https://github.com/craft-create/onecode.git"
+BRANCH="${DEPLOY_BRANCH:-main}"
+if ! git ls-remote --exit-code --heads "$REPO_URL" "$BRANCH" >/dev/null 2>&1; then
+  if [ "$BRANCH" != "master" ] && git ls-remote --exit-code --heads "$REPO_URL" "master" >/dev/null 2>&1; then
+    BRANCH="master"
+  elif [ "$BRANCH" != "main" ] && git ls-remote --exit-code --heads "$REPO_URL" "main" >/dev/null 2>&1; then
+    BRANCH="main"
+  else
+    BRANCH="main"
+  fi
+fi
 
 run_with_env() {
   if [ -n "${NPM_HTTP_PROXY:-}" ]; then
