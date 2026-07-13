@@ -6,6 +6,7 @@
  */
 import { Injectable, Logger, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
+import JSZip from 'jszip';
 // 导入Drizzle ORM操作符
 import { and, desc, eq, ilike, or, count, sql } from 'drizzle-orm';
 // 导入数据库表定义
@@ -921,7 +922,7 @@ export class ScriptService {
   async downloadScript(
     projectId: string,
     format: string,
-  ): Promise<{ content: string; contentType: string; filename: string }> {
+  ): Promise<{ content: string | Buffer; contentType: string; filename: string }> {
     const [project] = await this.db
       .select({ title: scriptProject.title })
       .from(scriptProject)
@@ -949,7 +950,6 @@ export class ScriptService {
       return { content: text, contentType: 'text/plain; charset=utf-8', filename };
     }
 
-    // 其他格式目前为占位实现，后续可接入专业的格式转换库
     const extMap: Record<string, string> = {
       pdf: '.pdf',
       word: '.docx',
@@ -964,11 +964,265 @@ export class ScriptService {
       fountain: 'text/plain; charset=utf-8',
     };
 
+    if (format === 'pdf') {
+      const pdfBuffer = this.buildSimplePdf(text, project.title);
+      return {
+        content: pdfBuffer,
+        contentType: contentTypeMap.pdf,
+        filename,
+      };
+    }
+
+    if (format === 'word') {
+      const docxBuffer = await this.buildSimpleDocx(text, project.title);
+      return {
+        content: docxBuffer,
+        contentType: contentTypeMap.word,
+        filename,
+      };
+    }
+
+    if (format === 'fountain') {
+      return {
+        content: this.buildFountainText(text, project.title),
+        contentType: contentTypeMap.fountain,
+        filename,
+      };
+    }
+
     return {
       content: text,
       contentType: contentTypeMap[format] || 'application/octet-stream',
       filename,
     };
+  }
+
+  private sanitizePdfText(text: string): string {
+    return text
+      .replace(/\\/g, '\\\\')
+      .replace(/\(/g, '\\(')
+      .replace(/\)/g, '\\)')
+      .replace(/[\u0080-\uFFFF]/g, '?');
+  }
+
+  /**
+   * 生成简化 PDF 文本文件，确保浏览器按 PDF 打开
+   * @param text 原始剧本文本
+   * @param title 项目标题
+   */
+  private buildSimplePdf(text: string, title: string): Buffer {
+    const safeTitle = this.sanitizePdfText(title);
+    const rawLines = this.sanitizePdfText(text)
+      .replace(/\r\n/g, '\n')
+      .split('\n');
+
+    const maxLineLength = 88;
+    const wrappedLines: string[] = [`剧本导出: ${safeTitle}`];
+
+    for (const rawLine of rawLines) {
+      if (rawLine === '') {
+        wrappedLines.push('');
+        continue;
+      }
+
+      let start = 0;
+      while (start < rawLine.length) {
+        wrappedLines.push(rawLine.slice(start, start + maxLineLength));
+        start += maxLineLength;
+      }
+    }
+
+    const pageWidth = 612;
+    const pageHeight = 792;
+    const marginLeft = 48;
+    const marginTop = 742;
+    const lineHeight = 14;
+    const linesPerPage = Math.max(
+      Math.floor((pageHeight - 2 * (pageHeight - marginTop) - 56) / lineHeight),
+      1,
+    );
+
+    const chunks: string[][] = [];
+    for (let i = 0; i < wrappedLines.length; i += linesPerPage) {
+      chunks.push(wrappedLines.slice(i, i + linesPerPage));
+    }
+
+    const objects: string[] = [''];
+
+    const addObject = (body: string) => {
+      objects.push(body);
+      return objects.length - 1;
+    };
+
+    const fontId = addObject(
+      '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
+    );
+    const pagesId = addObject('<< /Type /Pages /Kids [] /Count 0 >>');
+
+    const pageObjectIds: number[] = [];
+
+    for (const lines of chunks) {
+      const contentLines = ['BT', '/F1 12 Tf', `${marginLeft} ${marginTop} Td`];
+
+      for (const line of lines) {
+        const escapedLine = this.sanitizePdfText(line);
+        contentLines.push(`(${escapedLine}) Tj`);
+        contentLines.push(`0 -${lineHeight} Td`);
+      }
+
+      const contentBody = `${contentLines.join('\n')}\nET`;
+      const contentLength = Buffer.byteLength(contentBody, 'utf8');
+      const contentId = addObject(
+        `<< /Length ${contentLength} >>\nstream\n${contentBody}\nendstream`,
+      );
+
+      const pageId = addObject(
+        `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${contentId} 0 R >>`,
+      );
+      pageObjectIds.push(pageId);
+    }
+
+    objects[pagesId] = `<< /Type /Pages /Kids [${pageObjectIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pageObjectIds.length} >>`;
+    const catalogId = addObject(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
+
+    let body = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
+    const offsets: number[] = [];
+    for (let id = 1; id < objects.length; id += 1) {
+      offsets[id] = body.length;
+      body += `${id} 0 obj\n${objects[id]}\nendobj\n`;
+    }
+
+    const startXref = body.length;
+    body += `xref\n0 ${objects.length}\n`;
+    body += '0000000000 65535 f \n';
+    for (let id = 1; id < objects.length; id += 1) {
+      body += `${String(offsets[id]).padStart(10, '0')} 00000 n \n`;
+    }
+
+    body += `trailer\n<< /Size ${objects.length} /Root ${catalogId} 0 R >>\nstartxref\n${startXref}\n%%EOF`;
+
+    return Buffer.from(body, 'binary');
+  }
+
+  private sanitizeXmlText(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;')
+      .replace(/\r?\n/g, '\n');
+  }
+
+  private escapeFountainMeta(text: string): string {
+    return text.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+  }
+
+  private async buildSimpleDocx(text: string, title: string): Promise<Buffer> {
+    const zip = new JSZip();
+
+    const safeTitle = this.sanitizeXmlText(title || 'script');
+    const normalizedText = this.sanitizeXmlText(text || '');
+    const now = new Date().toISOString();
+
+    const paragraphs = normalizedText
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .map((line) => {
+        const escapedLine = this.sanitizeXmlText(line || '');
+        return `<w:p><w:r><w:t xml:space="preserve">${escapedLine}</w:t></w:r></w:p>`;
+      })
+      .join('');
+
+    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:cx="http://schemas.microsoft.com/office/drawing/2014/chartex" xmlns:cx1="http://schemas.microsoft.com/office/drawing/2015/9/8/chartex" xmlns:cx2="http://schemas.microsoft.com/office/drawing/2015/10/21/chartex" xmlns:cx3="http://schemas.microsoft.com/office/drawing/2016/5/9/chartex" xmlns:cx4="http://schemas.microsoft.com/office/drawing/2016/5/10/chartex" xmlns:cx5="http://schemas.microsoft.com/office/drawing/2016/5/11/chartex" xmlns:cx6="http://schemas.microsoft.com/office/drawing/2016/5/12/chartex" xmlns:cx7="http://schemas.microsoft.com/office/drawing/2016/5/13/chartex" xmlns:cx8="http://schemas.microsoft.com/office/drawing/2016/5/14/chartex" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:w16cid="http://schemas.microsoft.com/office/word/2016/wordml/cid" xmlns:w16se="http://schemas.microsoft.com/office/word/2015/wordml/symex" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:thm15="http://schemas.microsoft.com/office/thememl/2012/main" mc:Ignorable="w14 w15 w16se w16cid wne" xmlns:wp1="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup">
+  <w:body>
+    <w:p>
+      <w:r>
+        <w:t xml:space="preserve">${safeTitle}</w:t>
+      </w:r>
+    </w:p>
+    ${paragraphs}
+    <w:sectPr>
+      <w:pgSz w:w="12240" w:h="15840" w:orient="portrait"/>
+      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>
+      <w:cols w:space="720"/>
+      <w:docGrid w:linePitch="360"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+
+    const relsXml = `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
+</Relationships>`;
+
+    const docRelsXml = `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>`;
+
+    const stylesXml = `<?xml version="1.0" encoding="UTF-8"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:docDefaults/>
+  <w:style w:type="paragraph" w:default="1" w:styleId="Normal">
+    <w:name w:val="Normal"/>
+    <w:qFormat/>
+  </w:style>
+</w:styles>`;
+
+    const contentTypesXml = `<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/_rels/.rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+  <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+  <Override PartName="/word/_rels/document.xml.rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+</Types>`;
+
+    const coreXml = `<?xml version="1.0" encoding="UTF-8"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>${safeTitle}</dc:title>
+  <dc:creator>onecode</dc:creator>
+  <cp:lastModifiedBy>onecode</cp:lastModifiedBy>
+  <dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created>
+  <dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified>
+</cp:coreProperties>`;
+
+    const appXml = `<?xml version="1.0" encoding="UTF-8"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
+  <Template>Normal.dotm</Template>
+  <Application>onecode</Application>
+  <TotalTime>0</TotalTime>
+  <Pages>1</Pages>
+  <Characters>${normalizedText.length}</Characters>
+  <Words>${Math.max(normalizedText.split(/\\s+/).filter((word) => word.length > 0).length, 0)}</Words>
+  <Lines>${normalizedText.split('\\n').length}</Lines>
+</Properties>`;
+
+    zip.file('[Content_Types].xml', contentTypesXml);
+    zip.folder('_rels')?.file('.rels', relsXml);
+    zip.folder('docProps')?.file('core.xml', coreXml);
+    zip.folder('docProps')?.file('app.xml', appXml);
+    const wordFolder = zip.folder('word');
+    if (wordFolder) {
+      wordFolder.file('document.xml', documentXml);
+      wordFolder.file('styles.xml', stylesXml);
+      const documentRelsFolder = wordFolder.folder('_rels');
+      documentRelsFolder?.file('document.xml.rels', docRelsXml);
+    }
+
+    const uint8Buffer = await zip.generateAsync({ type: 'uint8array' });
+    return Buffer.from(uint8Buffer);
+  }
+
+  private buildFountainText(text: string, title: string): string {
+    const escapedTitle = this.escapeFountainMeta(title || 'script');
+    const escapedText = this.escapeFountainMeta(text || '');
+    return `; ${escapedTitle}\r\n\r\n${escapedText}`;
   }
 
   // ========================================

@@ -52,6 +52,7 @@
     "drizzle-orm": "0.44.6",
     "hbs": "^4.2.0",
     "jsonwebtoken": "^9.0.3",
+    "jszip": "^3.10.1",
     "multer": "^2.2.0",
     "reflect-metadata": "^0.1.14"
   },
