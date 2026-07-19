@@ -362,7 +362,13 @@ export class ChatService {
         nickname: localUsers.nickname,
       })
       .from(conversationMember)
-      .leftJoin(localUsers, eq(sql<string>`(${conversationMember.userId}).user_id`, localUsers.id))
+      .leftJoin(
+        localUsers,
+        eq(
+          sql<string>`${localUsers.id}::text`,
+          sql<string>`(${conversationMember.userId}).user_id`,
+        ),
+      )
       .where(inArray(conversationMember.conversationId, normalizedIds))
       .orderBy(conversationMember.createdAt);
 
