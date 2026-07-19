@@ -183,18 +183,10 @@ export class ScriptService {
 
     const safeUserId = this.normalizeUserId(userId);
 
-    const collaboratorSql = safeUserId
-      ? sql<boolean>`EXISTS (
-        SELECT 1
-        FROM unnest(${scriptProject.collaborators}) AS c
-        WHERE (c).user_id = CAST(${safeUserId} AS uuid)
-      )`
-      : sql<boolean>`false`;
-
     const [project] = await this.db
       .select({
         createdBy: sql<string>`(${scriptProject.createdBy}).user_id`,
-        isCollaborator: collaboratorSql,
+        collaborators: scriptProject.collaborators,
       })
       .from(scriptProject)
       .where(eq(scriptProject.id, safeProjectId))
@@ -204,9 +196,13 @@ export class ScriptService {
       throw new NotFoundException(`剧本项目 ${projectId} 不存在`);
     }
 
+    const isCollaborator = safeUserId
+      ? (project.collaborators || []).includes(safeUserId)
+      : false;
+
     return {
       createdBy: project.createdBy || null,
-      isCollaborator: project.isCollaborator || false,
+      isCollaborator,
     };
   }
 
