@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { io, type Socket } from 'socket.io-client';
 import { MessageCircle, Send, Search } from 'lucide-react';
 import { Button } from '@client/src/components/ui/button';
@@ -23,6 +23,7 @@ type SendMessageViaSocketResult = {
 
 export default function ChatPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { conversationId } = useParams();
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -33,6 +34,11 @@ export default function ChatPage() {
     if (!next?.id) return list;
     const exists = list.some((item) => item.id === next.id);
     return exists ? list : [next, ...list];
+  };
+
+  const getRouteStateConversation = (): Conversation | undefined => {
+    const state = location.state as { conversation?: Conversation } | undefined;
+    return state?.conversation;
   };
 
   const fetchConversations = async () => {
@@ -46,14 +52,34 @@ export default function ChatPage() {
         : response?.items ?? [];
 
       let finalList = list;
+      const routeStateConversation = getRouteStateConversation();
+      if (routeStateConversation?.id) {
+        finalList = mergeConversation(finalList, routeStateConversation);
+      }
+
       if (conversationId) {
         try {
           const conversation = (await (chatApi.getConversation(conversationId) as Promise<unknown>)) as Conversation | null;
           if (conversation) {
             finalList = mergeConversation(finalList, conversation);
+          } else {
+            finalList = mergeConversation(finalList, {
+              id: conversationId,
+              type: 'private',
+              title: '私聊',
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
           }
         } catch (detailError) {
           console.error('Failed to load active conversation detail:', detailError);
+          finalList = mergeConversation(finalList, {
+            id: conversationId,
+            type: 'private',
+            title: '私聊',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
         }
       }
 
