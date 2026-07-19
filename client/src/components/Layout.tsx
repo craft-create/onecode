@@ -188,7 +188,7 @@ const Layout = () => {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
-          <div className="app-container h-16 flex items-center gap-3">
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
             <NavLink
               to="/"
               className="flex items-center gap-2 font-bold text-lg text-foreground"
@@ -231,7 +231,7 @@ const Layout = () => {
         </AnimatePresence>
 
         {/* 导航栏内容容器 */}
-        <div className="app-container h-16 flex items-center justify-between gap-4">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           {/* ===== 左侧：Logo + 核心导航 ===== */}
           <div className="flex items-center gap-6 lg:gap-8">
             {/* Logo区域 */}
