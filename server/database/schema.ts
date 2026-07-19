@@ -183,7 +183,7 @@ export const commentLike = pgTable("comment_like", {
   updatedBy: userProfile("_updated_by").default(sql`CASE
     WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
 }, (table) => [
-  uniqueIndex("uq_comment_like").on(table.commentId),
+  uniqueIndex("uq_comment_like").on(table.commentId, table.userId),
 ]);
 
 export const scriptLike = pgTable("script_like", {
@@ -201,7 +201,7 @@ export const scriptLike = pgTable("script_like", {
   updatedBy: userProfile("_updated_by").default(sql`CASE
     WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
 }, (table) => [
-  uniqueIndex("uq_script_like").on(table.projectId),
+  uniqueIndex("uq_script_like").on(table.projectId, table.userId),
 ]);
 
 export const materialLike = pgTable("material_like", {
@@ -219,7 +219,7 @@ export const materialLike = pgTable("material_like", {
   updatedBy: userProfile("_updated_by").default(sql`CASE
     WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
 }, (table) => [
-  uniqueIndex("uq_material_like").on(table.materialId),
+  uniqueIndex("uq_material_like").on(table.materialId, table.userId),
 ]);
 
 export const materialComment = pgTable("material_comment", {

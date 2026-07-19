@@ -263,6 +263,13 @@ export class MaterialService {
       throw new NotFoundException('素材不存在');
     }
 
+    const likeCountRows = await this.db.execute<{ count: string }>(sql`
+      SELECT COUNT(*)::text AS count
+      FROM material_like
+      WHERE material_id = ${id}::uuid
+    `);
+    const likeCount = Number(likeCountRows[0]?.count || 0);
+
     // 字段名转换 + 默认值处理
     return {
       id: result.id,
@@ -278,6 +285,7 @@ export class MaterialService {
       preview_url: result.previewUrl || '',
       cover_url: result.coverUrl || '',
       download_count: result.downloadCount ?? 0,
+      like_count: likeCount,
     };
   }
 
@@ -288,7 +296,10 @@ export class MaterialService {
    * @returns 下载URL
    * @throws NotFoundException 素材不存在时抛出404
    */
-  async getDownloadUrl(id: string, _userId?: string): Promise<MaterialDownloadResponse> {
+  async getDownloadUrl(
+    id: string,
+    userId?: string,
+  ): Promise<MaterialDownloadResponse> {
     const [result] = await this.db
       .select({ downloadUrl: material.downloadUrl })
       .from(material)
@@ -304,8 +315,15 @@ export class MaterialService {
         UPDATE material SET download_count = COALESCE(download_count, 0) + 1
         WHERE id = ${id}::uuid
       `);
+      if (userId) {
+        await this.db.insert(userMaterial).values({
+          userId: sql`ROW(${userId})::user_profile`,
+          materialId: id,
+          relationType: 'download',
+        });
+      }
     } catch (err: unknown) {
-      this.logger.warn(`Failed to increment download_count: ${String(err)}`);
+      this.logger.warn(`Failed to update material download count or record: ${String(err)}`);
     }
 
     return { download_url: result.downloadUrl || '' };

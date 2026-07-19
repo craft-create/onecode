@@ -35,6 +35,7 @@ import { NeedLogin } from '@server/common/compat/fullstack-nestjs-core';
 import type { Request } from 'express';
 import { MaterialService } from './material.service';
 import { getLocalUserId } from '@server/common/utils/auth.helper';
+import { AnalyticsService } from '../analytics/analytics.service';
 // 导入接口响应/请求的TypeScript类型定义
 import type {
   MaterialListResponse,
@@ -57,7 +58,10 @@ export class MaterialController {
   /**
    * 构造函数：注入素材服务
    */
-  constructor(private readonly materialService: MaterialService) {}
+  constructor(
+    private readonly materialService: MaterialService,
+    private readonly analyticsService: AnalyticsService,
+  ) {}
 
   /**
    * GET /api/materials - 获取素材列表
@@ -143,7 +147,18 @@ export class MaterialController {
     @Req() req: Request,
   ): Promise<MaterialDownloadResponse> {
     const userId: string | undefined = getLocalUserId(req);
-    return this.materialService.getDownloadUrl(id, userId);
+    const result = await this.materialService.getDownloadUrl(id, userId);
+    void this.analyticsService.track(
+      {
+        action: 'download',
+        resourceType: 'material',
+        resourceId: id,
+      },
+      userId,
+      req.ip,
+      req.headers['user-agent'],
+    ).catch(() => {});
+    return result;
   }
 
   /**
@@ -304,7 +319,18 @@ export class MaterialController {
     if (!userId) {
       throw new UnauthorizedException('请先登录');
     }
-    return this.materialService.toggleMaterialLike(id, userId);
+    const result = await this.materialService.toggleMaterialLike(id, userId);
+    void this.analyticsService.track(
+      {
+        action: 'like',
+        resourceType: 'material',
+        resourceId: id,
+      },
+      userId,
+      req.ip,
+      req.headers['user-agent'],
+    ).catch(() => {});
+    return result;
   }
 
   /**

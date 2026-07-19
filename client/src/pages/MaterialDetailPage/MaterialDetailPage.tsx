@@ -14,6 +14,7 @@ import { logger } from '@/utils/logger';
 import { analyticsApi } from '@client/src/api';
 import {
   getMaterialById,
+  getMaterialLikeStatus,
   getRelatedMaterials,
   getMaterialDownloadUrl,
 } from '@client/src/api/materials';
@@ -39,6 +40,8 @@ const MaterialDetailPage: React.FC = () => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadDone, setDownloadDone] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -63,16 +66,30 @@ const MaterialDetailPage: React.FC = () => {
     }),
   );
 
+  const refreshMaterialDetail = useCallback(async () => {
+    if (!id) return;
+    const detailData = await getMaterialById(id);
+    setDetail(detailData);
+  }, [id]);
+
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     Promise.all([
       getMaterialById(id),
       getRelatedMaterials(id, 1, 8),
+      getMaterialLikeStatus(id).catch(() => ({
+        liked: false,
+        like_count: 0,
+      })),
     ])
-      .then(([detailData, relatedData]) => {
+      .then((
+        [detailData, relatedData, likeStatus],
+      ) => {
         setDetail(detailData);
         setRelated(relatedData.items);
+        setIsLiked(likeStatus.liked);
+        setLikeCount(likeStatus.like_count);
       })
       .catch((err: unknown) => logger.error('获取素材详情失败:', err))
       .finally(() => setLoading(false));
@@ -283,6 +300,7 @@ const MaterialDetailPage: React.FC = () => {
       if (download_url) {
         window.open(download_url, '_blank');
       }
+      await refreshMaterialDetail();
       setDownloadDone(true);
       setTimeout(() => setDownloadDone(false), 3000);
     } catch (err: unknown) {
@@ -290,7 +308,7 @@ const MaterialDetailPage: React.FC = () => {
     } finally {
       setDownloading(false);
     }
-  }, [id, downloading]);
+  }, [id, downloading, refreshMaterialDetail]);
 
   const handleFavorite = useCallback(async () => {
     if (!id) return;
@@ -304,6 +322,11 @@ const MaterialDetailPage: React.FC = () => {
       logger.error('收藏操作失败:', err);
     }
   }, [id, isFavorited]);
+
+  const handleLikeChange = useCallback((liked: boolean, count: number): void => {
+    setIsLiked(liked);
+    setLikeCount(count);
+  }, []);
 
   const formatDuration = useCallback((seconds: number): string => {
     if (!seconds || !isFinite(seconds)) return '0:00';
@@ -695,6 +718,9 @@ const MaterialDetailPage: React.FC = () => {
             downloading={downloading}
             downloadDone={downloadDone}
             onDownload={handleDownload}
+            isLiked={isLiked}
+            likeCount={likeCount}
+            onLikeChange={handleLikeChange}
             onFavorite={handleFavorite}
             formatDuration={formatDuration}
             formatFileSize={formatFileSize}

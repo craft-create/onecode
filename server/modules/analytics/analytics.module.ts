@@ -94,9 +94,28 @@ export class AnalyticsModule implements OnModuleInit {
         `
       );
 
+      await this.ensureLikeIndexes();
+
       this.logger.log('analytics 表初始化完成');
     } catch (error) {
       this.logger.error('创建 analytics 表失败', error);
+    }
+  }
+
+  private async ensureLikeIndexes(): Promise<void> {
+    try {
+      const drizzle = await import('drizzle-orm');
+      const { sql } = drizzle;
+
+      await this.db.execute(sql`DROP INDEX IF EXISTS uq_material_like`);
+      await this.db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS uq_material_like ON material_like (material_id, user_id)`);
+      await this.db.execute(sql`DROP INDEX IF EXISTS uq_comment_like`);
+      await this.db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS uq_comment_like ON comment_like (comment_id, user_id)`);
+      await this.db.execute(sql`DROP INDEX IF EXISTS uq_script_like`);
+      await this.db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS uq_script_like ON script_like (project_id, user_id)`);
+      this.logger.log('点赞索引修复完成');
+    } catch (error) {
+      this.logger.warn('点赞索引修复失败，跳过以避免启动阻塞', error);
     }
   }
 }

@@ -12,6 +12,7 @@ interface LikeButtonProps {
   targetType: 'material' | 'script';
   initialLiked?: boolean;
   initialCount?: number;
+  onStatusChange?: (liked: boolean, count: number) => void;
 }
 
 const LikeButton: React.FC<LikeButtonProps> = ({
@@ -19,6 +20,7 @@ const LikeButton: React.FC<LikeButtonProps> = ({
   targetType,
   initialLiked = false,
   initialCount = 0,
+  onStatusChange,
 }) => {
   const { user } = useAuth();
   const [liked, setLiked] = useState(initialLiked);
@@ -28,15 +30,21 @@ const LikeButton: React.FC<LikeButtonProps> = ({
   useEffect(() => {
     setLiked(initialLiked);
     setCount(initialCount);
-  }, [initialLiked, initialCount]);
+    onStatusChange?.(initialLiked, initialCount);
+  }, [initialLiked, initialCount, onStatusChange]);
 
   const handleToggle = useCallback(async () => {
     if (!targetId) return;
     setAnimating(true);
     const wasLiked = liked;
+    const currentCount = count;
+    const optimisticCount = wasLiked
+      ? Math.max(0, currentCount - 1)
+      : currentCount + 1;
     // Optimistic update
     setLiked(!wasLiked);
-    setCount((c: number) => (wasLiked ? Math.max(0, c - 1) : c + 1));
+    setCount(optimisticCount);
+    onStatusChange?.(!wasLiked, optimisticCount);
     try {
       const res =
         targetType === 'material'
@@ -44,16 +52,20 @@ const LikeButton: React.FC<LikeButtonProps> = ({
           : await toggleScriptLike(targetId);
       setLiked(res.liked);
       setCount(res.like_count);
+      onStatusChange?.(res.liked, res.like_count);
     } catch (err: unknown) {
       // Revert on error
       setLiked(wasLiked);
-      setCount((c: number) => (wasLiked ? c + 1 : Math.max(0, c - 1)));
+      const fallbackCount = currentCount;
+      setCount(fallbackCount);
+      const fallbackLiked = wasLiked;
+      onStatusChange?.(fallbackLiked, fallbackCount);
       logger.error('点赞操作失败:', err);
       toast.error('操作失败，请重试');
     } finally {
       setAnimating(false);
     }
-  }, [targetId, targetType, liked]);
+  }, [targetId, targetType, liked, count, onStatusChange]);
 
   // 未登录时不渲染按钮
   if (!user) return null;

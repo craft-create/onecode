@@ -44,6 +44,7 @@ import { NeedLogin } from '@server/common/compat/fullstack-nestjs-core';
 import type { Request, Response } from 'express';
 import { ScriptService } from './script.service';
 import { getLocalUserId } from '@server/common/utils/auth.helper';
+import { AnalyticsService } from '../analytics/analytics.service';
 // 导入类型定义
 import type {
   CreateScriptProjectRequest,
@@ -64,7 +65,10 @@ export class ScriptController {
   /**
    * 构造函数：注入剧本服务
    */
-  constructor(private readonly scriptService: ScriptService) {}
+  constructor(
+    private readonly scriptService: ScriptService,
+    private readonly analyticsService: AnalyticsService,
+  ) {}
 
   /**
    * GET /api/script-projects - 获取剧本项目列表
@@ -402,8 +406,20 @@ export class ScriptController {
     @Param('id') id: string,
     @Query('format') format: string,
     @Res() res: Response,
+    @Req() req: Request,
   ) {
     const result = await this.scriptService.downloadScript(id, format);
+    const userId: string | undefined = getLocalUserId(req);
+    void this.analyticsService.track(
+      {
+        action: 'download',
+        resourceType: 'script',
+        resourceId: id,
+      },
+      userId,
+      req.ip,
+      req.headers['user-agent'],
+    ).catch(() => {});
     // 设置响应头，触发浏览器下载
     res.set({
       'Content-Type': result.contentType,
@@ -432,7 +448,18 @@ export class ScriptController {
     if (!userId) {
       throw new UnauthorizedException('请先登录');
     }
-    return this.scriptService.toggleScriptLike(id, userId);
+    const result = await this.scriptService.toggleScriptLike(id, userId);
+    void this.analyticsService.track(
+      {
+        action: 'like',
+        resourceType: 'script',
+        resourceId: id,
+      },
+      userId,
+      req.ip,
+      req.headers['user-agent'],
+    ).catch(() => {});
+    return result;
   }
 
   /**

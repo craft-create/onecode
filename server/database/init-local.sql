@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS material_like (
   _updated_by user_profile DEFAULT NULL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_material_like ON material_like (material_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_material_like ON material_like (material_id, user_id);
 
 CREATE TABLE IF NOT EXISTS comment_like (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS comment_like (
   _updated_by user_profile DEFAULT NULL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_comment_like ON comment_like (comment_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_comment_like ON comment_like (comment_id, user_id);
 
 CREATE TABLE IF NOT EXISTS script_project (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -169,7 +169,7 @@ CREATE TABLE IF NOT EXISTS script_like (
   _updated_by user_profile DEFAULT NULL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_script_like ON script_like (project_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_script_like ON script_like (project_id, user_id);
 
 CREATE TABLE IF NOT EXISTS user_material (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,

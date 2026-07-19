@@ -13,13 +13,17 @@ import {
 import { motion } from 'framer-motion';
 import type { MaterialDetail } from '@shared/material.interface';
 import { memo } from 'react';
+import LikeButton from '@client/src/components/LikeButton';
 
 interface MaterialDetailSidePanelProps {
   detail: MaterialDetail;
   isFavorited: boolean;
   downloading: boolean;
   downloadDone: boolean;
+  isLiked: boolean;
+  likeCount: number;
   onDownload: () => void;
+  onLikeChange: (liked: boolean, count: number) => void;
   onFavorite: () => void;
   formatDuration: (seconds: number) => string;
   formatFileSize: (bytes: number) => string;
@@ -30,7 +34,10 @@ export const MaterialDetailSidePanel = memo(({
   isFavorited,
   downloading,
   downloadDone,
+  isLiked,
+  likeCount,
   onDownload,
+  onLikeChange,
   onFavorite,
   formatDuration,
   formatFileSize,
@@ -73,6 +80,13 @@ export const MaterialDetailSidePanel = memo(({
               {downloading ? '准备中...' : downloadDone ? '已完成' : '下载'}
             </span>
           </motion.button>
+          <LikeButton
+            targetId={detail.id}
+            targetType="material"
+            initialLiked={isLiked}
+            initialCount={likeCount}
+            onStatusChange={onLikeChange}
+          />
 
           <motion.button
             whileTap={{ scale: 0.96 }}
@@ -91,6 +105,13 @@ export const MaterialDetailSidePanel = memo(({
           <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
             <Download className="w-3 h-3" />
             <span>已下载 {detail.download_count.toLocaleString()} 次</span>
+          </div>
+        )}
+
+        {likeCount > 0 && (
+          <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+            <Heart className="w-3 h-3" />
+            <span>点赞 {likeCount.toLocaleString()} 次</span>
           </div>
         )}
       </div>

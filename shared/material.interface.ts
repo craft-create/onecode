@@ -114,6 +114,8 @@ export interface MaterialDetail {
   cover_url: string;
   /** 下载次数 */
   download_count: number;
+  /** 点赞次数 */
+  like_count: number;
 }
 
 /**
