@@ -118,6 +118,10 @@ export interface MaterialDetail {
   like_count: number;
   /** 创作者用户ID */
   creator_id?: string;
+  /** 创作者昵称 */
+  creator_name?: string;
+  /** 创作者头像 */
+  creator_avatar_url?: string;
 }
 
 /**

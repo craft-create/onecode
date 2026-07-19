@@ -374,13 +374,26 @@ const MaterialDetailPage: React.FC = () => {
     }
   }, [navigate, startingChat, user?.userId, detail?.creator_id]);
 
+  const creatorDisplay = detail?.creator_id
+    ? detail.creator_name || detail.creator_avatar_url
+      ? {
+          user_id: detail.creator_id,
+          name: detail.creator_name || '未知用户',
+          avatar: detail.creator_avatar_url,
+        }
+      : {
+          user_id: detail.creator_id,
+          name: '未知用户',
+        }
+    : undefined;
+
   const creatorFollowActionNode = detail?.creator_id ? (
     <div className="space-y-2.5">
       <Link
         to={`/user/${detail.creator_id}`}
         className="group flex items-center gap-2 rounded-lg border border-border/70 bg-card/60 px-2.5 py-1.5 text-left transition-all hover:border-primary/50 hover:bg-card"
       >
-        <UserDisplay userId={detail.creator_id} size="small" />
+        <UserDisplay value={creatorDisplay} size="small" />
       </Link>
       {user?.userId && detail.creator_id !== user.userId ? (
         <>

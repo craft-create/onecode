@@ -399,6 +399,18 @@ export class MaterialService {
       WHERE material_id = ${id}::uuid
     `);
     const likeCount = this.toCountValue(likeCountRows);
+    const resolvedCreatorId = result.createdBy || result.uploadCreatorId || '';
+    const creatorProfile = resolvedCreatorId
+      ? await this.db
+          .select({
+            nickname: localUsers.nickname,
+            avatarUrl: localUsers.avatarUrl,
+          })
+          .from(localUsers)
+          .where(eq(localUsers.id, resolvedCreatorId))
+          .limit(1)
+      : [];
+    const creatorProfileFirst = creatorProfile[0];
 
     // 字段名转换 + 默认值处理
     return {
@@ -416,7 +428,9 @@ export class MaterialService {
       cover_url: result.coverUrl || '',
       download_count: result.downloadCount ?? 0,
       like_count: likeCount,
-      creator_id: result.createdBy || result.uploadCreatorId || '',
+      creator_id: resolvedCreatorId,
+      creator_name: creatorProfileFirst?.nickname || '',
+      creator_avatar_url: creatorProfileFirst?.avatarUrl || '',
     };
   }
 
