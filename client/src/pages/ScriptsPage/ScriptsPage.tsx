@@ -257,7 +257,7 @@ const ScriptsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[hsl(228_15%_8%)]">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="app-container-shell">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -271,7 +271,7 @@ const ScriptsPage: React.FC = () => {
           {user && (
             <Button
               onClick={openCreateDialog}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 shadow-[0_0_20px_-4px_rgba(124_92_255_0.4)]"
+              className="app-btn-primary gap-2 shadow-[0_0_20px_-4px_rgba(124_92_255_0.4)]"
             >
               <Plus className="size-4" />
               新建项目
@@ -308,7 +308,7 @@ const ScriptsPage: React.FC = () => {
             <p className="text-foreground text-sm mb-4">{fetchError}</p>
             <button
               onClick={fetchProjects}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-colors"
+              className="app-btn-primary"
             >
               <RefreshCw className="w-4 h-4" />
               重试
@@ -537,7 +537,7 @@ const ScriptsPage: React.FC = () => {
                     setDialogStep(2);
                   }}
                   disabled={!selectedTemplate}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  className="app-btn-primary"
                 >
                   下一步
                 </Button>
@@ -586,7 +586,7 @@ const ScriptsPage: React.FC = () => {
                 <Button
                   onClick={nextStep}
                   disabled={!formData.title.trim()}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  className="app-btn-primary"
                 >
                   下一步
                 </Button>
@@ -681,7 +681,7 @@ const ScriptsPage: React.FC = () => {
                 <Button
                   onClick={handleCreate}
                   disabled={creating}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  className="app-btn-primary"
                 >
                   {creating ? '创建中...' : '创建项目'}
                 </Button>

@@ -214,10 +214,10 @@ const MaterialsPage: React.FC = () => {
   };
 
   return (
-    <PageFrame className="min-h-screen bg-background" containerClassName="w-full" contentClassName="">
+    <PageFrame className="min-h-screen bg-background" containerClassName="app-container-shell" contentClassName="">
       {/* Search Bar */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="app-container py-3 flex items-center gap-3">
           <div ref={searchRef} className="relative flex-1 max-w-xl">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
@@ -298,7 +298,7 @@ const MaterialsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 flex gap-6">
+      <div className="app-container py-6 flex gap-6">
         {/* Filter Panel */}
         <AnimatePresence>
           {showFilters && (
@@ -387,7 +387,7 @@ const MaterialsPage: React.FC = () => {
               <p className="text-foreground text-sm mb-4">{error}</p>
               <button
                 onClick={fetchMaterials}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-colors"
+                className="app-btn-primary"
               >
                 <RefreshCw className="w-4 h-4" />
                 重试

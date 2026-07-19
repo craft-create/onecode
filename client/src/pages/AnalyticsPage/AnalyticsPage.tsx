@@ -32,7 +32,7 @@ export default function AnalyticsPage() {
         title="数据中心"
         description="查看您的内容表现数据"
         className="min-h-screen bg-background"
-        containerClassName="max-w-6xl mx-auto px-4 py-8"
+        containerClassName="app-container-shell"
         contentClassName="space-y-6"
       >
         <Skeleton className="h-12 w-64" />
@@ -75,7 +75,7 @@ export default function AnalyticsPage() {
       title="数据中心"
       description="查看您的内容表现数据"
       className="min-h-screen bg-background"
-      containerClassName="max-w-6xl mx-auto px-4 py-8"
+      containerClassName="app-container-shell"
       contentClassName="space-y-6"
     >
 

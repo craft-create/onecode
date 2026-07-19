@@ -74,7 +74,7 @@ const AccountMaterialsPage: FC = () => {
   return (
     <PageFrame
       className="min-h-screen bg-background"
-      containerClassName="max-w-7xl mx-auto px-6 py-8"
+      containerClassName="app-container-shell"
       title="我的素材"
       description={`${items.length} 个素材`}
     >
@@ -84,7 +84,7 @@ const AccountMaterialsPage: FC = () => {
           <p className="text-foreground text-sm mb-4">{fetchError}</p>
           <button
             onClick={fetchItems}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-colors"
+            className="app-btn-primary"
           >
             <RefreshCw className="w-4 h-4" />
             重试

@@ -1,5 +1,5 @@
 import { APP_FILTER } from '@nestjs/core';
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CommonModule } from '@server/common/compat/nestjs-common';
 import { DataPaasModule } from '@server/common/compat/nestjs-datapaas';
@@ -32,6 +32,8 @@ import { AiModule } from './modules/ai/ai.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { ShareModule } from './modules/share/share.module';
 import { FileManagerModule } from './modules/file-manager/file-manager.module';
+import { ApiRateLimitMiddleware } from './common/middleware/api-rate-limit.middleware';
+import { ApiXssSanitizerMiddleware } from './common/middleware/api-xss-sanitizer.middleware';
 
 const isDataPaasDisabled =
   process.env.FORCE_FRAMEWORK_DISABLE_DATAPASS === 'true' ||
@@ -100,6 +102,11 @@ const isDataPaasDisabled =
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(AuthMiddleware).forRoutes('*');
+    consumer
+      .apply(AuthMiddleware)
+      .forRoutes('*');
+    consumer
+      .apply(ApiRateLimitMiddleware, ApiXssSanitizerMiddleware)
+      .forRoutes({ path: '*', method: RequestMethod.ALL });
   }
 }

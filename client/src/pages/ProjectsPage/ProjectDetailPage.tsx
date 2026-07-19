@@ -40,7 +40,7 @@ export default function ProjectDetailPage() {
         title="项目详情"
         description="加载中"
         className="min-h-screen bg-background"
-        containerClassName="max-w-6xl mx-auto px-4 py-8"
+        containerClassName="app-container-shell"
         contentClassName="space-y-6"
       >
         <Skeleton className="h-12 w-64 mb-6" />
@@ -57,7 +57,7 @@ export default function ProjectDetailPage() {
       <PageFrame
         title="项目不存在"
         className="min-h-screen bg-background"
-        containerClassName="max-w-6xl mx-auto px-4 py-8"
+        containerClassName="app-container-shell"
         contentClassName="flex flex-col items-center"
       >
         <p className="text-gray-500">项目不存在</p>
@@ -77,7 +77,7 @@ export default function ProjectDetailPage() {
       title={project.name}
       description={project.description}
       className="min-h-screen bg-background"
-      containerClassName="max-w-6xl mx-auto px-4 py-8"
+      containerClassName="app-container-shell"
       contentClassName="space-y-6"
       action={
         <Button onClick={() => navigate(`/projects/${projectId}/tasks/new`)}>

@@ -207,7 +207,7 @@ const FavoritesPage: FC = () => {
   return (
     <PageFrame
       className="min-h-screen bg-[hsl(228_15%_8%)]"
-      containerClassName="max-w-7xl mx-auto px-6 py-8"
+      containerClassName="app-container-shell"
       contentClassName=""
     >
       <div className="mb-8">

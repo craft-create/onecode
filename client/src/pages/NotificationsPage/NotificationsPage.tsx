@@ -81,10 +81,10 @@ export default function NotificationsPage() {
     return <PageErrorState message={error} onRetry={fetchData} />;
   }
 
-  return (
+    return (
     <PageFrame
       className="min-h-screen bg-background"
-      containerClassName="container mx-auto py-8 max-w-4xl"
+      containerClassName="app-container-shell"
       contentClassName="space-y-6"
     >
       <NotificationHeader unreadCount={unreadCount} onMarkAllAsRead={handleMarkAllAsRead} />

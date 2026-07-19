@@ -172,7 +172,7 @@ const ScriptExportPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[hsl(228_15%_8%)]">
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="app-container-shell">
         {/* Header */}
         <div className="flex items-center gap-4 mb-10">
           <Button
@@ -299,7 +299,7 @@ const ScriptExportPage: React.FC = () => {
             size="lg"
             onClick={handleExport}
             disabled={exporting || contentEmpty}
-            className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_24px_-4px_rgba(124_92_255_0.4)] px-8 py-6 text-base"
+            className="app-btn-primary-lg gap-2 shadow-[0_0_24px_-4px_rgba(124_92_255_0.4)] text-base"
           >
             {exporting ? (
               <>

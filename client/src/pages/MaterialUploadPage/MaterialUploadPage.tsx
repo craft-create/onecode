@@ -319,9 +319,9 @@ const MaterialUploadPage: React.FC = () => {
       title="上传素材"
       description="将文件拖拽或选择上传"
       className="min-h-screen bg-background"
-      containerClassName="max-w-3xl mx-auto px-4 py-8"
+      containerClassName="app-container-shell"
     >
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="max-w-3xl">
         <h1 className="text-xl font-semibold text-foreground mb-6">
           上传素材
         </h1>
@@ -700,7 +700,7 @@ const MaterialUploadPage: React.FC = () => {
                 <button
                   onClick={handleSubmit}
                   disabled={submitting || !formData.title.trim()}
-                  className="flex-1 h-10 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:shadow-[0_0_20px_-4px_rgba(139_92_246_0.4)] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                  className="flex-1 app-btn-primary disabled:opacity-50 disabled:cursor-not-allowed gap-2"
                 >
                   {submitting ? (
                     <>

@@ -32,7 +32,7 @@ export default function TeamDetailPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-8 max-w-6xl">
+      <div className="app-container-shell">
         <Skeleton className="h-12 w-64 mb-6" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
@@ -50,7 +50,7 @@ export default function TeamDetailPage() {
 
   if (!team) {
     return (
-      <div className="container mx-auto py-8 text-center">
+      <div className="app-container-shell text-center">
         <p className="text-gray-500">团队不存在</p>
         <Button className="mt-4" onClick={() => navigate('/teams')}>
           返回团队列表
@@ -60,7 +60,7 @@ export default function TeamDetailPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
+    <div className="app-container-shell">
       <Button variant="ghost" onClick={() => navigate('/teams')} className="mb-4">
         <ArrowLeft className="w-4 h-4 mr-2" />
         返回

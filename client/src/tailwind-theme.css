@@ -152,6 +152,34 @@
   .no-default-hover-elevate {}
   .no-default-active-elevate {}
 
+  .app-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6;
+  }
+
+  .app-container-shell {
+    @apply app-container py-8;
+  }
+
+  .app-btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors;
+  }
+
+  .app-btn-primary-compact {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors;
+  }
+
+  .app-btn-primary-lg {
+    @apply app-btn-primary py-3 px-8;
+  }
+
+  .app-btn-icon {
+    @apply inline-flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .app-section-gap {
+    @apply space-y-5;
+  }
+
   .toggle-elevate::before,
   .toggle-elevate-2::before {
     content: "";

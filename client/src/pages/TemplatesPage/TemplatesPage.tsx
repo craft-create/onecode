@@ -37,7 +37,7 @@ export default function TemplatesPage() {
       title="剧本模板市场"
       description="使用专业模板快速创建剧本"
       className="min-h-screen bg-background"
-      containerClassName="max-w-6xl mx-auto px-4 py-8"
+      containerClassName="app-container-shell"
       contentClassName="space-y-6"
       action={
         <Button variant="outline">

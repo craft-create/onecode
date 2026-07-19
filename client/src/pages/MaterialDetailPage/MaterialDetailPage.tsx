@@ -309,7 +309,7 @@ const MaterialDetailPage: React.FC = () => {
     return (
       <PageFrame
         className="min-h-screen bg-background"
-        containerClassName="max-w-7xl mx-auto px-4 py-8"
+        containerClassName="app-container-shell"
         contentClassName="flex items-center justify-center"
       >
         <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -321,7 +321,7 @@ const MaterialDetailPage: React.FC = () => {
     return (
       <PageFrame
         className="min-h-screen bg-background"
-        containerClassName="max-w-7xl mx-auto px-4 py-8"
+        containerClassName="app-container-shell"
         contentClassName="flex flex-col items-center justify-center text-muted-foreground"
       >
         <p className="text-lg">素材不存在</p>
@@ -338,7 +338,7 @@ const MaterialDetailPage: React.FC = () => {
   return (
     <PageFrame
       className="min-h-screen bg-background"
-      containerClassName="max-w-7xl mx-auto px-4 py-6"
+      containerClassName="app-container py-6"
       contentClassName="space-y-0"
     >
       {/* Header */}

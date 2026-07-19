@@ -121,7 +121,7 @@ const UserProfilePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[hsl(228_15%_8%)]">
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="app-container-shell">
         {/* Profile header */}
         <div className="bg-[hsl(228_14%_12%)] border border-[hsl(228_12%_18%)] rounded-lg p-6 mb-6">
           <div className="flex items-start gap-5">

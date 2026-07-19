@@ -182,11 +182,11 @@ const SettingsPage: React.FC = () => {
 
   if (authLoading || profileLoading) {
     return (
-      <PageFrame
-        className="min-h-screen bg-background flex items-center justify-center"
-        containerClassName="w-full flex items-center justify-center"
-        contentClassName=""
-      >
+    <PageFrame
+      className="min-h-screen bg-background flex items-center justify-center"
+      containerClassName="w-full flex items-center justify-center"
+      contentClassName=""
+    >
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </PageFrame>
     );
@@ -195,7 +195,7 @@ const SettingsPage: React.FC = () => {
   return (
     <PageFrame
       className="min-h-screen bg-background"
-      containerClassName="max-w-4xl mx-auto px-6 py-8"
+      containerClassName="app-container-shell"
       contentClassName=""
     >
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>

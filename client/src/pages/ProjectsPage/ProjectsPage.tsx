@@ -66,7 +66,7 @@ export default function ProjectsPage() {
         </Button>
       }
       className="min-h-screen bg-background"
-      containerClassName="max-w-6xl mx-auto px-4 py-8"
+      containerClassName="app-container-shell"
       contentClassName="space-y-6"
     >
 

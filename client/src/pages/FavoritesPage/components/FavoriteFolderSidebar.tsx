@@ -229,7 +229,7 @@ export const FavoriteFolderSidebar: FC<FavoriteFolderSidebarProps> = ({
                     type="button"
                     onClick={onCreateFolder}
                     disabled={creating || !newFolderName.trim()}
-                    className="shrink-0 w-8 h-8 flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                    className="app-btn-icon"
                   >
                     {creating ? (
                       <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

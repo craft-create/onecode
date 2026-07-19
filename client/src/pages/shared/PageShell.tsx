@@ -68,7 +68,7 @@ export function PageFrame({
   description,
   action,
   className = 'min-h-screen bg-background',
-  containerClassName = 'max-w-7xl mx-auto px-6 py-8',
+  containerClassName = 'app-container-shell',
   contentClassName = 'space-y-6',
   children,
 }: PageFrameProps) {

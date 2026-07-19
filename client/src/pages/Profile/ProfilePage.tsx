@@ -226,7 +226,7 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="app-container-shell">
         {/* ===== 用户信息区 ===== */}
         <div className="bg-card border border-border rounded-xl p-6 mb-8 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5)]">
           <div className="flex items-center gap-5">
@@ -333,7 +333,7 @@ const ProfilePage: React.FC = () => {
                   <p className="text-foreground text-sm mb-4">{materialsError}</p>
                   <button
                     onClick={fetchMaterials}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-colors"
+                    className="app-btn-primary"
                   >
                     <RefreshCw className="w-4 h-4" />
                     重试
@@ -358,7 +358,7 @@ const ProfilePage: React.FC = () => {
                   </EmptyHeader>
                   <Button
                     onClick={() => navigate('/materials/upload')}
-                    className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90"
+                    className="mt-4 app-btn-primary-compact"
                   >
                     <Upload className="w-4 h-4 mr-2" />
                     去上传
@@ -458,7 +458,7 @@ const ProfilePage: React.FC = () => {
                   <p className="text-foreground text-sm mb-4">{scriptsError}</p>
                   <button
                     onClick={fetchScripts}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-colors"
+                    className="app-btn-primary"
                   >
                     <RefreshCw className="w-4 h-4" />
                     重试
@@ -483,7 +483,7 @@ const ProfilePage: React.FC = () => {
                   </EmptyHeader>
                   <Button
                     onClick={() => navigate('/scripts')}
-                    className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90"
+                    className="mt-4 app-btn-primary-compact"
                   >
                     <PenLine className="w-4 h-4 mr-2" />
                     去创建

@@ -5,6 +5,7 @@
     "moduleResolution": "node",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+    "isolatedModules": true,
     "allowJs": false,
     "checkJs": false,
     "strict": true,

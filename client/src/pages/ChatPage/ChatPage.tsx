@@ -43,7 +43,7 @@ export default function ChatPage() {
       title="消息"
       description="管理你的聊天与通知"
       className="min-h-screen bg-background"
-      containerClassName="max-w-7xl mx-auto px-4 py-8"
+      containerClassName="app-container-shell"
       contentClassName="flex-1"
     >
       <div className="flex h-[calc(100vh-220px)] gap-4">

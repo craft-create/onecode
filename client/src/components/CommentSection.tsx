@@ -356,7 +356,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ targetId, targetType })
                         type="button"
                         onClick={() => handleReply(comment.id)}
                         disabled={replySubmitting || !replyContent.trim()}
-                        className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                        className="app-btn-icon"
                       >
                         {replySubmitting ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -427,7 +427,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ targetId, targetType })
             type="button"
             onClick={handleSubmit}
             disabled={submitting || !newComment.trim()}
-            className="shrink-0 self-end px-4 h-10 flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors text-sm font-medium"
+            className="app-btn-primary"
           >
             {submitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />

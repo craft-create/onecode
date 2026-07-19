@@ -40,7 +40,7 @@ export default function TeamsPage() {
       title="团队协作"
       description="与团队成员协同创作"
       className="min-h-screen bg-background"
-      containerClassName="max-w-6xl mx-auto px-4 py-8"
+      containerClassName="app-container-shell"
       contentClassName="space-y-6"
       action={
         <Button onClick={() => navigate('/teams/new')}>

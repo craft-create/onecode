@@ -106,7 +106,7 @@ const HomePage: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="max-w-7xl mx-auto px-4 py-8 space-y-10">
+        <div className="app-container-shell space-y-10">
           {/* 轮播骨架 */}
           <Skeleton className="w-full aspect-[21/9] rounded-xl" />
           {/* 统计栏骨架（3个卡片） */}
@@ -144,84 +144,78 @@ const HomePage: React.FC = () => {
   return (
     <PageFrame
       className="min-h-screen bg-background"
-      containerClassName="max-w-7xl mx-auto px-4 py-8 space-y-12"
-      contentClassName=""
+      containerClassName="app-container-shell space-y-12"
+      contentClassName="space-y-10 pb-8"
     >
       <PageHeader title="光影工坊" />
-        {/* 板块1：精选素材轮播 */}
-        <section data-ai-section-type="carousel">
-          {featured.length > 0 ? (
-            <FeaturedCarousel items={featured} />
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <AlertTriangle className="w-12 h-12 mb-3 opacity-30" />
-              <p className="text-sm">暂无精选素材</p>
-            </div>
-          )}
-        </section>
-
-        {/* 板块2：平台数据统计栏 */}
-        <section data-ai-section-type="card-stat">
-          <StatisticsBar stats={stats ?? defaultStats} />
-        </section>
-
-        {/* 板块3：热门影音素材（新增） */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-foreground">
-              热门影音素材
-            </h2>
-            {/* 查看全部按钮，跳转到素材库列表页 */}
-            <button
-              onClick={() => navigate('/materials')}
-              className="text-sm text-primary hover:text-primary/80 transition-colors"
-            >
-              查看全部 →
-            </button>
+      {/* 板块1：精选素材轮播 */}
+      <section className="space-y-4">
+        {featured.length > 0 ? (
+          <FeaturedCarousel items={featured} />
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <AlertTriangle className="w-12 h-12 mb-3 opacity-30" />
+            <p className="text-sm">暂无精选素材</p>
           </div>
-          {featured.length > 0 ? (
-            <PopularMaterials items={featured} />
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <AlertTriangle className="w-12 h-12 mb-3 opacity-30" />
-              <p className="text-sm">暂无热门素材</p>
-            </div>
-          )}
-        </section>
+        )}
+      </section>
 
-        {/* 板块4：热门剧本 */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-foreground">
-              热门剧本
-            </h2>
-          </div>
-          {scripts.length > 0 ? (
-            <PopularScripts items={scripts} />
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <AlertTriangle className="w-12 h-12 mb-3 opacity-30" />
-              <p className="text-sm">暂无热门剧本</p>
-            </div>
-          )}
-        </section>
+      {/* 板块2：平台数据统计栏 */}
+      <section data-ai-section-type="card-stat" className="space-y-4">
+        <StatisticsBar stats={stats ?? defaultStats} />
+      </section>
 
-        {/* 板块5：优秀创作者 */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-foreground">
-              优秀创作者
-            </h2>
+      {/* 板块3：热门影音素材（新增） */}
+      <section className="space-y-5 pb-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-foreground">热门影音素材</h2>
+          {/* 查看全部按钮，跳转到素材库列表页 */}
+          <button
+            onClick={() => navigate('/materials')}
+            className="text-sm text-primary hover:text-primary/80 transition-colors"
+          >
+            查看全部 →
+          </button>
+        </div>
+        {featured.length > 0 ? (
+          <PopularMaterials items={featured} />
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <AlertTriangle className="w-12 h-12 mb-3 opacity-30" />
+            <p className="text-sm">暂无热门素材</p>
           </div>
-          {creators.length > 0 ? (
-            <TopCreators items={creators} />
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <AlertTriangle className="w-12 h-12 mb-3 opacity-30" />
-              <p className="text-sm">暂无优秀创作者</p>
-            </div>
-          )}
-        </section>
+        )}
+      </section>
+
+      {/* 板块4：热门剧本 */}
+      <section className="space-y-5 pb-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-foreground">热门剧本</h2>
+        </div>
+        {scripts.length > 0 ? (
+          <PopularScripts items={scripts} />
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <AlertTriangle className="w-12 h-12 mb-3 opacity-30" />
+            <p className="text-sm">暂无热门剧本</p>
+          </div>
+        )}
+      </section>
+
+      {/* 板块5：优秀创作者 */}
+      <section className="space-y-5 pb-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-foreground">优秀创作者</h2>
+        </div>
+        {creators.length > 0 ? (
+          <TopCreators items={creators} />
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <AlertTriangle className="w-12 h-12 mb-3 opacity-30" />
+            <p className="text-sm">暂无优秀创作者</p>
+          </div>
+        )}
+      </section>
     </PageFrame>
   );
 };

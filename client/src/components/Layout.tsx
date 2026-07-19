@@ -167,7 +167,7 @@ const Layout = () => {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
+          <div className="app-container h-16 flex items-center gap-3">
             <NavLink
               to="/"
               className="flex items-center gap-2 font-bold text-lg text-foreground"
@@ -178,7 +178,7 @@ const Layout = () => {
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-4rem)] bg-background text-foreground flex items-center justify-center px-4 sm:px-6 py-8 overflow-y-auto">
+        <main className="app-container-shell bg-background text-foreground flex items-center justify-center overflow-y-auto">
           <Outlet />
         </main>
       </div>
@@ -209,7 +209,7 @@ const Layout = () => {
         </AnimatePresence>
 
         {/* 导航栏内容容器 */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        <div className="app-container h-16 flex items-center justify-between gap-4">
           {/* ===== 左侧：Logo + 核心导航 ===== */}
           <div className="flex items-center gap-6 lg:gap-8">
             {/* Logo区域 */}
@@ -295,7 +295,7 @@ const Layout = () => {
             {/* 上传素材按钮 */}
             <NavLink
               to="/materials/upload"
-              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-all shadow-[0_0_12px_-2px_rgba(124_92_255_0.4)] hover:shadow-[0_0_16px_-2px_rgba(124_92_255_0.6)]"
+              className="hidden sm:inline-flex app-btn-primary transition-all shadow-[0_0_12px_-2px_rgba(124_92_255_0.4)] hover:shadow-[0_0_16px_-2px_rgba(124_92_255_0.6)]"
             >
               <Upload className="w-4 h-4" />
               <span className="hidden lg:inline">上传素材</span>
@@ -303,7 +303,7 @@ const Layout = () => {
 
             {/* 用户菜单（已登录显示头像下拉，未登录显示登录按钮） */}
             {isLoggedIn ? (
-              <div className="relative" ref={userMenuRef}>
+            <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all ${
@@ -410,7 +410,7 @@ const Layout = () => {
             ) : (
               <NavLink
                 to="/login"
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-[0_0_12px_-2px_rgba(124_92_255_0.4)]"
+                className="app-btn-primary transition-all shadow-[0_0_12px_-2px_rgba(124_92_255_0.4)]"
               >
                 登录
               </NavLink>

@@ -41,7 +41,7 @@ export default function RequirementsPage() {
       title="需求大厅"
       description="发现创作需求，开启合作"
       className="min-h-screen bg-background"
-      containerClassName="max-w-6xl mx-auto px-4 py-8"
+      containerClassName="app-container-shell"
       contentClassName="space-y-6"
       action={
         <Button onClick={() => navigate('/requirements/new')}>

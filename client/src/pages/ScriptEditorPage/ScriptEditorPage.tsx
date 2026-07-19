@@ -297,7 +297,7 @@ const ScriptEditorPage: React.FC = () => {
           <p className="text-[hsl(220_15%_90%)] text-sm mb-4">{loadError}</p>
           <button
             onClick={fetchContent}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-colors"
+            className="app-btn-primary"
           >
             <RefreshCw className="w-4 h-4" />
             重试
@@ -396,7 +396,7 @@ const ScriptEditorPage: React.FC = () => {
             size="sm"
             onClick={handleManualSave}
             disabled={saving}
-            className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+            className="app-btn-primary-compact"
           >
             <Save className="size-3.5" />
             {saving ? '保存中...' : '保存'}
@@ -583,7 +583,7 @@ const ScriptEditorPage: React.FC = () => {
                     size="sm"
                     onClick={handleRevert}
                     disabled={reverting}
-                    className="w-full gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+                    className="w-full app-btn-primary-compact"
                   >
                     <RotateCcw className="size-3.5" />
                     {reverting
