@@ -5,15 +5,13 @@ import {
   ArrowLeft,
   Play,
   Pause,
-  Loader2,
   Volume2,
   VolumeX,
   Maximize,
   Minimize,
 } from 'lucide-react';
 import { logger } from '@/utils/logger';
-import { analyticsApi, chatApi } from '@client/src/api';
-import { Button } from '@client/src/components/ui/button';
+import { analyticsApi } from '@client/src/api';
 import {
   getMaterialById,
   getMaterialLikeStatus,
@@ -22,6 +20,7 @@ import {
 } from '@client/src/api/materials';
 import { toggleFavorite } from '@client/src/api/user-materials';
 import { useAuth } from '@client/src/hooks/useAuth';
+import FollowButton from '@client/src/components/FollowButton';
 import { Image } from '@client/src/components/ui/image';
 import { PageFrame } from '../shared/PageShell';
 import { MaterialDetailSidePanel } from './components/MaterialDetailSidePanel';
@@ -29,30 +28,7 @@ import type {
   MaterialDetail,
   MaterialRelatedItem,
 } from '@shared/material.interface';
-import { toast } from 'sonner';
-import type { ChatRequest } from '@shared/types';
-
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2];
-
-type ChatRequestDirection = 'outgoing' | 'incoming';
-
-type ChatRequestState = {
-  request: ChatRequest;
-  direction: ChatRequestDirection;
-};
-
-const normalizeChatRequestList = (value: unknown): ChatRequest[] => {
-  if (Array.isArray(value)) {
-    return value;
-  }
-
-  if (!value || typeof value !== 'object') {
-    return [];
-  }
-
-  const { items } = value as { items?: unknown };
-  return Array.isArray(items) ? (items as ChatRequest[]) : [];
-};
 
 const MaterialDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -80,9 +56,6 @@ const MaterialDetailPage: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
-  const [chatRequestLoading, setChatRequestLoading] = useState(false);
-  const [chatRequestSubmitting, setChatRequestSubmitting] = useState(false);
-  const [chatRequestState, setChatRequestState] = useState<ChatRequestState | null>(null);
   const [isDraggingProgress, setIsDraggingProgress] = useState(false);
   const [isDraggingVolume, setIsDraggingVolume] = useState(false);
   const trackedMaterialRef = useRef<string | null>(null);
@@ -310,50 +283,6 @@ const MaterialDetailPage: React.FC = () => {
     }
   }, [isPlaying]);
 
-  const refreshChatRequestState = useCallback(async () => {
-    if (!detail?.creator_id || !user?.userId) {
-      setChatRequestState(null);
-      setChatRequestLoading(false);
-      return;
-    }
-
-    setChatRequestLoading(true);
-    try {
-      const response = await chatApi.getChatRequests({ direction: 'all' });
-      const requestList = normalizeChatRequestList(response);
-
-      const matchedRequest = requestList.find((item: ChatRequest) =>
-        (item.fromUserId === user.userId && item.toUserId === detail.creator_id)
-        || (item.fromUserId === detail.creator_id && item.toUserId === user.userId),
-      );
-
-      if (!matchedRequest) {
-        setChatRequestState(null);
-        return;
-      }
-
-      const direction: ChatRequestDirection = matchedRequest.fromUserId === user.userId
-        ? 'outgoing'
-        : 'incoming';
-
-      setChatRequestState({ request: matchedRequest, direction });
-    } catch (_error) {
-      console.error('Failed to load chat request status');
-      setChatRequestState(null);
-    } finally {
-      setChatRequestLoading(false);
-    }
-  }, [detail?.creator_id, user?.userId]);
-
-  useEffect(() => {
-    if (!detail?.creator_id || !user?.userId) {
-      setChatRequestState(null);
-      return;
-    }
-
-    void refreshChatRequestState();
-  }, [detail?.creator_id, user?.userId, refreshChatRequestState]);
-
   // Fullscreen change listener
   useEffect(() => {
     const handleFsChange = () => {
@@ -402,143 +331,11 @@ const MaterialDetailPage: React.FC = () => {
     setLikeCount(count);
   }, []);
 
-  const canRequestChat = !!(
-    detail?.creator_id &&
-    user?.userId &&
-    detail.creator_id !== user.userId
-  );
-
-  const handleCreateChatRequest = useCallback(async () => {
-    if (!detail?.creator_id || !user?.userId || chatRequestSubmitting) {
-      return;
-    }
-
-    setChatRequestSubmitting(true);
-    try {
-      await chatApi.createChatRequest({ toUserId: detail.creator_id });
-      toast.success('已发送聊天申请，等待对方通过');
-      await refreshChatRequestState();
-    } catch (_error) {
-      toast.error('发送聊天申请失败');
-    } finally {
-      setChatRequestSubmitting(false);
-    }
-  }, [chatRequestSubmitting, detail?.creator_id, refreshChatRequestState, user?.userId]);
-
-  const handleOpenConversation = useCallback(() => {
-    const conversationId = chatRequestState?.request.conversationId;
-    if (!conversationId) {
-      toast.error('暂未获取到对应会话，暂不可进入');
-      return;
-    }
-    navigate(`/chat/${conversationId}`);
-  }, [chatRequestState?.request.conversationId, navigate]);
-
-  const chatActionNode = canRequestChat
+  const creatorFollowActionNode = detail?.creator_id && user?.userId && detail.creator_id !== user.userId
     ? (
-      (() => {
-        if (chatRequestLoading) {
-          return (
-            <div className="space-y-2">
-              <Button variant="outline" className="w-full" disabled>
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  获取关系状态中
-                </span>
-              </Button>
-            </div>
-          );
-        }
-
-        if (!chatRequestState) {
-          return (
-            <div className="space-y-2">
-              <Button
-                className="w-full"
-                onClick={() => void handleCreateChatRequest()}
-                disabled={chatRequestSubmitting}
-              >
-                {chatRequestSubmitting ? (
-                  <span className="inline-flex items-center gap-2">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    发送中
-                  </span>
-                ) : (
-                  '申请与作者聊天'
-                )}
-              </Button>
-              <p className="text-[11px] text-muted-foreground">
-                发送后对方通过，即可进入私聊。
-              </p>
-            </div>
-          );
-        }
-
-        if (chatRequestState.direction === 'outgoing') {
-          if (chatRequestState.request.status === 'pending') {
-            return (
-              <div className="space-y-2">
-                <Button variant="outline" className="w-full" disabled>
-                  已发送申请，待对方通过
-                </Button>
-              </div>
-            );
-          }
-
-          if (chatRequestState.request.status === 'approved') {
-            return (
-              <div className="space-y-2">
-                <Button
-                  className="w-full"
-                  onClick={handleOpenConversation}
-                >
-                  进入聊天
-                </Button>
-              </div>
-            );
-          }
-
-          return (
-            <div className="space-y-2">
-              <Button
-                className="w-full"
-                onClick={() => void handleCreateChatRequest()}
-                disabled={chatRequestSubmitting}
-              >
-                {chatRequestSubmitting ? (
-                  <span className="inline-flex items-center gap-2">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    重试中
-                  </span>
-                ) : (
-                  '重新申请'
-                )}
-              </Button>
-              <p className="text-[11px] text-warning">
-                对方已拒绝，可再次提交请求。
-              </p>
-            </div>
-          );
-        }
-
-        if (chatRequestState.request.status === 'approved') {
-          return (
-            <div className="space-y-2">
-              <Button className="w-full" onClick={handleOpenConversation}>
-                进入聊天
-              </Button>
-            </div>
-          );
-        }
-
-        return (
-          <div className="space-y-2">
-            <Button variant="outline" className="w-full" disabled>
-              对方已向你发起申请，请在消息中处理
-            </Button>
-          </div>
-        );
-      })()
+      <div className="space-y-2">
+        <FollowButton userId={detail.creator_id} />
+      </div>
     )
     : null;
 
@@ -938,7 +735,7 @@ const MaterialDetailPage: React.FC = () => {
             onFavorite={handleFavorite}
             formatDuration={formatDuration}
             formatFileSize={formatFileSize}
-            extraActions={chatActionNode}
+            extraActions={creatorFollowActionNode}
           />
         </div>
     </PageFrame>

@@ -7,7 +7,6 @@ import {
   FileVideo,
   Bookmark,
   HardDrive,
-  Heart,
   Monitor,
   Tag,
 } from 'lucide-react';
@@ -117,12 +116,6 @@ export const MaterialDetailSidePanel = memo(({
           </div>
         )}
 
-        {likeCount > 0 && (
-          <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
-            <Heart className="w-3 h-3" />
-            <span>点赞 {likeCount.toLocaleString()} 次</span>
-          </div>
-        )}
       </div>
 
       <div className="bg-card border border-border rounded-lg p-4">

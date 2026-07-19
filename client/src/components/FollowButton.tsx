@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { UserPlus, UserCheck } from 'lucide-react';
+import { UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/compat/client-toolkit/logger';
 import { toggleFollow } from '@client/src/api/follow';
@@ -57,9 +57,7 @@ const FollowButton: React.FC<FollowButtonProps> = ({ userId }) => {
         ) : (
           <UserCheck className="w-3.5 h-3.5" />
         )
-      ) : (
-        <UserPlus className="w-3.5 h-3.5" />
-      )}
+      ) : null}
       <span>
         {loading
           ? '处理中...'
