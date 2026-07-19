@@ -20,13 +20,45 @@ import { Badge } from '@client/src/components/ui/badge';
 import { Skeleton } from '@client/src/components/ui/skeleton';
 import { analyticsApi } from '@client/src/api';
 import { PageFrame } from '../shared/PageShell';
-import type { AnalyticsDashboardData } from '@shared/types';
+import type {
+  AnalyticsCategoryPoint,
+  AnalyticsDashboardData,
+  AnalyticsTimeSeriesPoint,
+  AnalyticsTopContentItem,
+} from '@shared/types';
 
 const chartColors = ['#6366f1', '#0ea5e9', '#ec4899', '#f59e0b', '#10b981'];
 
 const toReadableNumber = (value: number): string => {
   const normalized = Number(value || 0);
   return normalized.toLocaleString('zh-CN');
+};
+
+const toNumber = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const toArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? value : []);
+
+const normalizeDashboardData = (value: unknown): AnalyticsDashboardData => {
+  const payload = value && typeof value === 'object' && 'data' in value
+    ? (value as { data?: unknown }).data
+    : value;
+
+  const source = (typeof payload === 'object' && payload !== null ? payload : {}) as Partial<AnalyticsDashboardData>;
+
+  return {
+    totalViews: toNumber(source.totalViews),
+    totalLikes: toNumber(source.totalLikes),
+    totalDownloads: toNumber(source.totalDownloads),
+    totalShares: toNumber(source.totalShares),
+    totalFavorites: toNumber(source.totalFavorites),
+    totalContents: toNumber(source.totalContents),
+    weeklyTrend: toArray<AnalyticsTimeSeriesPoint>(source.weeklyTrend),
+    categoryDistribution: toArray<AnalyticsCategoryPoint>(source.categoryDistribution),
+    topContents: toArray<AnalyticsTopContentItem>(source.topContents),
+  };
 };
 
 export default function AnalyticsPage() {
@@ -42,8 +74,8 @@ export default function AnalyticsPage() {
       setError('');
 
       try {
-        const data = await analyticsApi.getDashboard();
-        setDashboardData(data);
+        const response = await analyticsApi.getDashboard();
+        setDashboardData(normalizeDashboardData(response));
       } catch (_error) {
         setError('数据加载失败，请稍后重试');
       } finally {
