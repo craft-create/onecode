@@ -8,20 +8,25 @@ import {
   Grid3X3,
   Bookmark,
   Heart,
+  MessageCircle,
 } from 'lucide-react';
 import { logger } from '@/compat/client-toolkit/logger';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import FollowButton from '@/components/FollowButton';
+import { toast } from 'sonner';
 import {
   getFollowStatus,
   getFollowers,
   getFollowing,
 } from '@client/src/api/follow';
+import { chatApi } from '@client/src/api';
 import { getUserUploadsByUserId } from '@client/src/api/user-materials';
 import { listProjects } from '@client/src/api/scripts';
+import { Image } from '@client/src/components/ui/image';
 import type { FollowUserItem } from '@shared/follow.interface';
 import type { UserMaterialItem } from '@shared/material.interface';
 import type { ScriptProjectItem } from '@shared/script.interface';
+import { useAuth } from '@client/src/hooks/useAuth';
 
 type TabKey = 'works' | 'favorites' | 'following' | 'followers';
 
@@ -35,6 +40,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>('works');
 
   const [followerCount, setFollowerCount] = useState(0);
@@ -42,6 +48,7 @@ const UserProfilePage: React.FC = () => {
   const [materialCount, setMaterialCount] = useState(0);
   const [scriptCount, setScriptCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [startingChat, setStartingChat] = useState(false);
 
   const [materials, setMaterials] = useState<UserMaterialItem[]>([]);
   const [scripts, setScripts] = useState<ScriptProjectItem[]>([]);
@@ -111,6 +118,41 @@ const UserProfilePage: React.FC = () => {
     fetchTabContent();
   }, [fetchTabContent]);
 
+  const handleStartChat = useCallback(async () => {
+    if (!user || !userId || user.userId === userId || startingChat) {
+      return;
+    }
+
+    setStartingChat(true);
+    try {
+      try {
+        const conversation = (await chatApi.createConversation({
+          type: 'private',
+          memberIds: [userId],
+        })) as { id?: string };
+        const conversationId = conversation?.id;
+        if (!conversationId) {
+          throw new Error('会话创建失败');
+        }
+        toast.success('已打开聊天');
+        navigate(`/chat/${conversationId}`);
+      } catch (createError: unknown) {
+        logger.error('发起私聊失败，尝试发送聊天申请:', createError);
+        try {
+          await chatApi.createChatRequest({ toUserId: userId });
+          toast.success('已发送聊天请求，等待对方同意');
+        } catch (_error: unknown) {
+          throw createError;
+        }
+      }
+    } catch (err: unknown) {
+      logger.error('发起聊天失败:', err);
+      toast.error('发起聊天失败，请重试');
+    } finally {
+      setStartingChat(false);
+    }
+  }, [navigate, startingChat, user, userId]);
+
   if (!userId) {
     return (
       <div className="min-h-screen bg-[hsl(228_15%_8%)] flex items-center justify-center">
@@ -134,7 +176,28 @@ const UserProfilePage: React.FC = () => {
                     影视创作者
                   </p>
                 </div>
-                <FollowButton userId={userId} />
+                <div className="flex items-center gap-2">
+                  {user && user.userId !== userId && (
+                    <button
+                      type="button"
+                      onClick={handleStartChat}
+                      disabled={startingChat}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        startingChat
+                          ? 'bg-primary/40 text-primary-foreground border border-primary/30'
+                          : 'bg-primary text-primary-foreground hover:bg-primary/90 border border-primary'
+                      }`}
+                    >
+                      {startingChat ? (
+                        <div className="w-3.5 h-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                      ) : (
+                        <MessageCircle className="w-3.5 h-3.5" />
+                      )}
+                      <span>{startingChat ? '处理中...' : '发起聊天'}</span>
+                    </button>
+                  )}
+                  <FollowButton userId={userId} />
+                </div>
               </div>
 
               {/* Stats */}
@@ -246,7 +309,7 @@ const UserProfilePage: React.FC = () => {
                           >
                             <div className="aspect-video bg-gradient-to-br from-[hsl(228_14%_18%)] to-[hsl(228_14%_8%)] flex items-center justify-center">
                               {item.cover_url ? (
-                                <img
+                                <Image
                                   src={item.cover_url}
                                   alt={item.title}
                                   className="w-full h-full object-cover"
@@ -283,7 +346,7 @@ const UserProfilePage: React.FC = () => {
                           >
                             <div className="aspect-video bg-gradient-to-br from-[hsl(228_14%_18%)] to-[hsl(228_14%_8%)] flex items-center justify-center">
                               {item.cover_url ? (
-                                <img
+                                <Image
                                   src={item.cover_url}
                                   alt={item.title}
                                   className="w-full h-full object-cover"

@@ -11,7 +11,8 @@ import {
   Minimize,
 } from 'lucide-react';
 import { logger } from '@/utils/logger';
-import { analyticsApi } from '@client/src/api';
+import { analyticsApi, chatApi } from '@client/src/api';
+import { toast } from 'sonner';
 import {
   getMaterialById,
   getMaterialLikeStatus,
@@ -331,9 +332,51 @@ const MaterialDetailPage: React.FC = () => {
     setLikeCount(count);
   }, []);
 
+  const handleStartChatWithCreator = useCallback(async () => {
+    if (
+      !user?.userId ||
+      !detail?.creator_id ||
+      user.userId === detail.creator_id
+    ) {
+      return;
+    }
+
+    try {
+      try {
+        const conversation = (await chatApi.createConversation({
+          type: 'private',
+          memberIds: [detail.creator_id],
+        })) as { id?: string };
+        const conversationId = conversation?.id;
+        if (!conversationId) {
+          throw new Error('会话创建失败');
+        }
+        navigate(`/chat/${conversationId}`);
+        toast.success('已打开聊天');
+        return;
+      } catch (createError: unknown) {
+        logger.error('发起私聊失败，尝试发送聊天申请:', createError);
+        await chatApi.createChatRequest({
+          toUserId: detail.creator_id,
+        });
+        toast.success('已发送聊天请求，等待对方同意');
+      }
+    } catch (err: unknown) {
+      logger.error('发起聊天失败:', err);
+      toast.error('发起聊天失败，请重试');
+    }
+  }, [navigate, user?.userId, detail?.creator_id]);
+
   const creatorFollowActionNode = detail?.creator_id && user?.userId && detail.creator_id !== user.userId
     ? (
       <div className="space-y-2">
+        <button
+          type="button"
+          onClick={handleStartChatWithCreator}
+          className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
+        >
+          发起聊天
+        </button>
         <FollowButton userId={detail.creator_id} />
       </div>
     )
