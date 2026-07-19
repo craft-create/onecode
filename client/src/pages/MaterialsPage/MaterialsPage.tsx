@@ -217,7 +217,7 @@ const MaterialsPage: React.FC = () => {
     <PageFrame className="min-h-screen bg-background" containerClassName="app-container-shell" contentClassName="">
       {/* Search Bar */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="app-container py-3 flex items-center gap-3">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
           <div ref={searchRef} className="relative flex-1 max-w-xl">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
@@ -298,7 +298,7 @@ const MaterialsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="app-container py-6 flex gap-6">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 flex gap-6">
         {/* Filter Panel */}
         <AnimatePresence>
           {showFilters && (
