@@ -4,7 +4,14 @@ import type {
   AnalyticsDashboardData,
   AnalyticsTrackRequest,
   ChatRequest,
+  Conversation,
+  Message,
 } from '@shared/types';
+import type {
+  ChatMessageRequest,
+  CreateChatRequestRequest,
+  CreateConversationRequest,
+} from '@shared/api.interface';
 
 export const AUTH_EXPIRED_EVENT = 'onecode:auth-expired';
 
@@ -103,22 +110,32 @@ export const notificationApi = {
 // ==================== 聊天系统 ====================
 export const chatApi = {
   // 创建会话
-  createConversation: (data: { title?: string; type?: string; memberIds?: string[] }) =>
-    api.post('/chat/conversations', data),
+  createConversation: (data: CreateConversationRequest): Promise<Conversation> =>
+    api.post('/chat/conversations', data) as unknown as Promise<Conversation>,
 
   // 获取会话列表
-  getConversations: () => api.get('/chat/conversations'),
+  getConversations: (): Promise<Conversation[]> =>
+    api.get('/chat/conversations') as unknown as Promise<Conversation[]>,
 
   // 获取会话详情
-  getConversation: (id: string) => api.get(`/chat/conversations/${id}`),
+  getConversation: (id: string): Promise<Conversation | null> =>
+    api.get(`/chat/conversations/${id}`) as unknown as Promise<Conversation | null>,
 
   // 发送消息
-  sendMessage: (data: { conversationId: string; content?: string; type?: string; attachments?: string; replyToMessageId?: string; mentions?: string }) =>
-    api.post('/chat/messages', data),
+  sendMessage: (data: ChatMessageRequest): Promise<Message> =>
+    api.post('/chat/messages', data) as unknown as Promise<Message>,
 
   // 获取消息列表
-  getMessages: (params: { conversationId: string; beforeId?: string; page?: number; limit?: number }) =>
-    api.get(`/chat/conversations/${params.conversationId}/messages`, { params }),
+  getMessages: (params: {
+    conversationId: string;
+    beforeId?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<Message[]> =>
+    api.get(
+      `/chat/conversations/${params.conversationId}/messages`,
+      { params },
+    ) as unknown as Promise<Message[]>,
 
   // 标记已读
   markAsRead: (conversationId: string) => api.post(`/chat/conversations/${conversationId}/read`),
@@ -130,19 +147,20 @@ export const chatApi = {
   getChatRequests: (params?: {
     direction?: 'incoming' | 'outgoing' | 'all';
     status?: 'pending' | 'approved' | 'rejected';
-  }) => api.get<ChatRequest[] | { items?: ChatRequest[] }>('/chat/requests', { params }),
+  }): Promise<ChatRequest[]> =>
+    api.get('/chat/requests', { params }) as unknown as Promise<ChatRequest[]>,
 
   // 发起聊天申请
-  createChatRequest: (data: { toUserId: string; reason?: string }) =>
-    api.post<ChatRequest>('/chat/requests', data),
+  createChatRequest: (data: CreateChatRequestRequest): Promise<ChatRequest> =>
+    api.post('/chat/requests', data) as unknown as Promise<ChatRequest>,
 
   // 同意聊天申请
   approveChatRequest: (requestId: string): Promise<ChatRequest> =>
-    api.post(`/chat/requests/${requestId}/approve`),
+    api.post(`/chat/requests/${requestId}/approve`) as unknown as Promise<ChatRequest>,
 
   // 拒绝聊天申请
   rejectChatRequest: (requestId: string): Promise<ChatRequest> =>
-    api.post(`/chat/requests/${requestId}/reject`),
+    api.post(`/chat/requests/${requestId}/reject`) as unknown as Promise<ChatRequest>,
 
   // 删除消息
   deleteMessage: (id: string) => api.delete(`/chat/messages/${id}`),

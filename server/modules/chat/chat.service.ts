@@ -21,8 +21,18 @@ import {
 } from 'drizzle-orm';
 import { conversation, conversationMember, message, chatRequest } from '@server/database/schema';
 import { localUsers } from '@server/database/local-schema';
-import type { Conversation as SharedConversation } from '@shared/types';
+import type {
+  ChatMessageRequest,
+  CreateChatRequestRequest,
+  CreateConversationRequest,
+} from '@shared/api.interface';
+import type {
+  ChatRequest as SharedChatRequest,
+  Conversation as SharedConversation,
+} from '@shared/types';
 import { ChatGateway } from './chat.gateway';
+
+const CHAT_REQUEST_APPROVED_MESSAGE = '好友申请已通过，现在可以开始聊天了';
 
 type MessageFilter = {
   beforeId?: string;
@@ -30,21 +40,7 @@ type MessageFilter = {
   limit?: number;
 };
 
-type MessagePayload = {
-  conversationId: string;
-  content?: string;
-  type?: string;
-  attachments?: string;
-  replyToMessageId?: string;
-  mentions?: string;
-};
-
 type ChatRequestStatus = 'pending' | 'approved' | 'rejected';
-
-type ChatRequestPayload = {
-  toUserId: string;
-  reason?: string;
-};
 
 type ChatRequestFilter = {
   direction?: 'incoming' | 'outgoing' | 'all';
@@ -74,6 +70,8 @@ type ConversationWithMembers = SharedConversation & {
   peerId?: string;
   peerName?: string;
 };
+
+type ChatRequestDbRow = typeof chatRequest.$inferSelect;
 
 @Injectable()
 export class ChatService {
@@ -154,6 +152,79 @@ export class ChatService {
     return result || null;
   }
 
+  private async findApprovedRequestBetween(
+    firstUserId: string,
+    secondUserId: string,
+  ): Promise<ChatRequestDbRow | null> {
+    const [result] = await this.db
+      .select()
+      .from(chatRequest)
+      .where(
+        and(
+          eq(chatRequest.status, 'approved'),
+          or(
+            and(
+              eq(chatRequest.fromUserId, firstUserId),
+              eq(chatRequest.toUserId, secondUserId),
+            ),
+            and(
+              eq(chatRequest.fromUserId, secondUserId),
+              eq(chatRequest.toUserId, firstUserId),
+            ),
+          ),
+        ),
+      )
+      .orderBy(desc(chatRequest.updatedAt))
+      .limit(1);
+    return result || null;
+  }
+
+  private async isPrivateConversationApproved(
+    conversationId: string,
+  ): Promise<boolean> {
+    const [approvedRequest] = await this.db
+      .select({ id: chatRequest.id })
+      .from(chatRequest)
+      .where(
+        and(
+          eq(chatRequest.conversationId, conversationId),
+          eq(chatRequest.status, 'approved'),
+        ),
+      )
+      .limit(1);
+    return Boolean(approvedRequest);
+  }
+
+  private async enrichChatRequests(
+    rows: ChatRequestDbRow[],
+  ): Promise<SharedChatRequest[]> {
+    const userIds: string[] = [...new Set(
+      rows.flatMap((row: ChatRequestDbRow) => [row.fromUserId, row.toUserId]),
+    )];
+    const userNames = new Map<string, string>();
+
+    if (userIds.length > 0) {
+      const users: { id: string; nickname: string }[] = await this.db
+        .select({ id: localUsers.id, nickname: localUsers.nickname })
+        .from(localUsers)
+        .where(inArray(localUsers.id, userIds));
+      for (const user of users) {
+        userNames.set(user.id, user.nickname);
+      }
+    }
+
+    return rows.map((row: ChatRequestDbRow) => ({
+      ...row,
+      status: this.normalizeChatRequestStatus(row.status),
+      reason: row.reason ?? undefined,
+      conversationId: row.conversationId ?? undefined,
+      createdBy: row.createdBy ?? undefined,
+      updatedBy: row.updatedBy ?? undefined,
+      fromUserName: userNames.get(row.fromUserId) || '未知用户',
+      toUserName: userNames.get(row.toUserId) || '未知用户',
+    }));
+  }
+
   async getChatRequests(userId?: string, filters?: ChatRequestFilter) {
     if (!userId) {
       return [];
@@ -168,18 +239,20 @@ export class ChatService {
           : or(eq(chatRequest.fromUserId, userId), eq(chatRequest.toUserId, userId));
 
     if (normalized.status) {
-      return this.db
+      const rows: ChatRequestDbRow[] = await this.db
         .select()
         .from(chatRequest)
         .where(and(directionCondition, eq(chatRequest.status, normalized.status)))
         .orderBy(desc(chatRequest.createdAt));
+      return this.enrichChatRequests(rows);
     }
 
-    return this.db
+    const rows: ChatRequestDbRow[] = await this.db
       .select()
       .from(chatRequest)
       .where(directionCondition)
       .orderBy(desc(chatRequest.createdAt));
+    return this.enrichChatRequests(rows);
   }
 
   private async fetchConversationMembers(
@@ -270,10 +343,10 @@ export class ChatService {
   }
 
   async createChatRequest(
-    payload: ChatRequestPayload,
+    payload: CreateChatRequestRequest,
     fromUserId?: string,
   ) {
-    const requestData: ChatRequestPayload = payload || {};
+    const requestData: CreateChatRequestRequest = payload || { toUserId: '' };
     const sender = await this.ensureLoggedIn(fromUserId);
     const toUserId = requestData.toUserId?.trim();
 
@@ -285,6 +358,11 @@ export class ChatService {
     }
 
     await this.ensureTargetUserExists(toUserId);
+
+    const approvedRequest = await this.findApprovedRequestBetween(sender, toUserId);
+    if (approvedRequest?.conversationId) {
+      return approvedRequest;
+    }
 
     const [existing] = await this.db
       .select({ id: chatRequest.id })
@@ -298,7 +376,8 @@ export class ChatService {
       )
       .limit(1);
     if (existing) {
-      throw new BadRequestException('你已经向对方提交过聊天申请，等待对方处理');
+      const pendingRequest = await this.findChatRequestById(existing.id);
+      return pendingRequest;
     }
 
     const [reverseExisting] = await this.db
@@ -376,6 +455,9 @@ export class ChatService {
       throw new ForbiddenException('只有对方可以处理该申请');
     }
     if (request.status === 'approved') {
+      if (request.conversationId) {
+        await this.ensureApprovalSystemMessage(request.conversationId, operator);
+      }
       return request;
     }
 
@@ -387,23 +469,24 @@ export class ChatService {
       ? await this.findOne(request.conversationId)
       : null;
 
-    const createdConversation =
-      existingConversation ?? await this.create({
-        title: `与${request.fromUserId}的私聊`,
-        type: 'private',
-        memberIds: [request.fromUserId],
-      }, operator);
+    const createdConversation = existingConversation
+      ?? await this.createApprovedPrivateConversation(
+        operator,
+        request.fromUserId,
+      );
 
     if (!createdConversation) {
       throw new BadRequestException('创建会话失败');
     }
 
-    return this.updateChatRequestStatus(
+    const approvedRequest = await this.updateChatRequestStatus(
       request.id,
       'approved',
       operator,
       createdConversation.id,
     );
+    await this.ensureApprovalSystemMessage(createdConversation.id, operator);
+    return approvedRequest;
   }
 
   async rejectChatRequest(requestId: string, approverId?: string) {
@@ -450,7 +533,26 @@ export class ChatService {
       .from(conversation)
       .where(inArray(conversation.id, uniqueConversationIds))
       .orderBy(desc(conversation.createdAt));
-    const normalizedList = this.normalizeConversationRows(list as ChatServiceConversationDbRow[]);
+    const approvedPrivateRows: { conversationId: string | null }[] = await this.db
+      .select({ conversationId: chatRequest.conversationId })
+      .from(chatRequest)
+      .where(
+        and(
+          eq(chatRequest.status, 'approved'),
+          inArray(chatRequest.conversationId, uniqueConversationIds),
+        ),
+      );
+    const approvedPrivateIds = new Set<string>(
+      approvedPrivateRows
+        .map((row: { conversationId: string | null }) => row.conversationId)
+        .filter((id: string | null): id is string => Boolean(id)),
+    );
+    const visibleRows: ChatServiceConversationDbRow[] = (
+      list as ChatServiceConversationDbRow[]
+    ).filter((row: ChatServiceConversationDbRow) => (
+      row.type === 'group' || approvedPrivateIds.has(row.id)
+    ));
+    const normalizedList = this.normalizeConversationRows(visibleRows);
     return this.enrichConversations(normalizedList, _userId);
   }
 
@@ -478,12 +580,98 @@ export class ChatService {
     return enriched || null;
   }
 
-  async create(data: any, userId?: string) {
+  private async createApprovedPrivateConversation(
+    creatorId: string,
+    peerId: string,
+  ) {
+    const [created] = await this.db
+      .insert(conversation)
+      .values({
+        type: 'private',
+        createdBy: creatorId,
+      })
+      .returning();
+
+    if (!created) {
+      return null;
+    }
+
+    await this.db.insert(conversationMember).values([
+      {
+        conversationId: created.id,
+        userId: creatorId,
+        role: 'owner',
+      },
+      {
+        conversationId: created.id,
+        userId: peerId,
+        role: 'member',
+      },
+    ]);
+    return created;
+  }
+
+  private async ensureApprovalSystemMessage(
+    conversationId: string,
+    approverId: string,
+  ): Promise<void> {
+    const [existingMessage] = await this.db
+      .select({ id: message.id })
+      .from(message)
+      .where(
+        and(
+          eq(message.conversationId, conversationId),
+          eq(message.type, 'system'),
+          eq(message.content, CHAT_REQUEST_APPROVED_MESSAGE),
+          eq(message.isDeleted, 0),
+        ),
+      )
+      .limit(1);
+    if (existingMessage) {
+      return;
+    }
+
+    const [createdMessage] = await this.db
+      .insert(message)
+      .values({
+        conversationId,
+        senderId: approverId,
+        content: CHAT_REQUEST_APPROVED_MESSAGE,
+        type: 'system',
+        createdBy: approverId,
+      })
+      .returning();
+    if (!createdMessage) {
+      throw new BadRequestException('好友申请已通过，但系统消息发送失败');
+    }
+
+    await this.db
+      .update(conversation)
+      .set({
+        lastMessageId: createdMessage.id,
+        lastMessageAt: createdMessage.createdAt,
+        updatedAt: new Date(),
+        updatedBy: approverId,
+      })
+      .where(eq(conversation.id, conversationId));
+
+    this.chatGateway.broadcastNewMessage({
+      conversationId,
+      message: {
+        id: createdMessage.id,
+        conversationId,
+        senderId: createdMessage.senderId,
+        content: createdMessage.content ?? undefined,
+        type: createdMessage.type,
+        createdAt: createdMessage.createdAt,
+      },
+    });
+  }
+
+  async create(data: CreateConversationRequest, userId?: string) {
     const conversationType = this.normalizeConversationType(data?.type);
     const creatorId = await this.ensureLoggedIn(userId);
     const membersFromRequest = this.normalizeMemberIds(data?.memberIds);
-    const conversationData = { ...(data || {}) } as Record<string, unknown>;
-    delete conversationData.memberIds;
 
     const memberIds = new Set<string>();
 
@@ -495,16 +683,33 @@ export class ChatService {
     }
 
     if (conversationType === 'private') {
-      const hasTarget = Array.from(memberIds).some((memberId) => memberId !== creatorId);
-      if (!hasTarget) {
+      const peerIds: string[] = Array.from(memberIds).filter(
+        (memberId: string) => memberId !== creatorId,
+      );
+      if (peerIds.length !== 1) {
         throw new BadRequestException('私聊至少需要一个对方用户');
       }
+      const approvedRequest = await this.findApprovedRequestBetween(
+        creatorId,
+        peerIds[0],
+      );
+      if (!approvedRequest?.conversationId) {
+        throw new ForbiddenException('请先发送好友申请，等待对方通过后再聊天');
+      }
+      const approvedConversation = await this.findOne(
+        approvedRequest.conversationId,
+        creatorId,
+      );
+      if (!approvedConversation) {
+        throw new NotFoundException('已通过的聊天会话不存在');
+      }
+      return approvedConversation;
     }
 
-    const result = await this.db
+    const result: ChatServiceConversationDbRow[] = await this.db
       .insert(conversation)
       .values({
-        ...conversationData,
+        title: data?.title?.trim() || null,
         type: conversationType,
         createdBy: creatorId,
       })
@@ -543,10 +748,21 @@ export class ChatService {
     await this.db.delete(conversation).where(eq(conversation.id, id));
   }
 
-  async findMessages(conversationId: string, filters?: MessageFilter) {
-    const conversationExists = await this.findOne(conversationId);
+  async findMessages(
+    conversationId: string,
+    viewerId?: string,
+    filters?: MessageFilter,
+  ) {
+    const currentUserId = await this.ensureLoggedIn(viewerId);
+    const conversationExists = await this.findOne(conversationId, currentUserId);
     if (!conversationExists) {
-      throw new NotFoundException('会话不存在');
+      throw new ForbiddenException('无权查看该会话消息');
+    }
+    if (
+      conversationExists.type === 'private'
+      && !await this.isPrivateConversationApproved(conversationId)
+    ) {
+      throw new ForbiddenException('好友申请通过后才能查看私聊消息');
     }
 
     const limit = this.clampInt(filters?.limit, 50, 1, 200);
@@ -578,7 +794,10 @@ export class ChatService {
       .offset(offset);
   }
 
-  async sendMessage(senderId: string | undefined, payload: MessagePayload) {
+  async sendMessage(
+    senderId: string | undefined,
+    payload: ChatMessageRequest,
+  ) {
     if (!senderId) {
       throw new BadRequestException('未登录');
     }
@@ -587,9 +806,15 @@ export class ChatService {
       throw new BadRequestException('会话ID不能为空');
     }
 
-    const conversationExists = await this.findOne(payload.conversationId);
+    const conversationExists = await this.findOne(payload.conversationId, senderId);
     if (!conversationExists) {
       throw new NotFoundException('会话不存在');
+    }
+    if (
+      conversationExists.type === 'private'
+      && !await this.isPrivateConversationApproved(payload.conversationId)
+    ) {
+      throw new ForbiddenException('好友申请通过后才能发送消息');
     }
     const isMember = await this.isConversationMember(payload.conversationId, senderId);
     if (!isMember) {

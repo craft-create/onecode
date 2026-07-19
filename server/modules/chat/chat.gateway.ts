@@ -38,7 +38,7 @@ interface ChatTypingPayload {
 interface ChatSendMessagePayload {
   conversationId?: string;
   content?: string;
-  type?: 'text' | 'image' | 'file' | 'system';
+  type?: 'text' | 'image' | 'file';
   attachments?: string;
   replyToMessageId?: string;
   mentions?: string;

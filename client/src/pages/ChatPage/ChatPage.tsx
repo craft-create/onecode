@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { io, type Socket } from 'socket.io-client';
 import { MessageCircle, Send, Search } from 'lucide-react';
@@ -10,11 +10,18 @@ import { ScrollArea } from '@client/src/components/ui/scroll-area';
 import { Separator } from '@client/src/components/ui/separator';
 import { Skeleton } from '@client/src/components/ui/skeleton';
 import { Textarea } from '@client/src/components/ui/textarea';
-import { api, chatApi } from '@client/src/api';
-import type { ChatMessageEvent, ChatTypingEvent, Conversation } from '@shared/types';
+import { chatApi } from '@client/src/api';
 import { toast } from 'sonner';
+import { logger } from '@/compat/client-toolkit/logger';
 import { useAuth } from '@client/src/hooks/useAuth';
 import { PageFrame } from '../shared/PageShell';
+import { ChatRequestsPanel } from './ChatRequestsPanel';
+import type {
+  ChatMessageEvent,
+  ChatTypingEvent,
+  Conversation,
+  Message,
+} from '@shared/types';
 
 type SendMessageViaSocketResult = {
   success: boolean;
@@ -30,71 +37,62 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const mergeConversation = (list: Conversation[], next: Conversation | undefined) => {
+  const mergeConversation = (
+    list: Conversation[],
+    next: Conversation | undefined,
+  ): Conversation[] => {
     if (!next?.id) return list;
     const exists = list.some((item) => item.id === next.id);
     return exists ? list : [next, ...list];
   };
 
-  const getRouteStateConversation = (): Conversation | undefined => {
-    const state = location.state as { conversation?: Conversation } | undefined;
-    return state?.conversation;
-  };
-
-  const fetchConversations = async () => {
-    setLoading(true);
+  const fetchConversations = useCallback(async (
+    showLoading = false,
+  ): Promise<void> => {
+    if (showLoading) {
+      setLoading(true);
+    }
     try {
-      const response = (await api.get<Conversation[] | { items?: Conversation[] }>('/chat/conversations')) as
-        Conversation[]
-        | { items?: Conversation[] };
-      const list = Array.isArray(response)
-        ? response
-        : response?.items ?? [];
+      const list: Conversation[] = await chatApi.getConversations();
 
       let finalList = list;
-      const routeStateConversation = getRouteStateConversation();
+      const state = location.state as { conversation?: Conversation } | undefined;
+      const routeStateConversation = state?.conversation;
       if (routeStateConversation?.id) {
         finalList = mergeConversation(finalList, routeStateConversation);
       }
 
       if (conversationId) {
         try {
-          const conversation = (await (chatApi.getConversation(conversationId) as Promise<unknown>)) as Conversation | null;
+          const conversation: Conversation | null = await chatApi.getConversation(
+            conversationId,
+          );
           if (conversation) {
             finalList = mergeConversation(finalList, conversation);
-          } else {
-            finalList = mergeConversation(finalList, {
-              id: conversationId,
-              type: 'private',
-              title: '私聊',
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            });
           }
-        } catch (detailError) {
-          console.error('Failed to load active conversation detail:', detailError);
-          finalList = mergeConversation(finalList, {
-            id: conversationId,
-            type: 'private',
-            title: '私聊',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
+        } catch (error: unknown) {
+          logger.error('加载当前会话失败:', error);
         }
       }
 
       setConversations(finalList);
-    } catch {
-      console.error('Failed to load conversations');
+    } catch (error: unknown) {
+      logger.error('加载会话列表失败:', error);
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
-  };
+  }, [conversationId, location.state]);
 
   useEffect(() => {
     setSearchQuery('');
-    void fetchConversations();
-  }, [conversationId]);
+    void fetchConversations(true);
+    const timerId: number = window.setInterval(() => {
+      void fetchConversations(false);
+    }, 5000);
+    return () => window.clearInterval(timerId);
+  }, [fetchConversations]);
 
   const filteredConversations = conversations.filter(c =>
     getConversationDisplayName(c).toLowerCase().includes(searchQuery.toLowerCase())
@@ -130,6 +128,13 @@ export default function ChatPage() {
             />
           </div>
         </div>
+
+        <ChatRequestsPanel
+          onApproved={(approvedConversationId: string): void => {
+            void fetchConversations(false);
+            navigate(`/chat/${approvedConversationId}`);
+          }}
+        />
 
         <ScrollArea className="flex-1">
           {loading ? (
@@ -215,7 +220,7 @@ function ChatDetail({
   currentUserId?: string;
   conversation?: Conversation;
 }) {
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const messagesViewportRef = React.useRef<HTMLDivElement>(null);
@@ -372,19 +377,16 @@ function ChatDetail({
     });
   }, [messages, autoScrollToBottom]);
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (): Promise<void> => {
     try {
-      const response = (await chatApi.getMessages({
+      const list: Message[] = await chatApi.getMessages({
         conversationId,
         page: 1,
         limit: 200,
-      })) as any[] | { items?: any[] };
-      const list = Array.isArray(response)
-        ? response
-        : response?.items ?? [];
+      });
       setMessages(list);
-    } catch (_error) {
-      console.error('Failed to load messages');
+    } catch (error: unknown) {
+      logger.error('加载消息失败:', error);
     } finally {
       setLoading(false);
     }
@@ -406,7 +408,7 @@ function ChatDetail({
         return;
       }
       socketFailureMessage = socketResult.error;
-      console.error('Failed to send message via WebSocket:', socketResult.error);
+      logger.error(`WebSocket 发送消息失败: ${socketResult.error || '未知错误'}`);
     }
 
     try {
@@ -424,8 +426,8 @@ function ChatDetail({
       if (socketFailureMessage) {
         toast.success(`已通过 HTTP 发送（网络通道回退）`);
       }
-    } catch (_error) {
-      console.error('Failed to send message');
+    } catch (error: unknown) {
+      logger.error('发送消息失败:', error);
       toast.error(socketFailureMessage || '发送失败，请重试');
     }
   };
@@ -547,8 +549,14 @@ function ChatDetail({
           </div>
         ) : (
           <div className="space-y-4">
-            {messages.map(message => (
-              message && (
+            {messages.map((message: Message) => (
+              message.type === 'system' ? (
+                <div key={message.id} className="flex justify-center py-1">
+                  <div className="rounded-full border border-primary/20 bg-accent/70 px-3 py-1 text-xs text-muted-foreground ring-1 ring-inset ring-white/5">
+                    {message.content}
+                  </div>
+                </div>
+              ) : (
               <div
                 key={message.id}
                 className={`flex ${
@@ -599,7 +607,7 @@ function ChatDetail({
   );
 }
 
-function getConversationDisplayName(conversation?: Conversation) {
+function getConversationDisplayName(conversation?: Conversation): string {
   if (!conversation) {
     return '聊天';
   }

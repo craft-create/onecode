@@ -347,25 +347,15 @@ const MaterialDetailPage: React.FC = () => {
 
     setStartingChat(true);
     try {
-      try {
-        const conversation = (await chatApi.createConversation({
-          type: 'private',
-          memberIds: [detail.creator_id],
-        })) as { id?: string };
-        const conversationId = conversation?.id;
-        if (!conversationId) {
-          throw new Error('会话创建失败');
-        }
-        navigate(`/chat/${conversationId}`);
+      const request = await chatApi.createChatRequest({
+        toUserId: detail.creator_id,
+      });
+      if (request.status === 'approved' && request.conversationId) {
+        navigate(`/chat/${request.conversationId}`);
         toast.success('已打开聊天');
         return;
-      } catch (createError: unknown) {
-        logger.error('发起私聊失败，尝试发送聊天申请:', createError);
-        await chatApi.createChatRequest({
-          toUserId: detail.creator_id,
-        });
-        toast.success('已发送聊天请求，等待对方同意');
       }
+      toast.success('好友申请已发送，通过后即可聊天');
     } catch (err: unknown) {
       logger.error('发起聊天失败:', err);
       toast.error('发起聊天失败，请重试');
@@ -412,7 +402,7 @@ const MaterialDetailPage: React.FC = () => {
             ) : (
               <MessageCircle className="w-3.5 h-3.5" />
             )}
-            <span>{startingChat ? '处理中...' : '发起聊天'}</span>
+            <span>{startingChat ? '处理中...' : '申请聊天'}</span>
           </button>
           <FollowButton userId={detail.creator_id} className="ml-1" />
         </>

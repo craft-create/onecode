@@ -27,6 +27,8 @@ export interface ChatRequest {
   updatedAt: Date;
   updatedBy?: string;
   createdBy?: string;
+  fromUserName?: string;
+  toUserName?: string;
 }
 
 // 聊天相关接口

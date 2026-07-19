@@ -27,6 +27,7 @@ import { Image } from '@client/src/components/ui/image';
 import type { FollowUserItem } from '@shared/follow.interface';
 import type { UserMaterialItem } from '@shared/material.interface';
 import type { ScriptProjectItem } from '@shared/script.interface';
+import type { ChatRequest } from '@shared/types';
 import { useAuth } from '@client/src/hooks/useAuth';
 
 type TabKey = 'works' | 'favorites' | 'following' | 'followers';
@@ -166,26 +167,15 @@ const UserProfilePage: React.FC = () => {
 
     setStartingChat(true);
     try {
-      try {
-        const conversation = (await chatApi.createConversation({
-          type: 'private',
-          memberIds: [userId],
-        })) as { id?: string };
-        const conversationId = conversation?.id;
-        if (!conversationId) {
-          throw new Error('会话创建失败');
-        }
+      const request: ChatRequest = await chatApi.createChatRequest({
+        toUserId: userId,
+      });
+      if (request.status === 'approved' && request.conversationId) {
         toast.success('已打开聊天');
-        navigate(`/chat/${conversationId}`);
-      } catch (createError: unknown) {
-        logger.error('发起私聊失败，尝试发送聊天申请:', createError);
-        try {
-          await chatApi.createChatRequest({ toUserId: userId });
-          toast.success('已发送聊天请求，等待对方同意');
-        } catch (_error: unknown) {
-          throw createError;
-        }
+        navigate(`/chat/${request.conversationId}`);
+        return;
       }
+      toast.success('好友申请已发送，通过后即可聊天');
     } catch (err: unknown) {
       logger.error('发起聊天失败:', err);
       toast.error('发起聊天失败，请重试');
@@ -250,7 +240,7 @@ const UserProfilePage: React.FC = () => {
                       ) : (
                         <MessageCircle className="w-3.5 h-3.5" />
                       )}
-                      <span>{startingChat ? '处理中...' : '发起聊天'}</span>
+                      <span>{startingChat ? '处理中...' : '申请聊天'}</span>
                     </button>
                   )}
                   <FollowButton userId={userId} className="ml-1" />
