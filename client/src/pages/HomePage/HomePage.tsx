@@ -35,7 +35,7 @@ import type {
   TopCreator,
   PlatformStatistics,
 } from '@shared/home.interface';
-import { PageFrame, PageHeader } from '../shared/PageShell';
+import { PageFrame } from '../shared/PageShell';
 import { PageErrorState } from '../shared/PageStatePanel';
 
 /**
@@ -106,9 +106,11 @@ const HomePage: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="app-container-shell space-y-10">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-8 space-y-10">
           {/* 轮播骨架 */}
-          <Skeleton className="w-full aspect-[21/9] rounded-xl" />
+          <div className="-mx-3 sm:-mx-6">
+            <Skeleton className="w-full aspect-[21/9] rounded-xl" />
+          </div>
           {/* 统计栏骨架（3个卡片） */}
           <div className="grid grid-cols-3 gap-4">
             <Skeleton className="h-24 rounded-xl" />
@@ -144,12 +146,11 @@ const HomePage: React.FC = () => {
   return (
     <PageFrame
       className="min-h-screen bg-background"
-      containerClassName="app-container-shell space-y-12"
+      containerClassName="max-w-7xl mx-auto px-3 sm:px-6 py-8 space-y-12"
       contentClassName="space-y-10 pb-8"
     >
-      <PageHeader title="光影工坊" />
       {/* 板块1：精选素材轮播 */}
-      <section className="space-y-4">
+      <section className="space-y-4 -mx-3 sm:-mx-6">
         {featured.length > 0 ? (
           <FeaturedCarousel items={featured} />
         ) : (

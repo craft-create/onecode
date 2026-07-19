@@ -214,7 +214,7 @@ const Layout = () => {
               onClick={closeAllMenus}
             >
               <Film className="w-6 h-6 text-primary" />
-              <span className="hidden sm:inline">{appName || "光影工坊"}</span>
+              <span className="inline">{appName || "光影工坊"}</span>
             </NavLink>
           </div>
         </header>
@@ -256,7 +256,7 @@ const Layout = () => {
             {/* Logo区域 */}
             <NavLink to="/" className="flex items-center gap-2 font-bold text-lg shrink-0">
               <Film className="w-6 h-6 text-primary" />
-              <span className="hidden sm:inline">{appName || "光影工坊"}</span>
+              <span className="inline">{appName || "光影工坊"}</span>
             </NavLink>
 
             {/* 核心导航菜单 */}
