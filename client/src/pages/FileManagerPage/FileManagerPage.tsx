@@ -84,11 +84,19 @@ const FileManagerPage: React.FC = () => {
   // ========== Upload ==========
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isStarred = (value: number | boolean | string) => {
+    return value === 1 || value === true || value === '1' || value === 'true';
+  };
+
+  const stopMenuPropagation = (event: React.MouseEvent) => {
+    event.stopPropagation();
+  };
+
   // ========== Load Data ==========
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-    const [foldersRes, filesRes] = await Promise.all([
+      const [foldersRes, filesRes] = await Promise.all([
         fileApi.getFolders(currentFolderId || undefined),
         fileApi.getFiles({ folderId: currentFolderId || undefined, pageSize: 100 }),
       ]);
@@ -96,7 +104,12 @@ const FileManagerPage: React.FC = () => {
       const filesData = (filesRes as { items?: FileItem[] }) || {};
 
       setFolders(foldersData);
-      setFiles(filesData.items || []);
+      setFiles(
+        (filesData.items || []).map((file: FileItem) => ({
+          ...file,
+          isStarred: isStarred(file.isStarred) ? 1 : 0,
+        })),
+      );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error('加载文件列表失败:', err);
@@ -163,13 +176,27 @@ const FileManagerPage: React.FC = () => {
   };
 
   // ========== Star/Unstar ==========
-  const handleToggleStar = async (fileId: string) => {
+  const handleToggleStar = async (fileId: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    const previousFiles = [...files];
+    const nextFiles = files.map((file) =>
+      file.id === fileId
+        ? { ...file, isStarred: isStarred(file.isStarred) ? 0 : 1 }
+        : file,
+    );
+
+    setFiles(nextFiles);
+
     try {
       await fileApi.toggleStar(fileId);
-      loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
+      setFiles(previousFiles);
       toast.error(`操作失败: ${msg}`);
+      await loadData();
     }
   };
 
@@ -519,7 +546,7 @@ const FileManagerPage: React.FC = () => {
                                 ) : (
                                   getFileIcon(file.type, file.mimeType)
                                 )}
-                                {file.isStarred === 1 && (
+                                {isStarred(file.isStarred) && (
                                   <Star className="absolute top-2 right-2 w-4 h-4 text-yellow-500 fill-yellow-500" />
                                 )}
                               </div>
@@ -549,19 +576,36 @@ const FileManagerPage: React.FC = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleToggleStar(file.id)}>
+                                <DropdownMenuItem onClick={(event) => handleToggleStar(file.id, event)}>
                                   <Star className="w-4 h-4 mr-2" />
-                                  {file.isStarred ? '取消收藏' : '收藏'}
+                                  {isStarred(file.isStarred) ? '取消收藏' : '收藏'}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => { setShareItem(file); setShareDialogOpen(true); }}>
+                                <DropdownMenuItem
+                                  onClick={(event) => {
+                                    stopMenuPropagation(event);
+                                    setShareItem(file);
+                                    setShareDialogOpen(true);
+                                  }}
+                                >
                                   <Share2 className="w-4 h-4 mr-2" />
                                   分享
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => window.open(file.url, '_blank')}>
+                                <DropdownMenuItem
+                                  onClick={(event) => {
+                                    stopMenuPropagation(event);
+                                    window.open(file.url, '_blank');
+                                  }}
+                                >
                                   <Download className="w-4 h-4 mr-2" />
                                   下载
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDelete(file)} className="text-destructive">
+                                <DropdownMenuItem
+                                  onClick={(event) => {
+                                    stopMenuPropagation(event);
+                                    handleDelete(file);
+                                  }}
+                                  className="text-destructive"
+                                >
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   删除
                                 </DropdownMenuItem>
@@ -590,24 +634,46 @@ const FileManagerPage: React.FC = () => {
                             <span className="text-sm text-muted-foreground">{formatSize(Number(file.size))}</span>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="w-8 h-8">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="w-8 h-8"
+                                  onClick={(event) => stopMenuPropagation(event)}
+                                >
                                   <MoreVertical className="w-4 h-4" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleToggleStar(file.id)}>
+                                <DropdownMenuItem onClick={(event) => handleToggleStar(file.id, event)}>
                                   <Star className="w-4 h-4 mr-2" />
-                                  {file.isStarred ? '取消收藏' : '收藏'}
+                                  {isStarred(file.isStarred) ? '取消收藏' : '收藏'}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => { setShareItem(file); setShareDialogOpen(true); }}>
+                                <DropdownMenuItem
+                                  onClick={(event) => {
+                                    stopMenuPropagation(event);
+                                    setShareItem(file);
+                                    setShareDialogOpen(true);
+                                  }}
+                                >
                                   <Share2 className="w-4 h-4 mr-2" />
                                   分享
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => window.open(file.url, '_blank')}>
+                                <DropdownMenuItem
+                                  onClick={(event) => {
+                                    stopMenuPropagation(event);
+                                    window.open(file.url, '_blank');
+                                  }}
+                                >
                                   <Download className="w-4 h-4 mr-2" />
                                   下载
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDelete(file)} className="text-destructive">
+                                <DropdownMenuItem
+                                  onClick={(event) => {
+                                    stopMenuPropagation(event);
+                                    handleDelete(file);
+                                  }}
+                                  className="text-destructive"
+                                >
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   删除
                                 </DropdownMenuItem>
