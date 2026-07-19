@@ -1,4 +1,15 @@
-import { Check, Clock, Download, HardDrive, Heart, Monitor, Tag } from 'lucide-react';
+import {
+  Check,
+  Clock,
+  Download,
+  FileAudio,
+  FileType,
+  FileVideo,
+  HardDrive,
+  Heart,
+  Monitor,
+  Tag,
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { MaterialDetail } from '@shared/material.interface';
 import { memo } from 'react';
@@ -24,6 +35,16 @@ export const MaterialDetailSidePanel = memo(({
   formatDuration,
   formatFileSize,
 }: MaterialDetailSidePanelProps) => {
+  const formatIcon = () => {
+    if (detail.type === 'video') {
+      return <FileVideo className="w-3.5 h-3.5" />;
+    }
+    if (detail.type === 'audio' || detail.type === 'sound') {
+      return <FileAudio className="w-3.5 h-3.5" />;
+    }
+    return <FileType className="w-3.5 h-3.5" />;
+  };
+
   return (
     <div className="space-y-4">
       <div className="bg-card border border-border rounded-lg p-4">
@@ -106,7 +127,10 @@ export const MaterialDetailSidePanel = memo(({
           </div>
 
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">格式</span>
+            <span className="text-muted-foreground flex items-center gap-1.5">
+              {formatIcon()}
+              格式
+            </span>
             <span className="text-foreground">{detail.format || '-'}</span>
           </div>
 
