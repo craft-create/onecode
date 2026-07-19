@@ -139,7 +139,21 @@ export class AnalyticsService {
   }
 
   async findAll(_userId?: string) {
-    return this.db.select().from(userBehavior).orderBy(desc(userBehavior.createdAt));
+    return this.db
+      .select({
+        id: userBehavior.id,
+        userId: userBehavior.userId,
+        sessionId: userBehavior.sessionId,
+        action: userBehavior.action,
+        resourceType: userBehavior.resourceType,
+        resourceId: userBehavior.resourceId,
+        duration: userBehavior.duration,
+        metadata: userBehavior.metadata,
+        ipAddress: userBehavior.ipAddress,
+        userAgent: userBehavior.userAgent,
+      })
+      .from(userBehavior)
+      .orderBy(desc(userBehavior.id));
   }
 
   async findOne(id: string) {
