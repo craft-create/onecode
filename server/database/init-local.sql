@@ -203,3 +203,53 @@ CREATE TABLE IF NOT EXISTS notification (
 CREATE INDEX IF NOT EXISTS idx_notification_user ON notification (((notification.user_id).user_id));
 CREATE INDEX IF NOT EXISTS idx_notification_is_read ON notification (is_read);
 CREATE INDEX IF NOT EXISTS idx_notification_created_at ON notification (_created_at);
+
+-- 聊天系统
+CREATE TABLE IF NOT EXISTS conversation (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  title varchar(255),
+  type varchar(50) NOT NULL DEFAULT 'private',
+  last_message_id uuid,
+  last_message_at timestamptz(3),
+  _created_at timestamptz(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  _created_by user_profile,
+  _updated_at timestamptz(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  _updated_by user_profile
+);
+
+CREATE TABLE IF NOT EXISTS conversation_member (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  conversation_id uuid NOT NULL,
+  user_id user_profile NOT NULL,
+  role varchar(50) NOT NULL DEFAULT 'member',
+  last_read_message_id uuid,
+  unread_count integer NOT NULL DEFAULT 0,
+  is_muted integer NOT NULL DEFAULT 0,
+  _created_at timestamptz(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  _created_by user_profile,
+  _updated_at timestamptz(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  _updated_by user_profile
+);
+
+CREATE TABLE IF NOT EXISTS message (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  conversation_id uuid NOT NULL,
+  sender_id user_profile NOT NULL,
+  content text,
+  type varchar(50) NOT NULL DEFAULT 'text',
+  attachments text,
+  reply_to_message_id uuid,
+  mentions text,
+  is_edited integer NOT NULL DEFAULT 0,
+  is_deleted integer NOT NULL DEFAULT 0,
+  _created_at timestamptz(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  _created_by user_profile,
+  _updated_at timestamptz(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  _updated_by user_profile
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversation_member_conversation ON conversation_member(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_member_user ON conversation_member(((user_id).user_id));
+CREATE UNIQUE INDEX IF NOT EXISTS uq_conversation_member ON conversation_member(conversation_id, ((user_id).user_id));
+CREATE INDEX IF NOT EXISTS idx_message_conversation ON message(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_updated_at ON conversation(_updated_at);
