@@ -8,6 +8,7 @@ import type {
   Message,
 } from '@shared/types';
 import type {
+  ChatAccessResponse,
   ChatMessageRequest,
   CreateChatRequestRequest,
   CreateConversationRequest,
@@ -120,6 +121,10 @@ export const chatApi = {
   // 获取会话详情
   getConversation: (id: string): Promise<Conversation | null> =>
     api.get(`/chat/conversations/${id}`) as unknown as Promise<Conversation | null>,
+
+  // 查询与指定用户的好友申请和聊天状态
+  getChatAccess: (userId: string): Promise<ChatAccessResponse> =>
+    api.get(`/chat/access/${userId}`) as unknown as Promise<ChatAccessResponse>,
 
   // 发送消息
   sendMessage: (data: ChatMessageRequest): Promise<Message> =>

@@ -191,7 +191,7 @@ export default function ChatPage() {
 
       {/* 聊天窗口 */}
       <div className="flex-1 border rounded-lg flex flex-col">
-        {conversationId ? (
+        {conversationId && activeConversation ? (
           <ChatDetail
             conversationId={conversationId}
             currentUserId={user?.userId}
@@ -201,7 +201,11 @@ export default function ChatPage() {
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
             <div className="text-center">
               <MessageCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-              <p>选择一个会话开始聊天</p>
+              <p>
+                {conversationId
+                  ? '正在加载会话，请稍候...'
+                  : '选择一个会话开始聊天'}
+              </p>
             </div>
           </div>
         )}

@@ -22,6 +22,7 @@ import {
 } from '@client/src/api/materials';
 import { toggleFavorite } from '@client/src/api/user-materials';
 import { useAuth } from '@client/src/hooks/useAuth';
+import { useChatAccess } from '@client/src/hooks/useChatAccess';
 import FollowButton from '@client/src/components/FollowButton';
 import { Image } from '@client/src/components/ui/image';
 import { PageFrame } from '../shared/PageShell';
@@ -72,6 +73,11 @@ const MaterialDetailPage: React.FC = () => {
   );
 
   const { user } = useAuth();
+  const {
+    access: creatorChatAccess,
+    loading: creatorChatAccessLoading,
+    refresh: refreshCreatorChatAccess,
+  } = useChatAccess(detail?.creator_id, user?.userId);
 
   const refreshMaterialDetail = useCallback(async () => {
     if (!id) return;
@@ -347,6 +353,23 @@ const MaterialDetailPage: React.FC = () => {
 
     setStartingChat(true);
     try {
+      if (
+        creatorChatAccess.status === 'approved'
+        && creatorChatAccess.conversationId
+      ) {
+        navigate(`/chat/${creatorChatAccess.conversationId}`);
+        return;
+      }
+      if (creatorChatAccess.status === 'pending') {
+        if (creatorChatAccess.direction === 'incoming') {
+          navigate('/chat');
+          toast.info('请在消息页处理对方的好友申请');
+          return;
+        }
+        toast.info('好友申请已发送，请等待对方通过');
+        return;
+      }
+
       const request = await chatApi.createChatRequest({
         toUserId: detail.creator_id,
       });
@@ -355,6 +378,7 @@ const MaterialDetailPage: React.FC = () => {
         toast.success('已打开聊天');
         return;
       }
+      await refreshCreatorChatAccess();
       toast.success('好友申请已发送，通过后即可聊天');
     } catch (err: unknown) {
       logger.error('发起聊天失败:', err);
@@ -362,7 +386,20 @@ const MaterialDetailPage: React.FC = () => {
     } finally {
       setStartingChat(false);
     }
-  }, [navigate, startingChat, user?.userId, detail?.creator_id]);
+  }, [
+    creatorChatAccess,
+    detail?.creator_id,
+    navigate,
+    refreshCreatorChatAccess,
+    startingChat,
+    user?.userId,
+  ]);
+
+  const creatorChatButtonLabel: string = creatorChatAccess.status === 'approved'
+    ? '发消息'
+    : creatorChatAccess.status === 'pending'
+      ? creatorChatAccess.direction === 'incoming' ? '处理申请' : '等待通过'
+      : '申请聊天';
 
   const creatorDisplay = detail?.creator_id
     ? detail.creator_name || detail.creator_avatar_url
@@ -390,7 +427,7 @@ const MaterialDetailPage: React.FC = () => {
           <button
             type="button"
             onClick={handleStartChatWithCreator}
-            disabled={startingChat}
+            disabled={startingChat || creatorChatAccessLoading}
             className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
               startingChat
                 ? 'bg-primary/40 text-primary-foreground border border-primary/30'
@@ -402,7 +439,11 @@ const MaterialDetailPage: React.FC = () => {
             ) : (
               <MessageCircle className="w-3.5 h-3.5" />
             )}
-            <span>{startingChat ? '处理中...' : '申请聊天'}</span>
+            <span>
+              {startingChat || creatorChatAccessLoading
+                ? '处理中...'
+                : creatorChatButtonLabel}
+            </span>
           </button>
           <FollowButton userId={detail.creator_id} className="ml-1" />
         </>

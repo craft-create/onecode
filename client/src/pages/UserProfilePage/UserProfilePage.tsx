@@ -29,6 +29,7 @@ import type { UserMaterialItem } from '@shared/material.interface';
 import type { ScriptProjectItem } from '@shared/script.interface';
 import type { ChatRequest } from '@shared/types';
 import { useAuth } from '@client/src/hooks/useAuth';
+import { useChatAccess } from '@client/src/hooks/useChatAccess';
 
 type TabKey = 'works' | 'favorites' | 'following' | 'followers';
 
@@ -43,6 +44,11 @@ const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const {
+    access: chatAccess,
+    loading: chatAccessLoading,
+    refresh: refreshChatAccess,
+  } = useChatAccess(userId, user?.userId);
   const [activeTab, setActiveTab] = useState<TabKey>('works');
 
   const [followerCount, setFollowerCount] = useState(0);
@@ -167,6 +173,20 @@ const UserProfilePage: React.FC = () => {
 
     setStartingChat(true);
     try {
+      if (chatAccess.status === 'approved' && chatAccess.conversationId) {
+        navigate(`/chat/${chatAccess.conversationId}`);
+        return;
+      }
+      if (chatAccess.status === 'pending') {
+        if (chatAccess.direction === 'incoming') {
+          navigate('/chat');
+          toast.info('请在消息页处理对方的好友申请');
+          return;
+        }
+        toast.info('好友申请已发送，请等待对方通过');
+        return;
+      }
+
       const request: ChatRequest = await chatApi.createChatRequest({
         toUserId: userId,
       });
@@ -175,6 +195,7 @@ const UserProfilePage: React.FC = () => {
         navigate(`/chat/${request.conversationId}`);
         return;
       }
+      await refreshChatAccess();
       toast.success('好友申请已发送，通过后即可聊天');
     } catch (err: unknown) {
       logger.error('发起聊天失败:', err);
@@ -182,7 +203,14 @@ const UserProfilePage: React.FC = () => {
     } finally {
       setStartingChat(false);
     }
-  }, [navigate, startingChat, user, userId]);
+  }, [
+    chatAccess,
+    navigate,
+    refreshChatAccess,
+    startingChat,
+    user,
+    userId,
+  ]);
 
   if (!userId || profileNotFound) {
     return (
@@ -207,6 +235,11 @@ const UserProfilePage: React.FC = () => {
       avatar: profile.avatarUrl || '',
     },
   ];
+  const chatButtonLabel: string = chatAccess.status === 'approved'
+    ? '发消息'
+    : chatAccess.status === 'pending'
+      ? chatAccess.direction === 'incoming' ? '处理申请' : '等待通过'
+      : '申请聊天';
 
   return (
     <div className="min-h-screen bg-[hsl(228_15%_8%)]">
@@ -228,7 +261,7 @@ const UserProfilePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleStartChat}
-                      disabled={startingChat}
+                      disabled={startingChat || chatAccessLoading}
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                         startingChat
                           ? 'bg-primary/40 text-primary-foreground border border-primary/30'
@@ -240,7 +273,9 @@ const UserProfilePage: React.FC = () => {
                       ) : (
                         <MessageCircle className="w-3.5 h-3.5" />
                       )}
-                      <span>{startingChat ? '处理中...' : '申请聊天'}</span>
+                      <span>
+                        {startingChat || chatAccessLoading ? '处理中...' : chatButtonLabel}
+                      </span>
                     </button>
                   )}
                   <FollowButton userId={userId} className="ml-1" />

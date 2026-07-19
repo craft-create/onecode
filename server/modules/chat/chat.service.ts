@@ -22,6 +22,7 @@ import {
 import { conversation, conversationMember, message, chatRequest } from '@server/database/schema';
 import { localUsers } from '@server/database/local-schema';
 import type {
+  ChatAccessResponse,
   ChatMessageRequest,
   CreateChatRequestRequest,
   CreateConversationRequest,
@@ -177,6 +178,92 @@ export class ChatService {
       .orderBy(desc(chatRequest.updatedAt))
       .limit(1);
     return result || null;
+  }
+
+  private async findLatestChatRequestBetween(
+    firstUserId: string,
+    secondUserId: string,
+  ): Promise<ChatRequestDbRow | null> {
+    const [result] = await this.db
+      .select()
+      .from(chatRequest)
+      .where(
+        or(
+          and(
+            eq(chatRequest.fromUserId, firstUserId),
+            eq(chatRequest.toUserId, secondUserId),
+          ),
+          and(
+            eq(chatRequest.fromUserId, secondUserId),
+            eq(chatRequest.toUserId, firstUserId),
+          ),
+        ),
+      )
+      .orderBy(desc(chatRequest.updatedAt))
+      .limit(1);
+    return result || null;
+  }
+
+  private async ensureApprovedConversationMembers(
+    request: ChatRequestDbRow,
+  ): Promise<void> {
+    if (request.status !== 'approved' || !request.conversationId) {
+      return;
+    }
+
+    const members: { userId: string; role: 'owner' | 'member' }[] = [
+      { userId: request.toUserId, role: 'owner' },
+      { userId: request.fromUserId, role: 'member' },
+    ];
+    for (const member of members) {
+      const exists = await this.isConversationMember(
+        request.conversationId,
+        member.userId,
+      );
+      if (exists) {
+        continue;
+      }
+      await this.db
+        .insert(conversationMember)
+        .values({
+          conversationId: request.conversationId,
+          userId: member.userId,
+          role: member.role,
+          createdBy: request.toUserId,
+        })
+        .onConflictDoNothing();
+    }
+  }
+
+  async getChatAccess(
+    userId: string | undefined,
+    targetUserId: string,
+  ): Promise<ChatAccessResponse> {
+    const currentUserId = await this.ensureLoggedIn(userId);
+    if (!targetUserId || targetUserId === currentUserId) {
+      return { status: 'none' };
+    }
+
+    const request = await this.findLatestChatRequestBetween(
+      currentUserId,
+      targetUserId,
+    );
+    if (!request) {
+      return { status: 'none' };
+    }
+    if (request.status === 'approved' && request.conversationId) {
+      await this.ensureApprovedConversationMembers(request);
+      await this.ensureApprovalSystemMessage(
+        request.conversationId,
+        request.toUserId,
+      );
+    }
+
+    return {
+      status: this.normalizeChatRequestStatus(request.status),
+      direction: request.fromUserId === currentUserId ? 'outgoing' : 'incoming',
+      conversationId: request.conversationId ?? undefined,
+    };
   }
 
   private async isPrivateConversationApproved(
@@ -523,7 +610,35 @@ export class ChatService {
       .from(conversationMember)
       .where(eq(sql<string>`(${conversationMember.userId}).user_id`, _userId));
 
-    const uniqueConversationIds = [...new Set(myConversationIdsRows.map((row) => row.conversationId))];
+    const approvedRequests: ChatRequestDbRow[] = await this.db
+      .select()
+      .from(chatRequest)
+      .where(
+        and(
+          eq(chatRequest.status, 'approved'),
+          or(
+            eq(chatRequest.fromUserId, _userId),
+            eq(chatRequest.toUserId, _userId),
+          ),
+        ),
+      );
+    for (const request of approvedRequests) {
+      await this.ensureApprovedConversationMembers(request);
+      if (request.conversationId) {
+        await this.ensureApprovalSystemMessage(
+          request.conversationId,
+          request.toUserId,
+        );
+      }
+    }
+
+    const approvedConversationIds: string[] = approvedRequests
+      .map((request: ChatRequestDbRow) => request.conversationId)
+      .filter((id: string | null): id is string => Boolean(id));
+    const uniqueConversationIds: string[] = [...new Set([
+      ...myConversationIdsRows.map((row) => row.conversationId),
+      ...approvedConversationIds,
+    ])];
     if (uniqueConversationIds.length === 0) {
       return [];
     }
@@ -567,7 +682,27 @@ export class ChatService {
     }
 
     if (viewerId) {
-      const isMember = await this.isConversationMember(id, viewerId);
+      let isMember = await this.isConversationMember(id, viewerId);
+      if (!isMember) {
+        const [approvedRequest] = await this.db
+          .select()
+          .from(chatRequest)
+          .where(
+            and(
+              eq(chatRequest.conversationId, id),
+              eq(chatRequest.status, 'approved'),
+              or(
+                eq(chatRequest.fromUserId, viewerId),
+                eq(chatRequest.toUserId, viewerId),
+              ),
+            ),
+          )
+          .limit(1);
+        if (approvedRequest) {
+          await this.ensureApprovedConversationMembers(approvedRequest);
+          isMember = await this.isConversationMember(id, viewerId);
+        }
+      }
       if (!isMember) {
         return null;
       }

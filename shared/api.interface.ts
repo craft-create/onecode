@@ -11,6 +11,12 @@ export interface CreateChatRequestRequest {
   reason?: string;
 }
 
+export interface ChatAccessResponse {
+  status: 'none' | 'pending' | 'approved' | 'rejected';
+  direction?: 'incoming' | 'outgoing';
+  conversationId?: string;
+}
+
 export interface ChatMessageRequest {
   conversationId: string;
   content?: string;

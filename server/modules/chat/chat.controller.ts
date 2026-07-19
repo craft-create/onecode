@@ -64,6 +64,17 @@ export class ChatController {
     });
   }
 
+  @Get('access/:userId')
+  getChatAccess(
+    @Param('userId') targetUserId: string,
+    @Req() req: Request,
+  ) {
+    return this.chatService.getChatAccess(
+      getLocalUserId(req),
+      targetUserId,
+    );
+  }
+
   @NeedLogin()
   @Post('requests')
   createChatRequest(
