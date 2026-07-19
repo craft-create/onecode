@@ -19,7 +19,7 @@ import { PassThrough } from 'stream';
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 // 导入Drizzle ORM操作符
-import { and, desc, eq, ilike, or, count, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, or, count, sql, inArray } from 'drizzle-orm';
 // 导入数据库表定义
 import { localUsers } from '@server/database/local-schema';
 import {
@@ -94,11 +94,12 @@ export class ScriptService {
       return undefined;
     }
 
+    const normalized = userId.trim();
     const isUuidLike =
       /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
-        userId,
+        normalized,
       );
-    return isUuidLike ? userId : undefined;
+    return isUuidLike ? normalized : undefined;
   }
 
   private getEtherpadPadUrl(padId: string): string {
@@ -281,9 +282,39 @@ export class ScriptService {
     return text || '';
   }
 
-  /**
-   * 构造函数：注入数据库实例
-   */
+  private toIsoDate(value: Date | string | null | undefined): string {
+    return value instanceof Date ? value.toISOString() : String(value || '');
+  }
+
+  private async resolveUserNicknames(
+    userIds: string[],
+  ): Promise<Map<string, string>> {
+    const normalizedIds = Array.from(
+      new Set(
+        userIds
+          .map((id) => id.trim())
+          .filter((id): id is string => this.normalizeUserId(id) !== undefined),
+      ),
+    );
+
+    if (normalizedIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.db
+      .select({
+        id: localUsers.id,
+        nickname: localUsers.nickname,
+      })
+      .from(localUsers)
+      .where(inArray(localUsers.id, normalizedIds));
+
+    return new Map(rows.map((row) => [row.id, row.nickname]));
+  }
+
+/**
+ * 构造函数：注入数据库实例
+ */
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
   ) {}
@@ -367,9 +398,7 @@ export class ScriptService {
       description: p.description || '',
       cover_url: p.coverUrl || '',
       collaborator_count: Number(p.collaboratorCount),
-      updated_at: p.updatedAt instanceof Date
-        ? p.updatedAt.toISOString()
-        : String(p.updatedAt),
+      updated_at: this.toIsoDate(p.updatedAt),
     }));
 
     return { items, total };
@@ -426,9 +455,7 @@ export class ScriptService {
       description: p.description || '',
       cover_url: p.coverUrl || '',
       collaborator_count: Number(p.collaboratorCount),
-      updated_at: p.updatedAt instanceof Date
-        ? p.updatedAt.toISOString()
-        : String(p.updatedAt),
+      updated_at: this.toIsoDate(p.updatedAt),
     }));
 
     return { items, total };
@@ -484,9 +511,7 @@ export class ScriptService {
       id: p.id,
       title: p.title,
       cover_url: p.coverUrl || '',
-      updated_at: p.updatedAt instanceof Date
-        ? p.updatedAt.toISOString()
-        : String(p.updatedAt),
+      updated_at: this.toIsoDate(p.updatedAt),
     }));
 
     return { items, total };
@@ -591,17 +616,8 @@ export class ScriptService {
       throw new NotFoundException(`Project ${id} not found`);
     }
 
-    // 协作者ID数组转换为对象数组
     const collaboratorIds: string[] = project.collaborators || [];
-
-    // 批量查询协作者信息
-    const collaboratorIdList = collaboratorIds
-      .map(id => `'${id.replace(/'/g, "''")}'::uuid`)
-      .join(', ');
-    const userRows = await this.db.execute<{ id: string; nickname: string }>(
-      sql.raw(`SELECT id, nickname FROM local_users WHERE id IN (${collaboratorIdList})`),
-    );
-    const userMap = new Map(userRows.map((u) => [u.id, u.nickname]));
+    const userMap = await this.resolveUserNicknames(collaboratorIds);
 
     const collaborators: ScriptCollaborator[] = collaboratorIds.map(
       (uid: string) => ({
@@ -891,16 +907,7 @@ export class ScriptService {
     const commentAuthorIds = comments
       .map((c) => c.author)
       .filter((id) => !!id);
-    const commentAuthorNames: Map<string, string> = new Map();
-    if (commentAuthorIds.length > 0) {
-      const commentAuthorIdList = commentAuthorIds
-        .map(id => `'${id.replace(/'/g, "''")}'::uuid`)
-        .join(', ');
-      const userRows = await this.db.execute<{ id: string; nickname: string }>(
-        sql.raw(`SELECT id, nickname FROM local_users WHERE id IN (${commentAuthorIdList})`),
-      );
-      userRows.forEach((u) => commentAuthorNames.set(u.id, u.nickname));
-    }
+    const commentAuthorNames = await this.resolveUserNicknames(commentAuthorIds);
 
     const items: ScriptCommentItem[] = comments.map((c) => ({
       id: c.id,
@@ -909,9 +916,7 @@ export class ScriptService {
       author_name: c.author ? (commentAuthorNames.get(c.author) || c.author) : '',
       author_avatar: '',
       status: c.status,
-      created_at: c.createdAt instanceof Date
-        ? c.createdAt.toISOString()
-        : String(c.createdAt),
+      created_at: this.toIsoDate(c.createdAt),
     }));
 
     return { items };
@@ -985,25 +990,14 @@ export class ScriptService {
     const authorIds = versions
       .map((v) => v.createdBy)
       .filter((id): id is string => typeof id === 'string' && id.length > 0);
-    const authorNames: Map<string, string> = new Map();
-    if (authorIds.length > 0) {
-      const authorIdList = authorIds
-        .map(id => `'${id.replace(/'/g, "''")}'::uuid`)
-        .join(', ');
-      const userRows = await this.db.execute<{ id: string; nickname: string }>(
-        sql.raw(`SELECT id, nickname FROM local_users WHERE id IN (${authorIdList})`),
-      );
-      userRows.forEach((u) => authorNames.set(u.id, u.nickname));
-    }
+    const authorNames = await this.resolveUserNicknames(authorIds);
 
     const items: ScriptVersionItem[] = versions.map((v) => ({
       id: v.id,
       version: v.version,
       snapshot_summary: v.snapshotSummary || '',
       author_name: v.createdBy ? (authorNames.get(v.createdBy) || v.createdBy) : '',
-      created_at: v.createdAt instanceof Date
-        ? v.createdAt.toISOString()
-        : String(v.createdAt),
+      created_at: this.toIsoDate(v.createdAt),
     }));
 
     return { items, total };

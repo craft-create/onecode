@@ -44,6 +44,37 @@ export class MaterialService {
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
   ) {}
 
+  private toIsoDate(value: Date | string | null | undefined): string {
+    return value instanceof Date ? value.toISOString() : String(value || '');
+  }
+
+  private buildCommentTree(comments: MaterialCommentItem[]): {
+    items: MaterialCommentItem[];
+    total: number;
+  } {
+    const topLevel: MaterialCommentItem[] = [];
+    const replyMap = new Map<string, MaterialCommentItem[]>();
+
+    for (const comment of comments) {
+      if (comment.parent_id) {
+        const bucket = replyMap.get(comment.parent_id) || [];
+        bucket.push(comment);
+        replyMap.set(comment.parent_id, bucket);
+      } else {
+        topLevel.push(comment);
+      }
+    }
+
+    for (const item of topLevel) {
+      item.replies = replyMap.get(item.id) || [];
+    }
+
+    return {
+      items: topLevel,
+      total: comments.length,
+    };
+  }
+
   /**
    * 判断用户是否为超级账户
    * 超级账户（nickname 为 'zrc'）可绕过权限检查，删除/修改任何内容
@@ -607,31 +638,10 @@ export class MaterialService {
       like_count: Number(row.like_count),
       is_liked: Boolean(row.is_liked),
       replies: [],
-      created_at: row.created_at instanceof Date
-        ? row.created_at.toISOString()
-        : String(row.created_at),
+      created_at: this.toIsoDate(row.created_at),
     }));
 
-    // 构建二级评论嵌套结构
-    const topLevel: MaterialCommentItem[] = [];
-    const replyMap = new Map<string, MaterialCommentItem[]>();
-    for (const c of allComments) {
-      if (c.parent_id) {
-        // 有父ID的是回复，暂存到Map
-        const arr = replyMap.get(c.parent_id) || [];
-        arr.push(c);
-        replyMap.set(c.parent_id, arr);
-      } else {
-        // 无父ID的是一级评论
-        topLevel.push(c);
-      }
-    }
-    // 将回复挂到对应一级评论下
-    for (const c of topLevel) {
-      c.replies = replyMap.get(c.id) || [];
-    }
-
-    return { items: topLevel, total: allComments.length };
+    return this.buildCommentTree(allComments);
   }
 
   /**

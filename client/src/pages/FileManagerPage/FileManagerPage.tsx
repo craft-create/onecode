@@ -315,6 +315,16 @@ const FileManagerPage: React.FC = () => {
   };
 
   // ========== Render Helpers ==========
+  type FileMediaKind = 'folder' | 'image' | 'video' | 'audio' | 'other';
+
+  const getFileMediaKind = (file: FileItem): FileMediaKind => {
+    if (file.type === 'folder') return 'folder';
+    if (file.mimeType?.startsWith('image/') || file.type === 'image') return 'image';
+    if (file.mimeType?.startsWith('video/') || file.type === 'video') return 'video';
+    if (file.mimeType?.startsWith('audio/') || file.type === 'audio') return 'audio';
+    return 'other';
+  };
+
   const getFileIcon = (type: string, mimeType?: string) => {
     if (type === 'folder') return <Folder className="w-8 h-8 text-blue-500" />;
     if (type === 'audio') return <Music className="w-8 h-8 text-yellow-500" />;
@@ -327,34 +337,28 @@ const FileManagerPage: React.FC = () => {
     return <File className="w-8 h-8 text-gray-500" />;
   };
 
-  const isImageFile = (file: FileItem) => {
-    return file.mimeType?.startsWith('image/') || file.type === 'image';
-  };
+  const renderFilePreview = (file: FileItem, mode: 'grid' | 'list'): React.ReactNode => {
+    const kind = getFileMediaKind(file);
 
-  const isVideoFile = (file: FileItem) => {
-    return file.mimeType?.startsWith('video/') || file.type === 'video';
-  };
-
-  const isAudioFile = (file: FileItem) => {
-    return file.mimeType?.startsWith('audio/') || file.type === 'audio';
-  };
-
-  const renderGridPreview = (file: FileItem) => {
-    if (isImageFile(file)) {
+    if (kind === 'image') {
       const imageUrl = file.thumbnailUrl || file.url;
       return (
-        <img src={imageUrl} alt={file.name} className="w-full h-full object-cover" />
+        <img
+          src={imageUrl}
+          alt={file.name}
+          className={mode === 'grid' ? 'w-full h-full object-cover' : 'w-10 h-10 object-cover rounded'}
+        />
       );
     }
 
-    if (isVideoFile(file)) {
-      const poster = file.thumbnailUrl || undefined;
+    if (kind === 'video') {
       return (
         <video
           src={file.url}
-          poster={poster}
+          poster={file.thumbnailUrl || undefined}
           controls
-          className="w-full h-full object-cover"
+          preload="metadata"
+          className={mode === 'grid' ? 'w-full h-full object-cover' : 'w-20 h-10 rounded object-cover'}
           onClick={(event) => event.stopPropagation()}
         >
           您的浏览器不支持视频播放
@@ -362,57 +366,72 @@ const FileManagerPage: React.FC = () => {
       );
     }
 
-    if (isAudioFile(file)) {
+    if (kind === 'audio') {
       return (
         <audio
           src={file.url}
           controls
-          className="w-full px-3"
+          preload="metadata"
+          className={mode === 'grid' ? 'w-full px-3' : 'w-48'}
           onClick={(event) => event.stopPropagation()}
         >
           您的浏览器不支持音频播放
         </audio>
       );
     }
+
     return null;
   };
 
-  const renderListPreview = (file: FileItem) => {
-    if (isImageFile(file)) {
-      const imageUrl = file.thumbnailUrl || file.url;
-      return (
-        <img src={imageUrl} alt={file.name} className="w-10 h-10 object-cover rounded" />
-      );
-    }
-
-    if (isVideoFile(file)) {
-      return (
-        <video
-          src={file.url}
-          controls
-          className="w-20 h-10 rounded object-cover"
+  const renderFileActions = (file: FileItem, triggerVariant: 'secondary' | 'ghost') => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant={triggerVariant}
+          size="icon"
+          className="w-8 h-8"
           onClick={(event) => event.stopPropagation()}
         >
-          您的浏览器不支持视频播放
-        </video>
-      );
-    }
-
-    if (isAudioFile(file)) {
-      return (
-        <audio
-          src={file.url}
-          controls
-          className="w-48"
-          onClick={(event) => event.stopPropagation()}
+          <MoreVertical className="w-4 h-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={(event) => handleToggleStar(file.id, event)}>
+          <Star className="w-4 h-4 mr-2" />
+          {isStarred(file.isStarred) ? '取消收藏' : '收藏'}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={(event) => {
+            stopMenuPropagation(event);
+            setShareItem(file);
+            setShareDialogOpen(true);
+          }}
         >
-          您的浏览器不支持音频播放
-        </audio>
-      );
-    }
-
-    return getFileIcon(file.type, file.mimeType);
-  };
+          <Share2 className="w-4 h-4 mr-2" />
+          分享
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={(event) => {
+            stopMenuPropagation(event);
+            window.open(file.url, '_blank');
+          }}
+        >
+          <Download className="w-4 h-4 mr-2" />
+          下载
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={(event) => {
+            stopMenuPropagation(event);
+            handleDelete(file);
+          }}
+          className="text-destructive"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          删除
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   const formatSize = (bytes?: number) => {
     if (!bytes) return '-';
@@ -622,9 +641,9 @@ const FileManagerPage: React.FC = () => {
                                 className="aspect-square bg-accent/30 flex items-center justify-center relative"
                                 onClick={() => window.open(file.url, '_blank')}
                               >
-                                {renderGridPreview(file) ? (
+                                {renderFilePreview(file, 'grid') ? (
                                   <div className="absolute inset-0 flex items-center justify-center">
-                                    {renderGridPreview(file)}
+                                    {renderFilePreview(file, 'grid')}
                                   </div>
                                 ) : (
                                   getFileIcon(file.type, file.mimeType)
@@ -647,53 +666,7 @@ const FileManagerPage: React.FC = () => {
                             />
                           </div>
                           <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="secondary"
-                                  size="icon"
-                                  className="w-8 h-8"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={(event) => handleToggleStar(file.id, event)}>
-                                  <Star className="w-4 h-4 mr-2" />
-                                  {isStarred(file.isStarred) ? '取消收藏' : '收藏'}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(event) => {
-                                    stopMenuPropagation(event);
-                                    setShareItem(file);
-                                    setShareDialogOpen(true);
-                                  }}
-                                >
-                                  <Share2 className="w-4 h-4 mr-2" />
-                                  分享
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(event) => {
-                                    stopMenuPropagation(event);
-                                    window.open(file.url, '_blank');
-                                  }}
-                                >
-                                  <Download className="w-4 h-4 mr-2" />
-                                  下载
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(event) => {
-                                    stopMenuPropagation(event);
-                                    handleDelete(file);
-                                  }}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  删除
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            {renderFileActions(file, 'secondary')}
                           </div>
                         </motion.div>
                       ))}
@@ -712,56 +685,10 @@ const FileManagerPage: React.FC = () => {
                               onCheckedChange={() => toggleSelect(file.id)}
                               onClick={(e) => e.stopPropagation()}
                             />
-                            {renderListPreview(file)}
+                            {renderFilePreview(file, 'list') || getFileIcon(file.type, file.mimeType)}
                             <span className="flex-1 font-medium truncate">{file.name}</span>
                             <span className="text-sm text-muted-foreground">{formatSize(Number(file.size))}</span>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="w-8 h-8"
-                                  onClick={(event) => stopMenuPropagation(event)}
-                                >
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={(event) => handleToggleStar(file.id, event)}>
-                                  <Star className="w-4 h-4 mr-2" />
-                                  {isStarred(file.isStarred) ? '取消收藏' : '收藏'}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(event) => {
-                                    stopMenuPropagation(event);
-                                    setShareItem(file);
-                                    setShareDialogOpen(true);
-                                  }}
-                                >
-                                  <Share2 className="w-4 h-4 mr-2" />
-                                  分享
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(event) => {
-                                    stopMenuPropagation(event);
-                                    window.open(file.url, '_blank');
-                                  }}
-                                >
-                                  <Download className="w-4 h-4 mr-2" />
-                                  下载
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(event) => {
-                                    stopMenuPropagation(event);
-                                    handleDelete(file);
-                                  }}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  删除
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            {renderFileActions(file, 'ghost')}
                           </CardContent>
                         </Card>
                       ))}

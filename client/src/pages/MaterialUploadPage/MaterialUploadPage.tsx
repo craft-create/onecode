@@ -89,9 +89,9 @@ const MaterialUploadPage: React.FC = () => {
 
     const entries: FileEntry[] = fileArray.map((file) => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      // 为图片/视频创建本地预览 URL
+      // 为图片/音频/视频创建本地预览 URL
       const localPreviewUrl =
-        file.type.startsWith('image/') || file.type.startsWith('video/')
+        isImageFile(file) || isVideoFile(file) || isAudioFile(file)
           ? URL.createObjectURL(file)
           : undefined;
       if (localPreviewUrl) objectUrlsRef.current.add(localPreviewUrl);
@@ -102,7 +102,7 @@ const MaterialUploadPage: React.FC = () => {
 
     // 立即对每个文件发起上传（异步，不阻塞 UI）
     entries.forEach((entry) => {
-      if (entry.file.type.startsWith('video/')) {
+      if (isVideoFile(entry.file)) {
         void fillVideoPreviewInfo(entry);
       }
       void doUpload(entry);
@@ -296,8 +296,8 @@ const MaterialUploadPage: React.FC = () => {
     if (file.status !== 'done') return;
 
     setEditingFile(file);
-    const isImage = file.file.type.startsWith('image/');
-    const isVideo = file.file.type.startsWith('video/');
+    const isImage = isImageFile(file.file);
+    const isVideo = isVideoFile(file.file);
     const url = file.uploadedUrl || '';
     const autoCoverUrl = isImage ? url : file.thumbnailUrl || '';
     const videoDuration: number = isVideo ? Math.round(file.duration || 0) : 0;
@@ -312,7 +312,7 @@ const MaterialUploadPage: React.FC = () => {
     setFormData({
       title: file.file.name.replace(/\.[^.]+$/, ''),
       description: '',
-      type: isVideo ? 'video' : file.file.type.startsWith('audio/') ? 'audio' : 'sound',
+      type: getMaterialType(file.file),
       resolution: videoResolution,
       duration: videoDuration,
       format: file.file.name.split('.').pop() || '',
@@ -416,17 +416,89 @@ const MaterialUploadPage: React.FC = () => {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
   };
 
+  type UploadMediaKind = 'video' | 'audio' | 'image' | 'other';
+
   const getFileIcon = (file: File) => {
-    if (file.type.startsWith('video/')) return Film;
-    if (file.type.startsWith('audio/')) return Music;
-    if (file.type.startsWith('image/')) return Image;
+    const kind = getUploadMediaKind(file);
+    if (kind === 'video') return Film;
+    if (kind === 'audio') return Music;
+    if (kind === 'image') return Image;
     return File;
   };
 
   /** 判断是否为图片文件 */
-  const isImageFile = (file: File): boolean => file.type.startsWith('image/');
+  const isImageFile = (file: File): boolean => getUploadMediaKind(file) === 'image';
   /** 判断是否为视频文件 */
-  const isVideoFile = (file: File): boolean => file.type.startsWith('video/');
+  const isVideoFile = (file: File): boolean => getUploadMediaKind(file) === 'video';
+  /** 判断是否为音频文件 */
+  const isAudioFile = (file: File): boolean => getUploadMediaKind(file) === 'audio';
+  const getUploadMediaKind = (file: File): UploadMediaKind => {
+    if (file.type.startsWith('image/')) return 'image';
+    if (file.type.startsWith('video/')) return 'video';
+    if (file.type.startsWith('audio/')) return 'audio';
+    return 'other';
+  };
+  const getMaterialType = (file: File): 'video' | 'audio' | 'sound' =>
+    isVideoFile(file) ? 'video' : isAudioFile(file) ? 'audio' : 'sound';
+
+  const getPreviewSource = (entry: FileEntry): string | undefined =>
+    entry.status === 'done'
+      ? entry.uploadedUrl || entry.localPreviewUrl
+      : entry.localPreviewUrl;
+  const getUploadEntryPreview = (entry: FileEntry) => {
+    if (!entry.status) return null;
+
+    if (isImageFile(entry.file)) {
+      return entry.localPreviewUrl ? (
+        <img
+          src={entry.localPreviewUrl}
+          alt={entry.file.name}
+          className="w-full h-full object-cover"
+        />
+      ) : null;
+    }
+
+    if (isVideoFile(entry.file)) {
+      if (entry.thumbnailUrl) {
+        return (
+          <img
+            src={entry.thumbnailUrl}
+            alt={entry.file.name}
+            className="w-full h-full object-cover"
+          />
+        );
+      }
+
+      if (entry.localPreviewUrl) {
+        return (
+          <video
+            src={entry.localPreviewUrl}
+            className="w-full h-full object-cover"
+            muted
+            controls={entry.status === 'done'}
+          />
+        );
+      }
+    }
+
+    if (isAudioFile(entry.file)) {
+      const previewSrc = getPreviewSource(entry);
+      if (previewSrc) {
+        return (
+          <audio
+            src={previewSrc}
+            controls
+            className="w-full"
+            preload="metadata"
+          >
+            您的浏览器不支持音频播放
+          </audio>
+        );
+      }
+    }
+
+    return null;
+  };
 
   return (
     <PageFrame
@@ -494,15 +566,14 @@ const MaterialUploadPage: React.FC = () => {
         </motion.div>
 
         {/* File List */}
-        {files.length > 0 && (
+            {files.length > 0 && (
           <div className="mt-6 space-y-3">
             <h2 className="text-sm font-medium text-foreground">
               上传列表 ({files.length})
             </h2>
             {files.map((entry) => {
               const FileIcon = getFileIcon(entry.file);
-              const isImg = isImageFile(entry.file);
-              const isVid = isVideoFile(entry.file);
+              const preview = getUploadEntryPreview(entry);
               return (
                 <div
                   key={entry.id}
@@ -510,24 +581,8 @@ const MaterialUploadPage: React.FC = () => {
                 >
                   {/* 预览区域：图片缩略图 / 视频首帧 / 文件图标 */}
                   <div className="w-14 h-14 rounded-lg bg-accent flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {entry.status === 'done' && entry.localPreviewUrl && isImg ? (
-                      <img
-                        src={entry.localPreviewUrl}
-                        alt={entry.file.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : entry.status === 'done' && isVid && entry.thumbnailUrl ? (
-                      <img
-                        src={entry.thumbnailUrl}
-                        alt={entry.file.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : entry.status === 'done' && entry.localPreviewUrl && isVid ? (
-                      <video
-                        src={entry.localPreviewUrl}
-                        className="w-full h-full object-cover"
-                        muted
-                      />
+                    {preview ? (
+                      preview
                     ) : (
                       <FileIcon className="w-6 h-6 text-muted-foreground" />
                     )}
@@ -669,6 +724,18 @@ const MaterialUploadPage: React.FC = () => {
                     controls
                     className="w-full max-h-48"
                   />
+                </div>
+              )}
+              {isAudioFile(editingFile.file) && editingFile.localPreviewUrl && (
+                <div className="mb-4 rounded-lg border border-border bg-accent/30 p-3">
+                  <audio
+                    src={editingFile.localPreviewUrl}
+                    controls
+                    preload="metadata"
+                    className="w-full"
+                  >
+                    您的浏览器不支持音频播放
+                  </audio>
                 </div>
               )}
 
