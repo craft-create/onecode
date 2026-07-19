@@ -197,26 +197,32 @@ export class ScriptService {
 
     let isCollaborator = false;
     if (safeUserId) {
-      const [membershipRow] =
-        await this.db.execute<{ isCollaborator: boolean | string | number }>(
-        sql`
-          SELECT EXISTS (
-            SELECT 1
-            FROM script_project sp,
-            UNNEST(sp.collaborators) AS c
-            WHERE sp.id = ${safeProjectId}
-              AND (c).user_id = ${safeUserId}
-          ) AS "isCollaborator"
-        `,
-      );
+      try {
+        const [membershipRow] =
+          await this.db.execute<{ isCollaborator: boolean | string | number }>(
+            sql`
+              SELECT EXISTS (
+                SELECT 1
+                FROM script_project sp,
+                UNNEST(sp.collaborators) AS c
+                WHERE sp.id = ${safeProjectId}
+                  AND (c).user_id = ${safeUserId}
+              ) AS "isCollaborator"
+            `,
+          );
 
-      const raw = membershipRow?.isCollaborator;
-      isCollaborator =
-        raw === true ||
-        raw === 1 ||
-        raw === 't' ||
-        raw === 'true' ||
-        raw === 'TRUE';
+        const raw = membershipRow?.isCollaborator;
+        isCollaborator =
+          raw === true ||
+          raw === 1 ||
+          raw === 't' ||
+          raw === 'true' ||
+          raw === 'TRUE';
+      } catch (error) {
+        this.logger.warn(
+          `Failed to resolve script collaborators for project ${projectId}: ${(error as Error).message || String(error)}`,
+        );
+      }
     }
 
     return {
