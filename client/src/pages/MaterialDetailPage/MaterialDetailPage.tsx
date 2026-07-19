@@ -9,6 +9,7 @@ import {
   VolumeX,
   Maximize,
   Minimize,
+  MessageCircle,
 } from 'lucide-react';
 import { logger } from '@/utils/logger';
 import { analyticsApi, chatApi } from '@client/src/api';
@@ -59,6 +60,7 @@ const MaterialDetailPage: React.FC = () => {
   const [audioDuration, setAudioDuration] = useState(0);
   const [isDraggingProgress, setIsDraggingProgress] = useState(false);
   const [isDraggingVolume, setIsDraggingVolume] = useState(false);
+  const [startingChat, setStartingChat] = useState(false);
   const trackedMaterialRef = useRef<string | null>(null);
   const audioAnimFrameRef = useRef<number | null>(null);
   const [audioBarHeights, setAudioBarHeights] = useState<number[]>(
@@ -336,11 +338,13 @@ const MaterialDetailPage: React.FC = () => {
     if (
       !user?.userId ||
       !detail?.creator_id ||
-      user.userId === detail.creator_id
+      user.userId === detail.creator_id ||
+      startingChat
     ) {
       return;
     }
 
+    setStartingChat(true);
     try {
       try {
         const conversation = (await chatApi.createConversation({
@@ -364,8 +368,10 @@ const MaterialDetailPage: React.FC = () => {
     } catch (err: unknown) {
       logger.error('发起聊天失败:', err);
       toast.error('发起聊天失败，请重试');
+    } finally {
+      setStartingChat(false);
     }
-  }, [navigate, user?.userId, detail?.creator_id]);
+  }, [navigate, startingChat, user?.userId, detail?.creator_id]);
 
   const creatorFollowActionNode = detail?.creator_id && user?.userId && detail.creator_id !== user.userId
     ? (
@@ -373,9 +379,19 @@ const MaterialDetailPage: React.FC = () => {
         <button
           type="button"
           onClick={handleStartChatWithCreator}
-          className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
+          disabled={startingChat}
+          className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            startingChat
+              ? 'bg-primary/40 text-primary-foreground border border-primary/30'
+              : 'bg-primary text-primary-foreground hover:bg-primary/90 border border-primary'
+          }`}
         >
-          发起聊天
+          {startingChat ? (
+            <div className="w-3.5 h-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+          ) : (
+            <MessageCircle className="w-3.5 h-3.5" />
+          )}
+          <span>{startingChat ? '处理中...' : '发起聊天'}</span>
         </button>
         <FollowButton userId={detail.creator_id} />
       </div>
