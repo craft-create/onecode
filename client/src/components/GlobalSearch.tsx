@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Clock, ArrowRight, Film, Clapperboard, User } from "lucide-react";
 import { logger } from "@/compat/client-toolkit/logger";
+import { Image } from "@client/src/components/ui/image";
 import { globalSearch } from "@client/src/api/search";
 import type { SearchResponse } from "@shared/search.interface";
 import type { MaterialItem } from "@shared/material.interface";
@@ -257,7 +258,7 @@ const GlobalSearch = () => {
                           className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-accent/50 cursor-pointer"
                         >
                           {item.cover_url ? (
-                            <img
+                            <Image
                               src={item.cover_url}
                               alt={item.title}
                               className="w-10 h-10 rounded object-cover shrink-0"
@@ -314,7 +315,7 @@ const GlobalSearch = () => {
                           className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-accent/50 cursor-pointer"
                         >
                           {item.cover_url ? (
-                            <img
+                            <Image
                               src={item.cover_url}
                               alt={item.title}
                               className="w-10 h-10 rounded object-cover shrink-0"

@@ -6,6 +6,7 @@ import { Input } from '@client/src/components/ui/input';
 import { Card } from '@client/src/components/ui/card';
 import { Badge } from '@client/src/components/ui/badge';
 import { Skeleton } from '@client/src/components/ui/skeleton';
+import { Image } from '@client/src/components/ui/image';
 import { api } from '@client/src/api';
 import type { ScriptTemplate } from '@shared/types';
 import { PageFrame } from '../shared/PageShell';
@@ -74,7 +75,7 @@ export default function TemplatesPage() {
               onClick={() => navigate(`/templates/${template.id}`)}
             >
               {template.coverUrl && (
-                <img
+                <Image
                   src={template.coverUrl}
                   alt={template.title}
                   className="w-full h-48 object-cover"

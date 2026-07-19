@@ -14,10 +14,12 @@ export interface ImageProps extends NativeImgProps {
 }
 
 const DEFAULT_QUALITY = 80;
+const DEFAULT_SIZES = '100vw';
 const DEFAULT_RESOLUTIONS: number[] = [
   16, 32, 48, 64, 96, 128, 256, 384, 640, 750, 828, 1080, 1200, 1920, 2048,
   3840,
 ];
+const FALLBACK_WIDTH = 1200;
 
 const SRC_ALLOWLIST = [
   '/runtime/api/v1/storage/object/',
@@ -53,6 +55,21 @@ function applyParamsToUrl(
 
 function isTargetSrc(originSrc: string) {
   return SRC_ALLOWLIST.some((item) => originSrc.includes(item));
+}
+
+function toNumberWidth(width: number | string | undefined): number | undefined {
+  return typeof width === 'number' && Number.isFinite(width) ? width : undefined;
+}
+
+function pickFallbackWidth(): number {
+  const viewportWidth =
+    typeof window === 'undefined'
+      ? FALLBACK_WIDTH
+      : Math.max(1, window.innerWidth || FALLBACK_WIDTH);
+
+  return getClosestResolution(
+    Math.min(viewportWidth, DEFAULT_RESOLUTIONS[DEFAULT_RESOLUTIONS.length - 1]),
+  );
 }
 
 function supportWebp() {
@@ -112,10 +129,51 @@ const LazyImage = React.forwardRef<HTMLImageElement, ImageProps>(
     },
     ref,
   ) => {
-    const imgRef = React.useRef<HTMLImageElement | null>(null);
+    const containerRef = React.useRef<HTMLDivElement | null>(null);
+    const [containerWidth, setContainerWidth] = React.useState<number | undefined>(
+      undefined,
+    );
     const [isInView, setIsInView] = React.useState(false);
     const [isLoaded, setIsLoaded] = React.useState(false);
     const [hasError, setHasError] = React.useState(false);
+    const isTarget = typeof src === 'string' && isTargetSrc(src);
+
+    const targetWidth = React.useMemo(() => {
+      const explicitWidth = toNumberWidth(width);
+      if (explicitWidth) {
+        return getClosestResolution(explicitWidth);
+      }
+      if (containerWidth) {
+        return getClosestResolution(containerWidth);
+      }
+
+      return undefined;
+    }, [width, containerWidth]);
+
+    const computedSizes = React.useMemo(
+      () => (isTarget ? sizes || DEFAULT_SIZES : sizes),
+      [isTarget, sizes],
+    );
+
+    React.useEffect(() => {
+      const node = containerRef.current;
+      if (!node || typeof ResizeObserver === 'undefined') {
+        return;
+      }
+
+      const observer = new ResizeObserver((entries: ResizeObserverEntry[]) => {
+        const width = entries[0]?.contentRect.width;
+        const nextWidth = Math.max(1, Math.round(width ?? 0));
+        setContainerWidth((prev: number | undefined) =>
+          prev === nextWidth ? prev : nextWidth,
+        );
+      });
+
+      observer.observe(node);
+      return () => {
+        observer.disconnect();
+      };
+    }, []);
 
     const defaultFormat = React.useMemo(
       () => (supportWebp() ? 'webp' : undefined),
@@ -124,7 +182,7 @@ const LazyImage = React.forwardRef<HTMLImageElement, ImageProps>(
 
     // IntersectionObserver for lazy loading
     React.useEffect(() => {
-      const el = imgRef.current;
+      const el = containerRef.current;
       if (!el) return;
 
       const observer = new IntersectionObserver(
@@ -152,40 +210,45 @@ const LazyImage = React.forwardRef<HTMLImageElement, ImageProps>(
 
     // Build src/srcSet only when in view
     const computedSrc = React.useMemo(() => {
-      if (!isInView || typeof src !== 'string' || !isTargetSrc(src)) {
-        return typeof src === 'string' && !isTargetSrc(src) ? src : undefined;
+      if (!isInView || typeof src !== 'string' || !isTarget) {
+        return typeof src === 'string' && !isTarget ? src : undefined;
       }
-      const numericWidth = typeof width === 'number' ? width : undefined;
+
+      const renderWidth = targetWidth ?? pickFallbackWidth();
       return applyParamsToUrl(src, {
-        resize: numericWidth ? `w_${numericWidth}` : undefined,
+        resize: `w_${renderWidth}`,
         quality: `Q_${quality}`,
         format: format ?? defaultFormat,
       });
-    }, [isInView, src, width, quality, format, defaultFormat]);
+    }, [isInView, src, targetWidth, quality, format, defaultFormat, isTarget]);
 
     const computedSrcSet = React.useMemo(() => {
-      if (!isInView || typeof src !== 'string' || !isTargetSrc(src)) return undefined;
+      if (!isInView || typeof src !== 'string' || !isTarget) return undefined;
       if (userSrcSet) return userSrcSet;
-      const numericWidth = typeof width === 'number' ? width : undefined;
       return buildSrcSet(
         src,
         breakpoints,
         format ?? (defaultFormat as ImageFormat),
         quality,
-        numericWidth,
-        sizes,
+        targetWidth,
+        computedSizes,
       );
-    }, [isInView, src, userSrcSet, width, breakpoints, format, defaultFormat, quality, sizes]);
-
-    const isTarget = typeof src === 'string' && isTargetSrc(src);
+    }, [
+      isInView,
+      src,
+      userSrcSet,
+      targetWidth,
+      breakpoints,
+      format,
+      defaultFormat,
+      quality,
+      computedSizes,
+      isTarget,
+    ]);
 
     return (
       <div
-        ref={(node: HTMLDivElement | null) => {
-          if (node && !imgRef.current) {
-            imgRef.current = node.querySelector?.('img') ?? null;
-          }
-        }}
+        ref={containerRef}
         className="relative overflow-hidden"
         style={{ width, height }}
       >
@@ -219,7 +282,7 @@ const LazyImage = React.forwardRef<HTMLImageElement, ImageProps>(
             src={isTarget ? computedSrc : src}
             width={width}
             height={height}
-            sizes={sizes}
+            sizes={computedSizes}
             srcSet={isTarget ? computedSrcSet : userSrcSet}
             className={cn(
               'transition-opacity duration-500',

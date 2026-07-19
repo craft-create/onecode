@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, X, Plus } from 'lucide-react';
+import { Image as ImageIcon, X, Plus } from 'lucide-react';
+import { Image } from '@client/src/components/ui/image';
 
 export interface MaterialUploadFormData {
   title: string;
@@ -172,12 +173,12 @@ const MaterialUploadFormDialog: React.FC<MaterialUploadFormDialogProps> = ({
             </label>
             <div className="flex items-center gap-3">
               <label className="flex-1 h-9 px-3 rounded-lg bg-background border border-border text-sm text-foreground cursor-pointer hover:border-primary/50 transition-colors flex items-center">
-                <Image className="w-4 h-4 mr-2 text-muted-foreground" />
+                <ImageIcon className="w-4 h-4 mr-2 text-muted-foreground" />
                 选择封面图片
                 <input type="file" accept="image/*" onChange={onCoverSelect} className="hidden" />
               </label>
               {(coverPreviewUrl || formData.cover_url) && (
-                <img
+                <Image
                   src={coverPreviewUrl || formData.cover_url}
                   alt="封面预览"
                   className="w-9 h-9 rounded object-cover border border-border"

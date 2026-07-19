@@ -8,6 +8,7 @@ import { Play } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import type { FeaturedMaterial } from '@shared/home.interface';
+import { Image } from '@client/src/components/ui/image';
 
 /**
  * 热门素材组件属性定义
@@ -54,7 +55,7 @@ export default function PopularMaterials({ items }: PopularMaterialsProps) {
           <div className="aspect-video relative overflow-hidden bg-muted">
             {/* 有封面图则显示，否则显示播放图标占位 */}
             {item.cover_url ? (
-              <img
+              <Image
                 src={item.cover_url}
                 alt={item.title}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"

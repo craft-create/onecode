@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Film, Users, Clock, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Image } from '@client/src/components/ui/image';
 import type { ScriptProjectItem } from '@shared/script.interface';
 
 export interface ScriptProjectCardProps {
@@ -47,7 +48,7 @@ const ScriptProjectCard: React.FC<ScriptProjectCardProps> = ({
       <div>
         <div className="aspect-[16/10] bg-gradient-to-br from-[hsl(228_14%_18%)] to-[hsl(228_14%_8%)] relative overflow-hidden">
           {project.cover_url ? (
-            <img
+            <Image
               src={project.cover_url}
               alt={project.title}
               className="w-full h-full object-cover"

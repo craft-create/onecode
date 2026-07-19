@@ -57,6 +57,8 @@
   --font-mono: "JetBrains Mono", "SF Mono", Menlo, monospace;
 
   --radius: 0.5rem;
+  --app-container-padding-mobile: calc(var(--spacing) * 2);
+  --app-container-padding-desktop: calc(var(--spacing) * 6);
   --shadow-x: 0px;
   --shadow-y: 2px;
   --shadow-blur: 12px;
@@ -152,16 +154,33 @@
   .no-default-hover-elevate {}
   .no-default-active-elevate {}
 
-  .app-container {
-    @apply w-full;
+.app-container {
+    max-width: var(--container-7xl, 80rem);
+    margin-inline: auto;
+    padding-inline: var(--app-container-padding-mobile);
   }
 
   .app-container-shell {
-    @apply max-w-7xl mx-auto px-2 sm:px-6 py-8;
+    max-width: var(--container-7xl, 80rem);
+    margin-inline: auto;
+    padding-inline: var(--app-container-padding-mobile);
+    padding-top: 2rem;
+    padding-bottom: 2rem;
   }
 
   .app-shell {
-    @apply w-full max-w-7xl mx-auto px-2 sm:px-6;
+    width: 100%;
+    max-width: var(--container-7xl, 80rem);
+    margin-inline: auto;
+    padding-inline: var(--app-container-padding-mobile);
+  }
+
+  @media (min-width: 640px) {
+    .app-container,
+    .app-container-shell,
+    .app-shell {
+      padding-inline: var(--app-container-padding-desktop);
+    }
   }
 
   .app-btn-primary {

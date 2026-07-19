@@ -12,6 +12,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { logger } from '@/utils/logger';
+import { Image } from '@client/src/components/ui/image';
 import {
   listMaterials,
   searchMaterials,
@@ -263,7 +264,7 @@ const MaterialsPage: React.FC = () => {
                     >
                       <div className="w-10 h-7 rounded bg-accent overflow-hidden flex-shrink-0">
                         {s.cover_url ? (
-                          <img
+                          <Image
                             src={s.cover_url}
                             alt=""
                             className="w-full h-full object-cover"
@@ -440,7 +441,7 @@ const MaterialsPage: React.FC = () => {
                   >
                     <div className="relative aspect-video bg-accent overflow-hidden">
                       {item.cover_url ? (
-                        <img
+                        <Image
                           src={item.cover_url}
                           alt={item.title}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"

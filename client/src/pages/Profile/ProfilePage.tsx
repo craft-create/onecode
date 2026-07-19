@@ -239,7 +239,9 @@ const ProfilePage: React.FC = () => {
                 className="group/avatar relative w-16 h-16 rounded-full overflow-hidden ring-1 ring-inset ring-primary/20 bg-primary/10 flex items-center justify-center transition-all hover:ring-primary/40"
               >
                 {currentUser?.avatarUrl ? (
-                  <img
+                  <Image
+                    width={64}
+                    height={64}
                     src={currentUser.avatarUrl}
                     alt={`${currentUser.nickname}的头像`}
                     className="w-full h-full object-cover"
@@ -512,7 +514,7 @@ const ProfilePage: React.FC = () => {
                         >
                           <div className="aspect-[16/10] bg-accent/30 relative overflow-hidden">
                             {item.cover_url ? (
-                              <img
+                              <Image
                                 src={item.cover_url}
                                 alt={item.title}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
