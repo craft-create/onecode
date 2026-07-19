@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { MaterialDetail } from '@shared/material.interface';
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import LikeButton from '@client/src/components/LikeButton';
 
 interface MaterialDetailSidePanelProps {
@@ -27,6 +27,7 @@ interface MaterialDetailSidePanelProps {
   onFavorite: () => void;
   formatDuration: (seconds: number) => string;
   formatFileSize: (bytes: number) => string;
+  extraActions?: ReactNode;
 }
 
 export const MaterialDetailSidePanel = memo(({
@@ -41,6 +42,7 @@ export const MaterialDetailSidePanel = memo(({
   onFavorite,
   formatDuration,
   formatFileSize,
+  extraActions,
 }: MaterialDetailSidePanelProps) => {
   const formatIcon = () => {
     if (detail.type === 'video') {
@@ -100,6 +102,12 @@ export const MaterialDetailSidePanel = memo(({
             <Heart className="w-4 h-4" fill={isFavorited ? 'currentColor' : 'none'} />
           </motion.button>
         </div>
+
+        {extraActions ? (
+          <div className="mt-3 pt-3 border-t border-border/60 space-y-2">
+            {extraActions}
+          </div>
+        ) : null}
 
         {detail.download_count > 0 && (
           <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
