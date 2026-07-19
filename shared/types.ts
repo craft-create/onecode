@@ -16,6 +16,19 @@ export interface Notification {
   updatedBy?: string;
 }
 
+export interface ChatRequest {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  reason?: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  conversationId?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  updatedBy?: string;
+  createdBy?: string;
+}
+
 // 聊天相关接口
 export interface Conversation {
   id: string;

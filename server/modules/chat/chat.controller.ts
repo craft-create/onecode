@@ -39,6 +39,33 @@ export class ChatController {
     return this.chatService.create(data, req.user?.userId);
   }
 
+  @Get('requests')
+  getChatRequests(
+    @Req() req: any,
+    @Query('direction') direction?: 'incoming' | 'outgoing' | 'all',
+    @Query('status') status?: 'pending' | 'approved' | 'rejected',
+  ) {
+    return this.chatService.getChatRequests(req.user?.userId, {
+      direction: direction || 'all',
+      status,
+    });
+  }
+
+  @Post('requests')
+  createChatRequest(@Body() data: { toUserId: string; reason?: string }, @Req() req: any) {
+    return this.chatService.createChatRequest(data, req.user?.userId);
+  }
+
+  @Post('requests/:id/approve')
+  approveChatRequest(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: any) {
+    return this.chatService.approveChatRequest(id, req.user?.userId);
+  }
+
+  @Post('requests/:id/reject')
+  rejectChatRequest(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: any) {
+    return this.chatService.rejectChatRequest(id, req.user?.userId);
+  }
+
   @Get('unread/count')
   getUnreadCount(@Req() req: any) {
     return this.chatService.getUnreadCount(req.user?.userId);

@@ -205,6 +205,23 @@ CREATE INDEX IF NOT EXISTS idx_notification_is_read ON notification (is_read);
 CREATE INDEX IF NOT EXISTS idx_notification_created_at ON notification (_created_at);
 
 -- 聊天系统
+CREATE TABLE IF NOT EXISTS chat_request (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  from_user_id user_profile NOT NULL,
+  to_user_id user_profile NOT NULL,
+  reason text,
+  status varchar(50) NOT NULL DEFAULT 'pending',
+  conversation_id uuid,
+  _created_at timestamptz(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  _created_by user_profile,
+  _updated_at timestamptz(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  _updated_by user_profile
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_request_from ON chat_request (((from_user_id).user_id));
+CREATE INDEX IF NOT EXISTS idx_chat_request_to ON chat_request (((to_user_id).user_id));
+CREATE INDEX IF NOT EXISTS idx_chat_request_status ON chat_request (status);
+
 CREATE TABLE IF NOT EXISTS conversation (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   title varchar(255),

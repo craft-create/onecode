@@ -3,6 +3,7 @@ import type {
   AnalyticsContentStatsResponse,
   AnalyticsDashboardData,
   AnalyticsTrackRequest,
+  ChatRequest,
 } from '@shared/types';
 
 export const AUTH_EXPIRED_EVENT = 'onecode:auth-expired';
@@ -124,6 +125,24 @@ export const chatApi = {
 
   // 获取未读数
   getUnreadCount: () => api.get('/chat/unread/count'),
+
+  // 获取聊天申请
+  getChatRequests: (params?: {
+    direction?: 'incoming' | 'outgoing' | 'all';
+    status?: 'pending' | 'approved' | 'rejected';
+  }) => api.get<ChatRequest[] | { items?: ChatRequest[] }>('/chat/requests', { params }),
+
+  // 发起聊天申请
+  createChatRequest: (data: { toUserId: string; reason?: string }) =>
+    api.post<ChatRequest>('/chat/requests', data),
+
+  // 同意聊天申请
+  approveChatRequest: (requestId: string): Promise<ChatRequest> =>
+    api.post(`/chat/requests/${requestId}/approve`),
+
+  // 拒绝聊天申请
+  rejectChatRequest: (requestId: string): Promise<ChatRequest> =>
+    api.post(`/chat/requests/${requestId}/reject`),
 
   // 删除消息
   deleteMessage: (id: string) => api.delete(`/chat/messages/${id}`),

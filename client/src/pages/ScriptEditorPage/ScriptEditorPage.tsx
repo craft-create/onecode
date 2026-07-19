@@ -1,22 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Save,
-  History,
-  Download,
-  List,
-  X,
-  RotateCcw,
   AlertTriangle,
   RefreshCw,
-  MessageSquare,
-  Lock,
-  Users,
-  RefreshCcw,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { logger } from '@/compat/client-toolkit/logger';
 import { toast } from 'sonner';
 import { useAuth } from '@client/src/hooks/useAuth';
@@ -32,9 +19,11 @@ import {
   getScriptCollaborationConfig,
   syncScriptFromCollaboration,
 } from '@/api/scripts';
-import LikeButton from '@client/src/components/LikeButton';
-import FavoriteButton from '@client/src/components/FavoriteButton';
-import CommentSection from '@client/src/components/CommentSection';
+import ScriptEditorToolbar from './components/ScriptEditorToolbar';
+import ScriptEditorOutlinePanel from './components/ScriptEditorOutlinePanel';
+import ScriptEditorVersionHistoryDrawer from './components/ScriptEditorVersionHistoryDrawer';
+import ScriptEditorCommentsPanel from './components/ScriptEditorCommentsPanel';
+import ScriptEditorStatusBar from './components/ScriptEditorStatusBar';
 import type {
   ScriptContentLatest,
   ScriptOutlineItem,
@@ -81,10 +70,10 @@ const ScriptEditorPage: React.FC = () => {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isCollaborationMode =
-    collaborationConfig?.enabled && collaborationConfig.mode === 'etherpad';
-  const isCollaborationEditable =
-    isCollaborationMode && collaborationConfig?.can_edit;
+  const isCollaborationMode = Boolean(
+    collaborationConfig?.enabled && collaborationConfig.mode === 'etherpad',
+  );
+  const isCollaborationEditable = isCollaborationMode && Boolean(collaborationConfig?.can_edit);
 
   // 未登录时重定向到登录页
   useEffect(() => {
@@ -378,132 +367,31 @@ const ScriptEditorPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[hsl(228_15%_8%)] flex flex-col">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-[hsl(228_12%_18%)] bg-[hsl(228_14%_12%)]/80 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/scripts')}
-            className="text-[hsl(220_10%_55%)] hover:text-[hsl(220_15%_90%)]"
-          >
-            ← 返回
-          </Button>
-          <span className="text-sm text-[hsl(220_10%_55%)]">{version}</span>
-          <span
-            className={`text-xs px-2 py-0.5 rounded-full ${
-              saveStatus === 'saved'
-                ? 'bg-[hsl(152_65%_45%)]/20 text-[hsl(152_65%_45%)]'
-                : saveStatus === 'saving'
-                  ? 'bg-[hsl(38_90%_55%)]/20 text-[hsl(38_90%_55%)]'
-                  : 'bg-[hsl(0_72%_55%)]/20 text-[hsl(0_72%_55%)]'
-            }`}
-          >
-            {saveStatus === 'saved'
-              ? '已保存'
-              : saveStatus === 'saving'
-                ? '保存中...'
-                : '未保存'}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isCollaborationMode && (
-            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] border border-[hsl(228_12%_18%)] bg-[hsl(228_14%_12%)] text-[hsl(220_10%_55%)]">
-              <Users className="size-3.5" />
-              Etherpad 协作编辑
-              {isCollaborationEditable ? (
-                <span className="text-[hsl(152_65%_45%)]">（可编辑）</span>
-              ) : (
-                <>
-                  <Lock className="size-3.5" />
-                  <span className="text-[hsl(38_90%_55%)]">只读</span>
-                </>
-              )}
-            </span>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setOutlineOpen(!outlineOpen)}
-            className={`gap-1.5 border-[hsl(228_12%_18%)] ${
-              outlineOpen
-                ? 'bg-primary/10 text-primary border-primary/30'
-                : 'text-[hsl(220_10%_55%)]'
-            }`}
-          >
-            <List className="size-3.5" />
-            大纲
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setHistoryOpen(true)}
-            className="gap-1.5 border-[hsl(228_12%_18%)] text-[hsl(220_10%_55%)]"
-          >
-            <History className="size-3.5" />
-            版本
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCommentsOpen(!commentsOpen)}
-            className={`gap-1.5 border-[hsl(228_12%_18%)] ${
-              commentsOpen
-                ? 'bg-primary/10 text-primary border-primary/30'
-                : 'text-[hsl(220_10%_55%)]'
-            }`}
-          >
-            <MessageSquare className="size-3.5" />
-            评论
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(`/scripts/${id}/export`)}
-            className="gap-1.5 border-[hsl(228_12%_18%)] text-[hsl(220_10%_55%)]"
-          >
-            <Download className="size-3.5" />
-            导出
-          </Button>
-          {isCollaborationMode && isCollaborationEditable && (
-            <Button
-              size="sm"
-              onClick={handleSyncCollaboration}
-              disabled={collabSyncing}
-              className="app-btn-primary-compact"
-            >
-              <RefreshCcw className="size-3.5" />
-              {collabSyncing ? '同步中...' : '同步协作内容'}
-            </Button>
-          )}
-          <div className="flex items-center gap-1.5">
-            <LikeButton
-              targetId={id}
-              targetType="script"
-              initialLiked={isLiked}
-              initialCount={likeCount}
-            />
-              <FavoriteButton targetId={id} targetType="script" />
-            </div>
-          {!isCollaborationMode && (
-            <Button
-              size="sm"
-              onClick={handleManualSave}
-              disabled={saving}
-              className="app-btn-primary-compact"
-            >
-              <Save className="size-3.5" />
-              {saving ? '保存中...' : '保存'}
-            </Button>
-          )}
-        </div>
-      </div>
+      <ScriptEditorToolbar
+        id={id}
+        version={version}
+        saveStatus={saveStatus}
+        isCollaborationMode={isCollaborationMode}
+        isCollaborationEditable={isCollaborationEditable}
+        outlineOpen={outlineOpen}
+        commentsOpen={commentsOpen}
+        collabSyncing={collabSyncing}
+        isLiked={isLiked}
+        likeCount={likeCount}
+        saving={saving}
+        onBack={() => navigate('/scripts')}
+        onToggleOutline={() => setOutlineOpen((prev) => !prev)}
+        onOpenHistory={() => setHistoryOpen(true)}
+        onToggleComments={() => setCommentsOpen((prev) => !prev)}
+        onSyncCollaboration={handleSyncCollaboration}
+        onManualSave={handleManualSave}
+        onExport={() => navigate(`/scripts/${id}/export`)}
+      />
 
       {/* Main area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Editor */}
-        <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-1 flex flex-col min-w-0">
           {isCollaborationMode ? (
             collaborationConfig?.pad_url ? (
               <iframe
@@ -528,188 +416,38 @@ const ScriptEditorPage: React.FC = () => {
             />
           )}
 
-          {/* Status bar */}
-          <div className="flex items-center justify-between px-6 py-2 border-t border-[hsl(228_12%_18%)] bg-[hsl(228_14%_12%)] text-xs text-[hsl(220_10%_55%)]">
-            <div className="flex items-center gap-4">
-              <span>字数: {cnCharCount.toLocaleString()}</span>
-              <span>单词: {enWordCount.toLocaleString()}</span>
-              <span>场景: {sceneCount}</span>
-              <span className="text-[hsl(220_10%_40%)]">|</span>
-              <span>预估时长: ~{estimatedMinutes}分钟</span>
-            </div>
-            <span>
-              {isCollaborationMode
-                ? '协作模式：多人实时编辑'
-                : 'Ctrl+S 保存'}
-            </span>
-          </div>
+          <ScriptEditorStatusBar
+            cnCharCount={cnCharCount}
+            enWordCount={enWordCount}
+            sceneCount={sceneCount}
+            estimatedMinutes={estimatedMinutes}
+            isCollaborationMode={isCollaborationMode}
+          />
 
-          {/* Comments panel */}
-          <AnimatePresence>
-            {commentsOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: 'easeInOut' }}
-                className="overflow-hidden border-t border-[hsl(228_12%_18%)]"
-              >
-                <div className="max-h-80 overflow-y-auto p-4">
-                  <CommentSection targetId={id} targetType="script" />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <ScriptEditorCommentsPanel open={commentsOpen} targetId={id} />
         </div>
 
-        {/* Outline Panel */}
-        <AnimatePresence>
-          {outlineOpen && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 260, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: 'easeInOut' }}
-              className="border-l border-[hsl(228_12%_18%)] bg-[hsl(228_14%_12%)] overflow-hidden shrink-0"
-            >
-              <div className="w-[260px] h-full flex flex-col">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-[hsl(228_12%_18%)]">
-                  <span className="text-sm font-medium text-[hsl(220_15%_90%)]">
-                    场景大纲
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setOutlineOpen(false)}
-                    className="size-7 p-0 text-[hsl(220_10%_55%)]"
-                  >
-                    <X className="size-3.5" />
-                  </Button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-2">
-                  {outline.length === 0 ? (
-                    <p className="text-xs text-[hsl(220_10%_55%)] p-3 text-center">
-                      暂无场景，以「数字.」开头定义场景
-                    </p>
-                  ) : (
-                    outline.map((item) => (
-                      <button
-                        key={item.index}
-                        type="button"
-                        onClick={() => scrollToPosition(item.position)}
-                        className="w-full text-left px-3 py-2 rounded-md text-xs text-[hsl(220_10%_55%)] hover:bg-[hsl(228_12%_18%)] hover:text-[hsl(220_15%_90%)] transition-colors flex items-center gap-2"
-                      >
-                        <Badge
-                          variant="secondary"
-                          className="shrink-0 text-[10px] px-1 py-0"
-                        >
-                          {item.index}
-                        </Badge>
-                        <span className="truncate">{item.scene_header}</span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      <ScriptEditorOutlinePanel
+        open={outlineOpen}
+        outline={outline}
+        onClose={() => setOutlineOpen(false)}
+        onNavigate={scrollToPosition}
+      />
       </div>
 
-      {/* Version History Drawer */}
-      <AnimatePresence>
-        {historyOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 z-40"
-              onClick={() => {
-                setHistoryOpen(false);
-                setPreviewVersion(null);
-              }}
-            />
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed right-0 top-0 bottom-0 w-96 bg-[hsl(228_14%_12%)] border-l border-[hsl(228_12%_18%)] z-50 flex flex-col"
-            >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-[hsl(228_12%_18%)]">
-                <h3 className="font-semibold text-[hsl(220_15%_90%)]">
-                  版本历史
-                </h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setHistoryOpen(false);
-                    setPreviewVersion(null);
-                  }}
-                  className="size-7 p-0 text-[hsl(220_10%_55%)]"
-                >
-                  <X className="size-4" />
-                </Button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                {versions.map((v) => (
-                  <div
-                    key={v.id}
-                    className={`rounded-lg border p-3 transition-colors cursor-pointer ${
-                      previewVersion?.id === v.id
-                        ? 'border-primary/50 bg-primary/5'
-                        : 'border-[hsl(228_12%_18%)] hover:border-[hsl(220_10%_40%)]'
-                    }`}
-                    onClick={() => handlePreviewVersion(v)}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <Badge
-                        variant="secondary"
-                        className="text-[10px] px-1.5 py-0"
-                      >
-                        {v.version}
-                      </Badge>
-                      <span className="text-[10px] text-[hsl(220_10%_55%)]">
-                        {new Date(v.created_at).toLocaleString('zh-CN')}
-                      </span>
-                    </div>
-                    <p className="text-xs text-[hsl(220_10%_55%)] truncate">
-                      {v.snapshot_summary || '无描述'}
-                    </p>
-                    <p className="text-[10px] text-[hsl(220_10%_40%)] mt-0.5">
-                      {v.author_name || '未知作者'}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              {previewVersion && (
-                <div className="border-t border-[hsl(228_12%_18%)] p-4 space-y-3">
-                  <div className="bg-[hsl(228_15%_8%)] rounded-md p-3 max-h-32 overflow-y-auto">
-                    <pre className="text-xs text-[hsl(220_10%_55%)] font-mono whitespace-pre-wrap">
-                      {previewContent || '(空内容)'}
-                    </pre>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={handleRevert}
-                    disabled={reverting}
-                    className="w-full app-btn-primary-compact"
-                  >
-                    <RotateCcw className="size-3.5" />
-                    {reverting
-                      ? '回退中...'
-                      : `回退至 ${previewVersion.version}`}
-                  </Button>
-                </div>
-              )}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      <ScriptEditorVersionHistoryDrawer
+        open={historyOpen}
+        versions={versions}
+        previewVersion={previewVersion}
+        previewContent={previewContent}
+        reverting={reverting}
+        onClose={() => {
+          setHistoryOpen(false);
+          setPreviewVersion(null);
+        }}
+        onSelectVersion={handlePreviewVersion}
+        onRevert={handleRevert}
+      />
     </div>
   );
 };

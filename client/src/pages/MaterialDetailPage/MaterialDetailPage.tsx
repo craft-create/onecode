@@ -9,6 +9,7 @@ import {
   VolumeX,
   Maximize,
   Minimize,
+  UserPlus as _UserPlus,
 } from 'lucide-react';
 import { logger } from '@/utils/logger';
 import { analyticsApi } from '@client/src/api';
@@ -18,14 +19,27 @@ import {
   getRelatedMaterials,
   getMaterialDownloadUrl,
 } from '@client/src/api/materials';
+import { api as _api, chatApi } from '@client/src/api';
 import { toggleFavorite } from '@client/src/api/user-materials';
+import { useAuth } from '@client/src/hooks/useAuth';
 import { Image } from '@client/src/components/ui/image';
+import { Button as _Button } from '@client/src/components/ui/button';
+import {
+  Dialog as _Dialog,
+  DialogContent as _DialogContent,
+  DialogDescription as _DialogDescription,
+  DialogFooter as _DialogFooter,
+  DialogHeader as _DialogHeader,
+  DialogTitle as _DialogTitle,
+} from '@client/src/components/ui/dialog';
+import { Textarea as _Textarea } from '@client/src/components/ui/textarea';
 import { PageFrame } from '../shared/PageShell';
 import { MaterialDetailSidePanel } from './components/MaterialDetailSidePanel';
 import type {
   MaterialDetail,
   MaterialRelatedItem,
 } from '@shared/material.interface';
+import { toast } from 'sonner';
 
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
@@ -53,6 +67,9 @@ const MaterialDetailPage: React.FC = () => {
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [_requestChatOpen, _setRequestChatOpen] = useState(false);
+  const [requestReason, _setRequestReason] = useState('');
+  const [submittingRequest, _setSubmittingRequest] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [isDraggingProgress, setIsDraggingProgress] = useState(false);
@@ -65,6 +82,8 @@ const MaterialDetailPage: React.FC = () => {
       return 10 + seed * 30;
     }),
   );
+
+  const { user } = useAuth();
 
   const refreshMaterialDetail = useCallback(async () => {
     if (!id) return;
@@ -342,6 +361,54 @@ const MaterialDetailPage: React.FC = () => {
       return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
   }, []);
+
+  const _isSelfMaterial = detail?.creator_id && user?.userId
+    ? detail.creator_id === user.userId
+    : false;
+
+  const _canRequestChat = !!(
+    detail?.creator_id &&
+    user?.userId &&
+    detail.creator_id !== user.userId
+  );
+
+  const _handleOpenRequestChat = useCallback(() => {
+    if (!user?.userId) {
+      toast.error('请先登录后再发起聊天申请');
+      return;
+    }
+    if (!detail?.creator_id) {
+      toast.error('未获取到作者信息，无法发送申请');
+      return;
+    }
+    _setRequestReason('');
+    _setRequestChatOpen(true);
+  }, [detail?.creator_id, user?.userId]);
+
+  const _handleCloseRequestChat = useCallback(() => {
+    if (!submittingRequest) {
+      _setRequestChatOpen(false);
+    }
+  }, [submittingRequest]);
+
+  const _submitChatRequest = useCallback(async () => {
+    if (!detail?.creator_id || !user?.userId || submittingRequest) {
+      return;
+    }
+    _setSubmittingRequest(true);
+    try {
+      await chatApi.createChatRequest({
+        toUserId: detail.creator_id,
+        reason: requestReason.trim(),
+      });
+      toast.success('已发送聊天申请，等待对方通过');
+      _setRequestChatOpen(false);
+    } catch (_error) {
+      toast.error('发送聊天申请失败');
+    } finally {
+      _setSubmittingRequest(false);
+    }
+  }, [detail?.creator_id, requestReason, submittingRequest, user?.userId]);
 
   if (loading) {
     return (

@@ -1,7 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Upload } from 'lucide-react';
 import { logger } from '@/utils/logger';
 import { formatBytes } from '@/utils/formatBytes';
 import { createMaterial } from '@client/src/api/materials';
@@ -16,10 +14,11 @@ import {
   isImageFile,
   isVideoFile,
 } from '@client/src/components/media/MaterialUploadPreview';
-import MaterialUploadEntryItem from '@client/src/components/material/MaterialUploadEntryItem';
 import MaterialUploadFormDialog from '@client/src/components/material/MaterialUploadFormDialog';
+import MaterialUploadDropZone from './components/MaterialUploadDropZone';
+import MaterialUploadFileList from './components/MaterialUploadFileList';
 
-interface FileEntry {
+export interface FileEntry {
   id: string;
   file: File;
   progress: number;
@@ -425,82 +424,27 @@ const MaterialUploadPage: React.FC = () => {
       containerClassName="app-container-shell"
     >
       <div className="max-w-3xl">
-        <h1 className="text-xl font-semibold text-foreground mb-6">
-          上传素材
-        </h1>
+        <h1 className="text-xl font-semibold text-foreground mb-6">上传素材</h1>
 
         {/* Drop Zone */}
-        <motion.div
-          animate={
-            isDragOver
-              ? { borderColor: 'hsl(252 85% 60%)', scale: 1.01 }
-              : { borderColor: 'hsl(228 12% 18%)', scale: 1 }
-          }
+        <MaterialUploadDropZone
+          isDragOver={isDragOver}
+          fileInputRef={fileInputRef}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`relative border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all ${
-            isDragOver
-              ? 'border-primary bg-primary/5'
-              : 'border-border hover:border-foreground/20'
-          }`}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="video/*,audio/*,image/*"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-          <motion.div
-            animate={isDragOver ? { y: -4 } : { y: 0 }}
-            className="flex flex-col items-center gap-3"
-          >
-            <div
-              className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-colors ${
-                isDragOver ? 'bg-primary/20' : 'bg-accent'
-              }`}
-            >
-              <Upload
-                className={`w-7 h-7 ${
-                  isDragOver ? 'text-primary' : 'text-muted-foreground'
-                }`}
-              />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">
-                {isDragOver
-                  ? '释放以上传文件'
-                  : '拖拽文件到此处或点击选择'}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                支持视频、音频、图片格式，文件将自动上传
-              </p>
-            </div>
-          </motion.div>
-        </motion.div>
+          onSelectFile={handleFileSelect}
+        />
 
         {/* File List */}
         {files.length > 0 && (
-          <div className="mt-6 space-y-3">
-            <h2 className="text-sm font-medium text-foreground">
-              上传列表 ({files.length})
-            </h2>
-            {files.map((entry) => {
-              return (
-                <MaterialUploadEntryItem
-                  key={entry.id}
-                  entry={entry}
-                  formatSize={formatBytes}
-                  onOpenForm={openForm}
-                  onRetry={handleRetryUpload}
-                  onRemove={removeFile}
-                />
-              );
-            })}
-          </div>
+          <MaterialUploadFileList
+            entries={files}
+            formatSize={formatBytes}
+            onOpenForm={openForm}
+            onRetry={handleRetryUpload}
+            onRemove={removeFile}
+          />
         )}
       </div>
 

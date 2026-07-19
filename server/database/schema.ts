@@ -407,6 +407,29 @@ export const notification = pgTable("notification", {
 // =============================================
 // 私信聊天系统
 // =============================================
+export const chatRequest = pgTable("chat_request", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fromUserId: userProfile("from_user_id").notNull(),
+  toUserId: userProfile("to_user_id").notNull(),
+  reason: text("reason"),
+  status: varchar("status", { length: 50 }).notNull().default('pending'), // pending, approved, rejected
+  conversationId: uuid("conversation_id"),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 3 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by").default(sql`CASE
+    WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
+  // System field: Update time (auto-filled, do-not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 3 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by").default(sql`CASE
+    WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
+}, (table) => [
+  index("idx_chat_request_from").on(table.fromUserId),
+  index("idx_chat_request_to").on(table.toUserId),
+  index("idx_chat_request_status").on(table.status),
+]);
+
 export const conversation = pgTable("conversation", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: varchar("title", { length: 255 }), // 群聊标题，私聊为null

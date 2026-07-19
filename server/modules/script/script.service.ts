@@ -286,6 +286,86 @@ export class ScriptService {
     return value instanceof Date ? value.toISOString() : String(value || '');
   }
 
+  private toCountValue(rows: Array<{ count: string | number | null | undefined }>): number {
+    const raw = rows[0]?.count;
+    if (typeof raw === 'number') {
+      return raw;
+    }
+    return Number(raw || 0);
+  }
+
+  private mapProjectListItem(row: {
+    id: string;
+    title: string;
+    type: string | null;
+    description: string | null;
+    coverUrl: string | null;
+    collaboratorCount: number | string | null;
+    updatedAt: Date | null;
+  }): ScriptProjectItem {
+    return {
+      id: row.id,
+      title: row.title,
+      type: row.type || '',
+      description: row.description || '',
+      cover_url: row.coverUrl || '',
+      collaborator_count: Number(row.collaboratorCount || 0),
+      updated_at: this.toIsoDate(row.updatedAt),
+    };
+  }
+
+  private mapProjectSearchItem(row: {
+    id: string;
+    title: string;
+    coverUrl: string | null;
+    updatedAt: Date | null;
+  }): ScriptProjectSearchItem {
+    return {
+      id: row.id,
+      title: row.title,
+      cover_url: row.coverUrl || '',
+      updated_at: this.toIsoDate(row.updatedAt),
+    };
+  }
+
+  private mapVersionItem(
+    row: {
+      id: string;
+      version: string;
+      snapshotSummary: string | null;
+      createdBy: string | null;
+      createdAt: Date | null;
+    },
+    authorNames: Map<string, string>,
+  ): ScriptVersionItem {
+    return {
+      id: row.id,
+      version: row.version,
+      snapshot_summary: row.snapshotSummary || '',
+      author_name: row.createdBy ? (authorNames.get(row.createdBy) || row.createdBy) : '',
+      created_at: this.toIsoDate(row.createdAt),
+    };
+  }
+
+  private mapCommentItem(row: {
+    id: string;
+    position: number;
+    comment: string;
+    author: string | null;
+    status: string;
+    createdAt: Date | null;
+  }, authorNames: Map<string, string>): ScriptCommentItem {
+    return {
+      id: row.id,
+      position: row.position,
+      comment: row.comment,
+      author_name: row.author ? (authorNames.get(row.author) || row.author) : '',
+      author_avatar: '',
+      status: row.status,
+      created_at: this.toIsoDate(row.createdAt),
+    };
+  }
+
   private async resolveUserNicknames(
     userIds: string[],
   ): Promise<Map<string, string>> {
@@ -388,18 +468,12 @@ export class ScriptService {
       .from(scriptProject)
       .where(whereClause);
 
-    const total = Number(totalResult[0].count);
+    const total = this.toCountValue(totalResult);
 
     // 字段名转换 + 日期格式化
-    const items: ScriptProjectItem[] = projects.map((p) => ({
-      id: p.id,
-      title: p.title,
-      type: p.type || '',
-      description: p.description || '',
-      cover_url: p.coverUrl || '',
-      collaborator_count: Number(p.collaboratorCount),
-      updated_at: this.toIsoDate(p.updatedAt),
-    }));
+    const items: ScriptProjectItem[] = projects.map((p) =>
+      this.mapProjectListItem(p),
+    );
 
     return { items, total };
   }
@@ -446,17 +520,11 @@ export class ScriptService {
         .where(userFilter),
     ]);
 
-    const total = Number(totalResult[0].count);
+    const total = this.toCountValue(totalResult);
 
-    const items: ScriptProjectItem[] = projects.map((p) => ({
-      id: p.id,
-      title: p.title,
-      type: p.type || '',
-      description: p.description || '',
-      cover_url: p.coverUrl || '',
-      collaborator_count: Number(p.collaboratorCount),
-      updated_at: this.toIsoDate(p.updatedAt),
-    }));
+    const items: ScriptProjectItem[] = projects.map((p) =>
+      this.mapProjectListItem(p),
+    );
 
     return { items, total };
   }
@@ -504,15 +572,12 @@ export class ScriptService {
         ),
       );
 
-    const total = Number(totalResult[0].count);
+    const total = this.toCountValue(totalResult);
 
     // 字段名转换
-    const items: ScriptProjectSearchItem[] = projects.map((p) => ({
-      id: p.id,
-      title: p.title,
-      cover_url: p.coverUrl || '',
-      updated_at: this.toIsoDate(p.updatedAt),
-    }));
+    const items: ScriptProjectSearchItem[] = projects.map((p) =>
+      this.mapProjectSearchItem(p),
+    );
 
     return { items, total };
   }
@@ -906,18 +971,12 @@ export class ScriptService {
     // 查询作者显示名称
     const commentAuthorIds = comments
       .map((c) => c.author)
-      .filter((id) => !!id);
+      .filter((id): id is string => Boolean(id));
     const commentAuthorNames = await this.resolveUserNicknames(commentAuthorIds);
 
-    const items: ScriptCommentItem[] = comments.map((c) => ({
-      id: c.id,
-      position: c.position,
-      comment: c.comment,
-      author_name: c.author ? (commentAuthorNames.get(c.author) || c.author) : '',
-      author_avatar: '',
-      status: c.status,
-      created_at: this.toIsoDate(c.createdAt),
-    }));
+    const items: ScriptCommentItem[] = comments.map((c) =>
+      this.mapCommentItem(c, commentAuthorNames),
+    );
 
     return { items };
   }
@@ -983,7 +1042,7 @@ export class ScriptService {
       .from(scriptContent)
       .where(eq(scriptContent.projectId, projectId));
 
-    const total = Number(totalResult[0].count);
+    const total = this.toCountValue(totalResult);
 
     // 字段名转换
     // 批量查询作者显示名称
@@ -992,13 +1051,9 @@ export class ScriptService {
       .filter((id): id is string => typeof id === 'string' && id.length > 0);
     const authorNames = await this.resolveUserNicknames(authorIds);
 
-    const items: ScriptVersionItem[] = versions.map((v) => ({
-      id: v.id,
-      version: v.version,
-      snapshot_summary: v.snapshotSummary || '',
-      author_name: v.createdBy ? (authorNames.get(v.createdBy) || v.createdBy) : '',
-      created_at: this.toIsoDate(v.createdAt),
-    }));
+    const items: ScriptVersionItem[] = versions.map((v) =>
+      this.mapVersionItem(v, authorNames),
+    );
 
     return { items, total };
   }
@@ -1622,7 +1677,7 @@ export class ScriptService {
       SELECT COUNT(*)::text AS count FROM script_like
       WHERE project_id = ${projectId}::uuid
     `);
-    const likeCount: number = parseInt(countRows[0].count, 10);
+    const likeCount = this.toCountValue(countRows);
 
     return { liked: existing.length === 0, like_count: likeCount };
   }
@@ -1642,7 +1697,7 @@ export class ScriptService {
       SELECT COUNT(*)::text AS count FROM script_like
       WHERE project_id = ${projectId}::uuid
     `);
-    const likeCount: number = parseInt(countRows[0].count, 10);
+    const likeCount = this.toCountValue(countRows);
 
     // 已登录则查询是否点过赞
     let liked = false;

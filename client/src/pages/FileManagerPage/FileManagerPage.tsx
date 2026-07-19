@@ -3,23 +3,19 @@
  * 功能：文件夹浏览、文件上传、批量操作、分享、回收站
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Folder, Plus, Upload, Home, Grid3X3, List, Loader2, Trash2, Share2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { logger } from '@/utils/logger';
 import { formatBytes } from '@/utils/formatBytes';
 import { PageFrame } from '../shared/PageShell';
 import { fileApi } from '@/api';
-import FileManagerFileItem from '@/components/file/FileManagerFileItem';
-import FileManagerFolderItem from '@/components/file/FileManagerFolderItem';
+import FileManagerTopBar from './components/FileManagerTopBar';
+import FileManagerExplorerContent from './components/FileManagerExplorerContent';
+import FileManagerNewFolderDialog from './components/FileManagerNewFolderDialog';
+import FileManagerShareDialog from './components/FileManagerShareDialog';
 
-type ViewMode = 'grid' | 'list';
+export type ViewMode = 'grid' | 'list';
 
-interface FileItem {
+export interface FileItem {
   id: string;
   name: string;
   type: string;
@@ -33,7 +29,7 @@ interface FileItem {
   updatedAt: string;
 }
 
-interface FolderItem {
+export interface FolderItem {
   id: string;
   name: string;
   itemCount: number;
@@ -290,20 +286,16 @@ const FileManagerPage: React.FC = () => {
     }
   };
 
+  const handleShareItem = (file: FileItem) => {
+    setShareItem(file);
+    setShareDialogOpen(true);
+  };
+
   return (
-    <PageFrame
-      title="文件管理器"
-      description="管理你的所有文件"
-      action={
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => setNewFolderDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            新建文件夹
-          </Button>
-          <Button size="sm" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="w-4 h-4 mr-2" />
-            上传文件
-          </Button>
+      <PageFrame
+        title="文件管理器"
+        description="管理你的所有文件"
+        action={
           <input
             ref={fileInputRef}
             type="file"
@@ -311,267 +303,66 @@ const FileManagerPage: React.FC = () => {
             onChange={handleFileUpload}
             className="hidden"
           />
-        </div>
-      }
-      className="min-h-screen bg-background"
-      containerClassName="app-container-shell"
-      contentClassName="space-y-6"
-    >
-      {/* ===== Breadcrumbs & Actions ===== */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={navigateToRoot}>
-            <Home className="w-4 h-4" />
-          </Button>
-          {breadcrumbs.map((crumb, idx) => (
-            <React.Fragment key={crumb.id}>
-              <span className="text-muted-foreground">/</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const newCrumbs = breadcrumbs.slice(0, idx + 1);
-                  setBreadcrumbs(newCrumbs);
-                  setCurrentFolderId(crumb.id);
-                  clearSelection();
-                }}
-              >
-                {crumb.name}
-              </Button>
-            </React.Fragment>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {selectedItems.size > 0 && (
-            <>
-              <span className="text-sm text-muted-foreground">已选 {selectedItems.size} 项</span>
-              <Button variant="destructive" size="sm" onClick={handleBatchDelete}>
-                <Trash2 className="w-4 h-4 mr-2" />
-                删除
-              </Button>
-              <Button variant="outline" size="sm" onClick={clearSelection}>
-                取消选择
-              </Button>
-            </>
-          )}
-          <Button variant="ghost" size="sm" onClick={selectAll}>
-            全选
-          </Button>
-          <div className="border-l pl-2 flex gap-1">
-            <Button
-              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('grid')}
-            >
-              <Grid3X3 className="w-4 h-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-            >
-              <List className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* ===== Content ===== */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-        </div>
-      ) : (
-        <AnimatePresence mode="wait">
-          {folders.length === 0 && files.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col items-center justify-center py-20"
-            >
-              <Folder className="w-16 h-16 text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground">此文件夹为空</p>
-              <Button className="mt-4" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="w-4 h-4 mr-2" />
-                上传文件
-              </Button>
-            </motion.div>
-          ) : (
-            <>
-              {/* Folders */}
-                  {folders.length > 0 && (
-                <div className="mb-6">
-                  <h2 className="text-lg font-semibold mb-3">文件夹</h2>
-                  {viewMode === 'grid' ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {folders.map((folder) => (
-                        <FileManagerFolderItem
-                          key={folder.id}
-                          folder={folder}
-                          viewMode={viewMode}
-                          selected={selectedItems.has(folder.id)}
-                          onNavigate={navigateToFolder}
-                          onToggleSelect={toggleSelect}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {folders.map((folder) => (
-                        <FileManagerFolderItem
-                          key={folder.id}
-                          folder={folder}
-                          viewMode={viewMode}
-                          selected={selectedItems.has(folder.id)}
-                          onNavigate={navigateToFolder}
-                          onToggleSelect={toggleSelect}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Files */}
-              {files.length > 0 && (
-                <div>
-                  <h2 className="text-lg font-semibold mb-3">文件</h2>
-                  {viewMode === 'grid' ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {files.map((file) => (
-                        <FileManagerFileItem
-                          key={file.id}
-                          file={file}
-                          viewMode={viewMode}
-                          selected={selectedItems.has(file.id)}
-                          onOpen={(targetFile) => window.open(targetFile.url, '_blank')}
-                          onToggleSelect={toggleSelect}
-                          onToggleStar={(event) => handleToggleStar(file.id, event)}
-                          onShare={(event) => {
-                            event.stopPropagation();
-                            setShareItem(file);
-                            setShareDialogOpen(true);
-                          }}
-                          onDownload={(event) => {
-                            event.stopPropagation();
-                            window.open(file.url, '_blank');
-                          }}
-                          onDelete={(event) => {
-                            event.stopPropagation();
-                            handleDelete(file);
-                          }}
-                          formatSize={formatBytes}
-                          isStarred={isStarred(file.isStarred)}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {files.map((file) => (
-                        <FileManagerFileItem
-                          key={file.id}
-                          file={file}
-                          viewMode={viewMode}
-                          selected={selectedItems.has(file.id)}
-                          onOpen={(targetFile) => window.open(targetFile.url, '_blank')}
-                          onToggleSelect={toggleSelect}
-                          onToggleStar={(event) => handleToggleStar(file.id, event)}
-                          onShare={(event) => {
-                            event.stopPropagation();
-                            setShareItem(file);
-                            setShareDialogOpen(true);
-                          }}
-                          onDownload={(event) => {
-                            event.stopPropagation();
-                            window.open(file.url, '_blank');
-                          }}
-                          onDelete={(event) => {
-                            event.stopPropagation();
-                            handleDelete(file);
-                          }}
-                          formatSize={formatBytes}
-                          isStarred={isStarred(file.isStarred)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </AnimatePresence>
-      )}
+        }
+        className="min-h-screen bg-background"
+        containerClassName="app-container-shell"
+        contentClassName="space-y-6"
+      >
+      <FileManagerTopBar
+        breadcrumbs={breadcrumbs}
+        selectedCount={selectedItems.size}
+        viewMode={viewMode}
+        onNavigateRoot={navigateToRoot}
+        onNavigateCrumb={(crumb, idx) => {
+          const newCrumbs = breadcrumbs.slice(0, idx + 1);
+          setBreadcrumbs(newCrumbs);
+          setCurrentFolderId(crumb.id);
+          clearSelection();
+        }}
+        onNewFolder={() => setNewFolderDialogOpen(true)}
+        onUpload={() => fileInputRef.current?.click()}
+        onSelectAll={selectAll}
+        onClearSelection={clearSelection}
+        onBatchDelete={handleBatchDelete}
+        onViewModeChange={setViewMode}
+      />
+      <FileManagerExplorerContent
+        loading={loading}
+        folders={folders}
+        files={files}
+        viewMode={viewMode}
+        selectedItems={selectedItems}
+        isStarred={isStarred}
+        onNavigateFolder={navigateToFolder}
+        onOpenFile={(targetFile) => window.open(targetFile.url, '_blank')}
+        onToggleSelect={toggleSelect}
+        onToggleStar={handleToggleStar}
+        onShare={handleShareItem}
+        onDownload={(file) => window.open(file.url, '_blank')}
+        onDelete={handleDelete}
+        formatSize={formatBytes}
+      />
 
       {/* ===== New Folder Dialog ===== */}
-      <Dialog open={newFolderDialogOpen} onOpenChange={setNewFolderDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>新建文件夹</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="folderName">文件夹名称</Label>
-              <Input
-                id="folderName"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="输入文件夹名称"
-                onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNewFolderDialogOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={handleCreateFolder}>创建</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FileManagerNewFolderDialog
+        open={newFolderDialogOpen}
+        onOpenChange={setNewFolderDialogOpen}
+        value={newFolderName}
+        onValueChange={setNewFolderName}
+        onSubmit={handleCreateFolder}
+      />
 
       {/* ===== Share Dialog ===== */}
-      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>分享文件</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>分享文件</Label>
-              <p className="text-sm text-muted-foreground">{shareItem?.name}</p>
-            </div>
-            <div className="space-y-2">
-              <Label>有效期（小时）</Label>
-              <Input
-                type="number"
-                value={shareExpiresIn}
-                onChange={(e) => setShareExpiresIn(parseInt(e.target.value))}
-                min="1"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>分享密码（可选）</Label>
-              <Input
-                type="password"
-                value={sharePassword}
-                onChange={(e) => setSharePassword(e.target.value)}
-                placeholder="留空则公开访问"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShareDialogOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={handleShare}>
-              <Share2 className="w-4 h-4 mr-2" />
-              生成分享链接
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FileManagerShareDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        shareItem={shareItem}
+        shareExpiresIn={shareExpiresIn}
+        sharePassword={sharePassword}
+        onExpiresInChange={setShareExpiresIn}
+        onPasswordChange={setSharePassword}
+        onSubmit={handleShare}
+      />
     </PageFrame>
   );
 };

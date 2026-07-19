@@ -116,6 +116,8 @@ export interface MaterialDetail {
   download_count: number;
   /** 点赞次数 */
   like_count: number;
+  /** 创作者用户ID */
+  creator_id?: string;
 }
 
 /**

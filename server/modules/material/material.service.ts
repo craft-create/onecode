@@ -48,6 +48,95 @@ export class MaterialService {
     return value instanceof Date ? value.toISOString() : String(value || '');
   }
 
+  private toCountValue(rows: Array<{ count?: string | number | null | undefined; cnt?: string | number | null | undefined }>): number {
+    const raw = rows[0]?.count ?? rows[0]?.cnt;
+    if (typeof raw === 'number') {
+      return raw;
+    }
+    return Number(raw || 0);
+  }
+
+  private mapMaterialItem(row: {
+    id: string;
+    title: string;
+    type: MaterialItem['type'] | string | null;
+    resolution: string | null;
+    duration: number | null;
+    coverUrl: string | null;
+    previewUrl: string | null;
+    tags: string[] | null;
+  }): MaterialItem {
+    return {
+      id: row.id,
+      title: row.title,
+      type: row.type as MaterialItem['type'],
+      resolution: row.resolution || '',
+      duration: row.duration || 0,
+      cover_url: row.coverUrl || '',
+      preview_url: row.previewUrl || '',
+      tags: row.tags || [],
+    };
+  }
+
+  private mapMaterialSearchItem(row: {
+    id: string;
+    title: string;
+    type: MaterialSearchItem['type'] | string | null;
+    resolution: string | null;
+    duration: number | null;
+    coverUrl: string | null;
+    previewUrl: string | null;
+    tags: string[] | null;
+  }): MaterialSearchItem {
+    return {
+      id: row.id,
+      title: row.title,
+      type: row.type as MaterialSearchItem['type'],
+      resolution: row.resolution || '',
+      duration: row.duration || 0,
+      cover_url: row.coverUrl || '',
+      preview_url: row.previewUrl || '',
+      tags: row.tags || [],
+    };
+  }
+
+  private mapRelatedItem(row: {
+    id: string;
+    title: string;
+    coverUrl: string | null;
+    duration: number | null;
+  }): MaterialRelatedItem {
+    return {
+      id: row.id,
+      title: row.title,
+      cover_url: row.coverUrl || '',
+      duration: row.duration || 0,
+    };
+  }
+
+  private mapMaterialCommentItem(row: {
+    id: string;
+    material_id: string;
+    parent_id: string | null;
+    content: string;
+    author: string;
+    like_count: number;
+    created_at: Date;
+    is_liked: boolean;
+  }): MaterialCommentItem {
+    return {
+      id: row.id,
+      material_id: row.material_id,
+      parent_id: row.parent_id,
+      content: row.content,
+      author: row.author,
+      like_count: row.like_count,
+      is_liked: Boolean(row.is_liked),
+      replies: [],
+      created_at: this.toIsoDate(row.created_at),
+    };
+  }
+
   private buildCommentTree(comments: MaterialCommentItem[]): {
     items: MaterialCommentItem[];
     total: number;
@@ -160,19 +249,12 @@ export class MaterialService {
     ]);
 
     // 提取总数
-    const total = Number(countResult[0]?.count || 0);
+    const total = this.toCountValue(countResult);
 
     // 字段名转换：数据库驼峰 -> 接口下划线
-    const mappedItems: MaterialItem[] = items.map((item) => ({
-      id: item.id,
-      title: item.title,
-      type: item.type as MaterialItem['type'],
-      resolution: item.resolution || '',
-      duration: item.duration || 0,
-      cover_url: item.coverUrl || '',
-      preview_url: item.previewUrl || '',
-      tags: item.tags || [],
-    }));
+    const mappedItems: MaterialItem[] = items.map((item) =>
+      this.mapMaterialItem(item),
+    );
 
     return { items: mappedItems, total };
   }
@@ -217,19 +299,12 @@ export class MaterialService {
         .offset(offset),
     ]);
 
-    const total = Number(countResult[0]?.count || 0);
+    const total = this.toCountValue(countResult);
 
     // 字段名转换
-    const mappedItems: MaterialSearchItem[] = items.map((item) => ({
-      id: item.id,
-      title: item.title,
-      type: item.type as MaterialSearchItem['type'],
-      resolution: item.resolution || '',
-      duration: item.duration || 0,
-      cover_url: item.coverUrl || '',
-      preview_url: item.previewUrl || '',
-      tags: item.tags || [],
-    }));
+    const mappedItems: MaterialSearchItem[] = items.map((item) =>
+      this.mapMaterialSearchItem(item),
+    );
 
     return { items: mappedItems, total };
   }
@@ -286,7 +361,22 @@ export class MaterialService {
    */
   async getById(id: string): Promise<MaterialDetail> {
     const [result] = await this.db
-      .select()
+      .select({
+        id: material.id,
+        title: material.title,
+        description: material.description,
+        type: material.type,
+        resolution: material.resolution,
+        duration: material.duration,
+        format: material.format,
+        fileSize: material.fileSize,
+        device: material.device,
+        tags: material.tags,
+        previewUrl: material.previewUrl,
+        coverUrl: material.coverUrl,
+        downloadCount: material.downloadCount,
+        createdBy: material.createdBy,
+      })
       .from(material)
       .where(eq(material.id, id));
 
@@ -299,7 +389,7 @@ export class MaterialService {
       FROM material_like
       WHERE material_id = ${id}::uuid
     `);
-    const likeCount = Number(likeCountRows[0]?.count || 0);
+    const likeCount = this.toCountValue(likeCountRows);
 
     // 字段名转换 + 默认值处理
     return {
@@ -317,6 +407,7 @@ export class MaterialService {
       cover_url: result.coverUrl || '',
       download_count: result.downloadCount ?? 0,
       like_count: likeCount,
+      creator_id: result.createdBy || '',
     };
   }
 
@@ -405,12 +496,9 @@ export class MaterialService {
       .offset(offset);
 
     // 字段名转换
-    const mappedItems: MaterialRelatedItem[] = items.map((item) => ({
-      id: item.id,
-      title: item.title,
-      cover_url: item.coverUrl || '',
-      duration: item.duration || 0,
-    }));
+    const mappedItems: MaterialRelatedItem[] = items.map((item) =>
+      this.mapRelatedItem(item),
+    );
 
     return { items: mappedItems };
   }
@@ -504,7 +592,7 @@ export class MaterialService {
           AND (user_id).user_id = ${userId}
           AND relation_type = 'upload'
       `);
-      if (parseInt(umRows[0].cnt, 10) === 0) {
+      if (this.toCountValue(umRows) === 0) {
         throw new ForbiddenException('只能删除自己上传的素材');
       }
     }
@@ -629,17 +717,9 @@ export class MaterialService {
     `);
 
     // 转换字段格式
-    const allComments: MaterialCommentItem[] = rows.map((row) => ({
-      id: row.id,
-      material_id: row.material_id,
-      parent_id: row.parent_id,
-      content: row.content,
-      author: row.author,
-      like_count: Number(row.like_count),
-      is_liked: Boolean(row.is_liked),
-      replies: [],
-      created_at: this.toIsoDate(row.created_at),
-    }));
+    const allComments: MaterialCommentItem[] = rows.map((row) =>
+      this.mapMaterialCommentItem(row),
+    );
 
     return this.buildCommentTree(allComments);
   }
@@ -752,7 +832,7 @@ export class MaterialService {
       SELECT COUNT(*)::text AS count FROM material_like
       WHERE material_id = ${materialId}::uuid
     `);
-    const likeCount: number = parseInt(countRows[0].count, 10);
+    const likeCount = this.toCountValue(countRows);
 
     // 返回：是否已点赞（existing.length === 0 表示之前没点，现在点了）
     return { liked: existing.length === 0, like_count: likeCount };
@@ -773,7 +853,7 @@ export class MaterialService {
       SELECT COUNT(*)::text AS count FROM material_like
       WHERE material_id = ${materialId}::uuid
     `);
-    const likeCount: number = parseInt(countRows[0].count, 10);
+    const likeCount = this.toCountValue(countRows);
 
     // 如果用户已登录，查询是否已点赞
     let liked = false;

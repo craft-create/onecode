@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -11,11 +12,13 @@ import {
   desc,
   eq,
   lt,
-  sql,
   type SQLWrapper,
+  sql,
+  or,
   count,
 } from 'drizzle-orm';
-import { conversation, conversationMember, message } from '@server/database/schema';
+import { conversation, conversationMember, message, chatRequest } from '@server/database/schema';
+import { localUsers } from '@server/database/local-schema';
 
 type MessageFilter = {
   beforeId?: string;
@@ -32,9 +35,281 @@ type MessagePayload = {
   mentions?: string;
 };
 
+type ChatRequestStatus = 'pending' | 'approved' | 'rejected';
+
+type ChatRequestPayload = {
+  toUserId: string;
+  reason?: string;
+};
+
+type ChatRequestFilter = {
+  direction?: 'incoming' | 'outgoing' | 'all';
+  status?: ChatRequestStatus;
+};
+
 @Injectable()
 export class ChatService {
   constructor(@Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase) {}
+
+  private normalizeConversationType(value: unknown): 'private' | 'group' {
+    return value === 'group' ? 'group' : 'private';
+  }
+
+  private normalizeMemberIds(members: unknown): string[] {
+    if (!Array.isArray(members)) {
+      return [];
+    }
+
+    return members
+      .map((memberId) => (typeof memberId === 'string' ? memberId.trim() : ''))
+      .filter((memberId): memberId is string => Boolean(memberId))
+      .filter((memberId, index, list) => list.indexOf(memberId) === index);
+  }
+
+  private normalizeChatRequestStatus(value: unknown): ChatRequestStatus {
+    if (value === 'approved' || value === 'rejected') {
+      return value;
+    }
+    return 'pending';
+  }
+
+  private normalizeChatRequestDirection(
+    direction: ChatRequestFilter['direction'],
+  ): 'incoming' | 'outgoing' | 'all' {
+    if (direction === 'incoming' || direction === 'outgoing') {
+      return direction;
+    }
+    return 'all';
+  }
+
+  private normalizeChatRequestFilter(
+    filters?: ChatRequestFilter,
+  ): ChatRequestFilter {
+    if (!filters) {
+      return { direction: 'all' };
+    }
+
+    return {
+      direction: this.normalizeChatRequestDirection(filters.direction),
+      status: filters.status ? this.normalizeChatRequestStatus(filters.status) : undefined,
+    };
+  }
+
+  private async ensureLoggedIn(userId?: string): Promise<string> {
+    if (!userId) {
+      throw new BadRequestException('请先登录');
+    }
+    return userId;
+  }
+
+  private async ensureTargetUserExists(targetUserId: string): Promise<void> {
+    const [target] = await this.db
+      .select({ id: localUsers.id })
+      .from(localUsers)
+      .where(eq(localUsers.id, targetUserId))
+      .limit(1);
+    if (!target) {
+      throw new BadRequestException('对方用户不存在');
+    }
+  }
+
+  private async findChatRequestById(requestId: string) {
+    const [result] = await this.db
+      .select()
+      .from(chatRequest)
+      .where(eq(chatRequest.id, requestId))
+      .limit(1);
+    return result || null;
+  }
+
+  async getChatRequests(userId?: string, filters?: ChatRequestFilter) {
+    if (!userId) {
+      return [];
+    }
+
+    const normalized = this.normalizeChatRequestFilter(filters);
+    const directionCondition =
+      normalized.direction === 'incoming'
+        ? eq(chatRequest.toUserId, userId)
+        : normalized.direction === 'outgoing'
+          ? eq(chatRequest.fromUserId, userId)
+          : or(eq(chatRequest.fromUserId, userId), eq(chatRequest.toUserId, userId));
+
+    if (normalized.status) {
+      return this.db
+        .select()
+        .from(chatRequest)
+        .where(and(directionCondition, eq(chatRequest.status, normalized.status)))
+        .orderBy(desc(chatRequest.createdAt));
+    }
+
+    return this.db
+      .select()
+      .from(chatRequest)
+      .where(directionCondition)
+      .orderBy(desc(chatRequest.createdAt));
+  }
+
+  async createChatRequest(
+    payload: ChatRequestPayload,
+    fromUserId?: string,
+  ) {
+    const requestData: ChatRequestPayload = payload || {};
+    const sender = await this.ensureLoggedIn(fromUserId);
+    const toUserId = requestData.toUserId?.trim();
+
+    if (!toUserId) {
+      throw new BadRequestException('请填写对方用户ID');
+    }
+    if (toUserId === sender) {
+      throw new BadRequestException('不能向自己发送聊天申请');
+    }
+
+    await this.ensureTargetUserExists(toUserId);
+
+    const [existing] = await this.db
+      .select({ id: chatRequest.id })
+      .from(chatRequest)
+      .where(
+        and(
+          eq(chatRequest.status, 'pending'),
+          eq(chatRequest.fromUserId, sender),
+          eq(chatRequest.toUserId, toUserId),
+        ),
+      )
+      .limit(1);
+    if (existing) {
+      throw new BadRequestException('你已经向对方提交过聊天申请，等待对方处理');
+    }
+
+    const [reverseExisting] = await this.db
+      .select({ id: chatRequest.id })
+      .from(chatRequest)
+      .where(
+        and(
+          eq(chatRequest.status, 'pending'),
+          eq(chatRequest.fromUserId, toUserId),
+          eq(chatRequest.toUserId, sender),
+        ),
+      )
+      .limit(1);
+    if (reverseExisting) {
+      throw new BadRequestException('对方已向你提交聊天申请，请先处理该申请');
+    }
+
+    const [result] = await this.db
+      .insert(chatRequest)
+      .values({
+        fromUserId: sender,
+        toUserId,
+        reason: requestData.reason?.trim() || null,
+        status: 'pending',
+        createdBy: sender,
+      })
+      .returning();
+    return result || null;
+  }
+
+  async updateChatRequestStatus(
+    requestId: string,
+    status: ChatRequestStatus,
+    userId?: string,
+    conversationId?: string,
+  ) {
+    const operator = await this.ensureLoggedIn(userId);
+    const request = await this.findChatRequestById(requestId);
+    if (!request) {
+      throw new NotFoundException('申请不存在');
+    }
+    if (request.status === status) {
+      return request;
+    }
+
+    if (status === 'approved' && request.toUserId !== operator) {
+      throw new ForbiddenException('只有对方能处理该申请');
+    }
+
+    if (status === 'rejected' && request.toUserId !== operator) {
+      throw new ForbiddenException('只有对方能处理该申请');
+    }
+
+    const [result] = await this.db
+      .update(chatRequest)
+      .set({
+        status,
+        conversationId,
+        updatedBy: operator,
+        updatedAt: new Date(),
+      })
+      .where(eq(chatRequest.id, requestId))
+      .returning();
+
+    return result || null;
+  }
+
+  async approveChatRequest(requestId: string, approverId?: string) {
+    const operator = await this.ensureLoggedIn(approverId);
+    const request = await this.findChatRequestById(requestId);
+    if (!request) {
+      throw new NotFoundException('聊天申请不存在');
+    }
+    if (request.toUserId !== operator) {
+      throw new ForbiddenException('只有对方可以处理该申请');
+    }
+    if (request.status === 'approved') {
+      return request;
+    }
+
+    if (request.status === 'rejected') {
+      throw new BadRequestException('该申请已被拒绝');
+    }
+
+    const existingConversation = request.conversationId
+      ? await this.findOne(request.conversationId)
+      : null;
+
+    const createdConversation =
+      existingConversation ?? await this.create({
+        title: `与${request.fromUserId}的私聊`,
+        type: 'private',
+        memberIds: [request.fromUserId],
+      }, operator);
+
+    if (!createdConversation) {
+      throw new BadRequestException('创建会话失败');
+    }
+
+    return this.updateChatRequestStatus(
+      request.id,
+      'approved',
+      operator,
+      createdConversation.id,
+    );
+  }
+
+  async rejectChatRequest(requestId: string, approverId?: string) {
+    const operator = await this.ensureLoggedIn(approverId);
+    const request = await this.findChatRequestById(requestId);
+    if (!request) {
+      throw new NotFoundException('聊天申请不存在');
+    }
+    if (request.toUserId !== operator) {
+      throw new ForbiddenException('只有对方可以处理该申请');
+    }
+    if (request.status === 'approved') {
+      throw new BadRequestException('该申请已通过，不能再拒绝');
+    }
+    if (request.status === 'rejected') {
+      return request;
+    }
+
+    return this.updateChatRequestStatus(
+      request.id,
+      'rejected',
+      operator,
+      request.conversationId ?? undefined,
+    );
+  }
 
   async findAll(_userId?: string) {
     return this.db.select().from(conversation).orderBy(desc(conversation.createdAt));
@@ -50,9 +325,34 @@ export class ChatService {
   }
 
   async create(data: any, userId?: string) {
+    const conversationType = this.normalizeConversationType(data?.type);
+    const membersFromRequest = this.normalizeMemberIds(data?.memberIds);
+    const conversationData = { ...(data || {}) } as Record<string, unknown>;
+    delete conversationData.memberIds;
+
+    const memberIds = new Set<string>();
+
+    if (userId) {
+      memberIds.add(userId);
+    }
+    for (const memberId of membersFromRequest) {
+      memberIds.add(memberId);
+    }
+
+    if (conversationType === 'private' && userId) {
+      const hasTarget = Array.from(memberIds).some((memberId) => memberId !== userId);
+      if (!hasTarget) {
+        throw new BadRequestException('私聊至少需要一个对方用户');
+      }
+    }
+
     const result = await this.db
       .insert(conversation)
-      .values({ ...data, createdBy: userId })
+      .values({
+        ...conversationData,
+        type: conversationType,
+        createdBy: userId,
+      })
       .returning();
 
     const created = result[0];
@@ -60,19 +360,9 @@ export class ChatService {
       return null;
     }
 
-    const memberIds = new Set<string>();
-    if (userId) {
-      memberIds.add(userId);
-    }
-    if (Array.isArray(data?.memberIds)) {
-      data.memberIds.forEach((memberId: unknown) => {
-        if (typeof memberId === 'string' && memberId.trim()) {
-          memberIds.add(memberId.trim());
-        }
-      });
-    }
+    const memberIdsToCreate = new Set(memberIds);
 
-    const members = [...memberIds].map((memberId: string) => ({
+    const members = [...memberIdsToCreate].map((memberId: string) => ({
       conversationId: created.id,
       userId: memberId,
       role: memberId === userId ? 'owner' : 'member',
