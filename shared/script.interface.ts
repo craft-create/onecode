@@ -28,6 +28,8 @@ export interface ScriptProjectItem {
   collaborator_count: number;
   /** 最后更新时间 */
   updated_at: string;
+  /** 创建者用户ID */
+  creator_id?: string;
 }
 
 /**

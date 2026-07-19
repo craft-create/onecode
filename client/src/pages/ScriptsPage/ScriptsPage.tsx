@@ -22,6 +22,7 @@ import {
   createProject,
   deleteProject,
   saveContent,
+  listMyProjects,
 } from '@/api/scripts';
 import { uploadFile } from '@/api/upload';
 import ScriptTemplates, { type ScriptTemplate } from '@/components/ScriptTemplates';
@@ -70,6 +71,7 @@ const ScriptsPage: React.FC = () => {
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(1);
   const pageSize = 12;
+  const [ownedScriptIds, setOwnedScriptIds] = useState<Set<string>>(new Set());
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogStep, setDialogStep] = useState(0);
@@ -93,6 +95,39 @@ const ScriptsPage: React.FC = () => {
 
   // Track latest request to prevent stale responses
   const requestIdRef = useRef(0);
+
+  const loadOwnedScriptIds = useCallback(async () => {
+    if (!user?.userId) {
+      setOwnedScriptIds(new Set());
+      return;
+    }
+
+    try {
+      const pageSizeForOwner = 200;
+      const first = await listMyProjects({ page: 1, pageSize: pageSizeForOwner });
+      const next = new Set(first.items.map((item) => item.id));
+
+      if (first.total > first.items.length) {
+        const totalPages = Math.ceil(first.total / pageSizeForOwner);
+        for (let p = 2; p <= totalPages; p += 1) {
+          const pageRes = await listMyProjects({ page: p, pageSize: pageSizeForOwner });
+          pageRes.items.forEach((item) => {
+            next.add(item.id);
+          });
+        }
+      }
+
+      setOwnedScriptIds(next);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error('获取我的剧本列表失败:', msg);
+      setOwnedScriptIds(new Set());
+    }
+  }, [user?.userId]);
+
+  useEffect(() => {
+    loadOwnedScriptIds();
+  }, [loadOwnedScriptIds]);
 
   const fetchProjects = useCallback(async () => {
     const requestId = ++requestIdRef.current;
@@ -241,6 +276,14 @@ const ScriptsPage: React.FC = () => {
   };
 
   const prevStep = () => setDialogStep((s) => s - 1);
+
+  const canDeleteProject = (project: ScriptProjectItem): boolean => {
+    if (!user?.userId) return false;
+    if (project.creator_id) {
+      return project.creator_id === user.userId;
+    }
+    return ownedScriptIds.has(project.id);
+  };
 
   const formatTime = (iso: string): string => {
     const d = new Date(iso);
@@ -403,7 +446,7 @@ const ScriptsPage: React.FC = () => {
                 </div>
 
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  {user && (
+                  {canDeleteProject(project) && (
                     <Button
                       variant="destructive"
                       size="icon"
