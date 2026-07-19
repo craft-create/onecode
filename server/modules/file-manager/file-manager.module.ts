@@ -15,32 +15,6 @@ export class FileManagerModule implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     try {
-      // 删除旧表（使用 user_profile 类型）
-      await this.db.execute(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (await import('drizzle-orm')).sql`
-          DROP TABLE IF EXISTS file_recycle_bin CASCADE
-        `
-      );
-      await this.db.execute(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (await import('drizzle-orm')).sql`
-          DROP TABLE IF EXISTS file_share CASCADE
-        `
-      );
-      await this.db.execute(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (await import('drizzle-orm')).sql`
-          DROP TABLE IF EXISTS file_item CASCADE
-        `
-      );
-      await this.db.execute(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (await import('drizzle-orm')).sql`
-          DROP TABLE IF EXISTS file_folder CASCADE
-        `
-      );
-
       // 创建 file_folder 表（使用 uuid 类型）
       await this.db.execute(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
