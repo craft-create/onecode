@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
@@ -26,6 +26,7 @@ import FollowButton from '@client/src/components/FollowButton';
 import { Image } from '@client/src/components/ui/image';
 import { PageFrame } from '../shared/PageShell';
 import { MaterialDetailSidePanel } from './components/MaterialDetailSidePanel';
+import { UserDisplay } from '@client/src/components/business-ui/user-display/user-display';
 import type {
   MaterialDetail,
   MaterialRelatedItem,
@@ -373,30 +374,39 @@ const MaterialDetailPage: React.FC = () => {
     }
   }, [navigate, startingChat, user?.userId, detail?.creator_id]);
 
-  const creatorFollowActionNode = detail?.creator_id && user?.userId && detail.creator_id !== user.userId
-    ? (
-      <div className="space-y-3">
-        <button
-          type="button"
-          onClick={handleStartChatWithCreator}
-          disabled={startingChat}
-          className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-            startingChat
-              ? 'bg-primary/40 text-primary-foreground border border-primary/30'
-              : 'bg-primary text-primary-foreground hover:bg-primary/90 border border-primary'
-          }`}
-        >
-          {startingChat ? (
-            <div className="w-3.5 h-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
-          ) : (
-            <MessageCircle className="w-3.5 h-3.5" />
-          )}
-          <span>{startingChat ? '处理中...' : '发起聊天'}</span>
-        </button>
-        <FollowButton userId={detail.creator_id} className="ml-1" />
-      </div>
-    )
-    : null;
+  const creatorFollowActionNode = detail?.creator_id ? (
+    <div className="space-y-2.5">
+      <Link
+        to={`/user/${detail.creator_id}`}
+        className="group flex items-center gap-2 rounded-lg border border-border/70 bg-card/60 px-2.5 py-1.5 text-left transition-all hover:border-primary/50 hover:bg-card"
+      >
+        <UserDisplay userId={detail.creator_id} size="small" />
+      </Link>
+      {user?.userId && detail.creator_id !== user.userId ? (
+        <>
+          <button
+            type="button"
+            onClick={handleStartChatWithCreator}
+            disabled={startingChat}
+            className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              startingChat
+                ? 'bg-primary/40 text-primary-foreground border border-primary/30'
+                : 'bg-primary text-primary-foreground hover:bg-primary/90 border border-primary'
+            }`}
+          >
+            {startingChat ? (
+              <div className="w-3.5 h-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+            ) : (
+              <MessageCircle className="w-3.5 h-3.5" />
+            )}
+            <span>{startingChat ? '处理中...' : '发起聊天'}</span>
+          </button>
+          <FollowButton userId={detail.creator_id} className="ml-1" />
+        </>
+      ) : null}
+    </div>
+  )
+  : null;
 
   const formatDuration = useCallback((seconds: number): string => {
     if (!seconds || !isFinite(seconds)) return '0:00';
