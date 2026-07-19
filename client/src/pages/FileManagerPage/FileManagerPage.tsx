@@ -7,12 +7,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Folder,
   FolderOpen,
-  File,
-  Image,
-  Film,
-  Music,
-  FileText,
-  Archive,
   Star,
   Trash2,
   Share2,
@@ -36,6 +30,11 @@ import { toast } from 'sonner';
 import { logger } from '@/utils/logger';
 import { PageFrame } from '../shared/PageShell';
 import { fileApi } from '@/api';
+import {
+  FileAssetPreview,
+  getFileAssetIcon,
+  getFileAssetMediaKind,
+} from '@/components/media/FileAssetPreview';
 
 type ViewMode = 'grid' | 'list';
 
@@ -315,74 +314,6 @@ const FileManagerPage: React.FC = () => {
   };
 
   // ========== Render Helpers ==========
-  type FileMediaKind = 'folder' | 'image' | 'video' | 'audio' | 'other';
-
-  const getFileMediaKind = (file: FileItem): FileMediaKind => {
-    if (file.type === 'folder') return 'folder';
-    if (file.mimeType?.startsWith('image/') || file.type === 'image') return 'image';
-    if (file.mimeType?.startsWith('video/') || file.type === 'video') return 'video';
-    if (file.mimeType?.startsWith('audio/') || file.type === 'audio') return 'audio';
-    return 'other';
-  };
-
-  const getFileIcon = (type: string, mimeType?: string) => {
-    if (type === 'folder') return <Folder className="w-8 h-8 text-blue-500" />;
-    if (type === 'audio') return <Music className="w-8 h-8 text-yellow-500" />;
-    if (type === 'video' && !mimeType?.startsWith('video/')) return <Film className="w-8 h-8 text-purple-500" />;
-    if (mimeType?.startsWith('image/')) return <Image className="w-8 h-8 text-green-500" />;
-    if (mimeType?.startsWith('video/')) return <Film className="w-8 h-8 text-purple-500" />;
-    if (mimeType?.startsWith('audio/')) return <Music className="w-8 h-8 text-yellow-500" />;
-    if (mimeType?.includes('pdf') || mimeType?.includes('document')) return <FileText className="w-8 h-8 text-red-500" />;
-    if (mimeType?.includes('zip') || mimeType?.includes('compressed')) return <Archive className="w-8 h-8 text-orange-500" />;
-    return <File className="w-8 h-8 text-gray-500" />;
-  };
-
-  const renderFilePreview = (file: FileItem, mode: 'grid' | 'list'): React.ReactNode => {
-    const kind = getFileMediaKind(file);
-
-    if (kind === 'image') {
-      const imageUrl = file.thumbnailUrl || file.url;
-      return (
-        <img
-          src={imageUrl}
-          alt={file.name}
-          className={mode === 'grid' ? 'w-full h-full object-cover' : 'w-10 h-10 object-cover rounded'}
-        />
-      );
-    }
-
-    if (kind === 'video') {
-      return (
-        <video
-          src={file.url}
-          poster={file.thumbnailUrl || undefined}
-          controls
-          preload="metadata"
-          className={mode === 'grid' ? 'w-full h-full object-cover' : 'w-20 h-10 rounded object-cover'}
-          onClick={(event) => event.stopPropagation()}
-        >
-          您的浏览器不支持视频播放
-        </video>
-      );
-    }
-
-    if (kind === 'audio') {
-      return (
-        <audio
-          src={file.url}
-          controls
-          preload="metadata"
-          className={mode === 'grid' ? 'w-full px-3' : 'w-48'}
-          onClick={(event) => event.stopPropagation()}
-        >
-          您的浏览器不支持音频播放
-        </audio>
-      );
-    }
-
-    return null;
-  };
-
   const renderFileActions = (file: FileItem, triggerVariant: 'secondary' | 'ghost') => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -641,12 +572,18 @@ const FileManagerPage: React.FC = () => {
                                 className="aspect-square bg-accent/30 flex items-center justify-center relative"
                                 onClick={() => window.open(file.url, '_blank')}
                               >
-                                {renderFilePreview(file, 'grid') ? (
+                                {getFileAssetMediaKind(file) === 'image' ||
+                                getFileAssetMediaKind(file) === 'video' ||
+                                getFileAssetMediaKind(file) === 'audio' ? (
                                   <div className="absolute inset-0 flex items-center justify-center">
-                                    {renderFilePreview(file, 'grid')}
+                                    <FileAssetPreview
+                                      file={file}
+                                      mode="grid"
+                                      stopMediaEvent={true}
+                                    />
                                   </div>
                                 ) : (
-                                  getFileIcon(file.type, file.mimeType)
+                                  getFileAssetIcon(file.type, file.mimeType)
                                 )}
                                 {isStarred(file.isStarred) && (
                                   <Star className="absolute top-2 right-2 w-4 h-4 text-yellow-500 fill-yellow-500" />
@@ -677,15 +614,25 @@ const FileManagerPage: React.FC = () => {
                         <Card
                           key={file.id}
                           className="cursor-pointer hover:border-primary/50 transition-all"
-                          onClick={() => window.open(file.url, '_blank')}
-                        >
+                            onClick={() => window.open(file.url, '_blank')}
+                          >
                           <CardContent className="p-3 flex items-center gap-3">
                             <Checkbox
                               checked={selectedItems.has(file.id)}
                               onCheckedChange={() => toggleSelect(file.id)}
                               onClick={(e) => e.stopPropagation()}
                             />
-                            {renderFilePreview(file, 'list') || getFileIcon(file.type, file.mimeType)}
+                            {getFileAssetMediaKind(file) === 'image' ||
+                            getFileAssetMediaKind(file) === 'video' ||
+                            getFileAssetMediaKind(file) === 'audio' ? (
+                              <FileAssetPreview
+                                file={file}
+                                mode="list"
+                                stopMediaEvent={true}
+                              />
+                            ) : (
+                              getFileAssetIcon(file.type, file.mimeType)
+                            )}
                             <span className="flex-1 font-medium truncate">{file.name}</span>
                             <span className="text-sm text-muted-foreground">{formatSize(Number(file.size))}</span>
                             {renderFileActions(file, 'ghost')}
