@@ -72,8 +72,8 @@ export class ChatController {
   }
 
   @Get('conversations/:id')
-  findConversation(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.chatService.findOne(id);
+  findConversation(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: any) {
+    return this.chatService.findOne(id, req.user?.userId);
   }
 
   @Get('conversations/:id/messages')
@@ -121,8 +121,8 @@ export class ChatController {
   }
 
   @Get(':id')
-  findOne(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.chatService.findOne(id);
+  findOne(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: any) {
+    return this.chatService.findOne(id, req.user?.userId);
   }
 
   @Patch(':id')

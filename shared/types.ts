@@ -40,6 +40,15 @@ export interface Conversation {
   createdBy?: string;
   updatedAt: Date;
   updatedBy?: string;
+  members?: ConversationMemberSummary[];
+  peerId?: string;
+  peerName?: string;
+}
+
+export interface ConversationMemberSummary {
+  userId: string;
+  nickname?: string | null;
+  role: 'owner' | 'admin' | 'member';
 }
 
 export interface Message {
@@ -57,6 +66,17 @@ export interface Message {
   createdBy?: string;
   updatedAt: Date;
   updatedBy?: string;
+}
+
+export interface ChatTypingEvent {
+  conversationId: string;
+  userId: string;
+  isTyping: boolean;
+}
+
+export interface ChatMessageEvent {
+  conversationId: string;
+  message: Message;
 }
 
 export interface ConversationMember {

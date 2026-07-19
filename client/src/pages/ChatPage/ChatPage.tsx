@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { io, type Socket } from 'socket.io-client';
 import { MessageCircle, Send, Search } from 'lucide-react';
 import { Button } from '@client/src/components/ui/button';
 import { Input } from '@client/src/components/ui/input';
@@ -10,9 +11,15 @@ import { Separator } from '@client/src/components/ui/separator';
 import { Skeleton } from '@client/src/components/ui/skeleton';
 import { Textarea } from '@client/src/components/ui/textarea';
 import { api, chatApi } from '@client/src/api';
-import type { Conversation } from '@shared/types';
+import type { ChatMessageEvent, ChatTypingEvent, Conversation } from '@shared/types';
+import { toast } from 'sonner';
 import { useAuth } from '@client/src/hooks/useAuth';
 import { PageFrame } from '../shared/PageShell';
+
+type SendMessageViaSocketResult = {
+  success: boolean;
+  error?: string;
+};
 
 export default function ChatPage() {
   const navigate = useNavigate();
@@ -43,8 +50,10 @@ export default function ChatPage() {
   };
 
   const filteredConversations = conversations.filter(c =>
-    (c.title ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+    getConversationDisplayName(c).toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const activeConversation = conversations.find(c => c.id === conversationId);
 
   return (
     <PageFrame
@@ -65,7 +74,7 @@ export default function ChatPage() {
             </h2>
           </div>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="搜索会话..."
               value={searchQuery}
@@ -83,36 +92,40 @@ export default function ChatPage() {
               ))}
             </div>
           ) : filteredConversations.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <MessageCircle className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+            <div className="p-8 text-center text-muted-foreground">
+              <MessageCircle className="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
               <p>暂无会话</p>
             </div>
           ) : (
             filteredConversations.map(conversation => (
               <div key={conversation.id}>
                 <div
-                  className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${conversationId === conversation.id ? 'bg-blue-50' : ''}`}
+                  className={`p-4 hover:bg-accent/70 cursor-pointer transition-colors ${
+                    conversationId === conversation.id
+                      ? 'bg-accent/60 border-l-4 border-primary'
+                      : ''
+                  }`}
                   onClick={() => navigate(`/chat/${conversation.id}`)}
                 >
                   <div className="flex items-start gap-3">
-                    <Avatar className="w-10 h-10">
-                      <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center text-white font-semibold">
-                        {conversation.title?.[0] || '私'}
-                      </div>
-                    </Avatar>
+                      <Avatar className="w-10 h-10">
+                        <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center text-white font-semibold">
+                          {getConversationDisplayName(conversation).charAt(0) || '私'}
+                        </div>
+                      </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start">
                         <h3 className="font-medium text-sm truncate">
-                          {conversation.title || '私聊'}
+                          {getConversationDisplayName(conversation)}
                         </h3>
                         {conversation.lastMessageAt && (
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-muted-foreground">
                             {new Date(conversation.lastMessageAt).toLocaleDateString('zh-CN')}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 mt-1 truncate">
-                        {conversation.type === 'group' ? '群聊' : '私聊'}
+                      <p className="text-xs text-muted-foreground mt-1 truncate">
+                        {conversation.type === 'group' ? (conversation.title || '群聊') : getConversationDisplayName(conversation)}
                       </p>
                     </div>
                   </div>
@@ -130,11 +143,12 @@ export default function ChatPage() {
           <ChatDetail
             conversationId={conversationId}
             currentUserId={user?.userId}
+            conversation={activeConversation}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-400">
+          <div className="flex-1 flex items-center justify-center text-muted-foreground">
             <div className="text-center">
-              <MessageCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <MessageCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
               <p>选择一个会话开始聊天</p>
             </div>
           </div>
@@ -148,21 +162,152 @@ export default function ChatPage() {
 function ChatDetail({
   conversationId,
   currentUserId,
+  conversation,
 }: {
   conversationId: string;
   currentUserId?: string;
+  conversation?: Conversation;
 }) {
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const messagesViewportRef = React.useRef<HTMLDivElement>(null);
   const [autoScrollToBottom, setAutoScrollToBottom] = useState(true);
+  const [isPeerTyping, setIsPeerTyping] = useState(false);
+  const socketRef = React.useRef<Socket | null>(null);
+  const typingTimerRef = React.useRef<number | null>(null);
+  const peerTypingClearTimerRef = React.useRef<number | null>(null);
 
   useEffect(() => {
     setLoading(true);
     setAutoScrollToBottom(true);
     fetchMessages();
   }, [conversationId]);
+
+  useEffect(() => {
+    return () => {
+      const socket = socketRef.current;
+      if (!socket) {
+        return;
+      }
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token || !currentUserId) {
+      const existingSocket = socketRef.current;
+      if (existingSocket) {
+        existingSocket.disconnect();
+        socketRef.current = null;
+      }
+      return;
+    }
+
+    const ensureSocket = (): Socket => {
+      if (socketRef.current) {
+        return socketRef.current;
+      }
+      const nextSocket = io('', {
+        path: '/api/chat-ws',
+        transports: ['websocket'],
+        auth: { token },
+        withCredentials: true,
+      });
+      socketRef.current = nextSocket;
+      return nextSocket;
+    };
+
+    const socket = ensureSocket();
+
+    const clearTypingTimers = (): void => {
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = null;
+      }
+      if (peerTypingClearTimerRef.current) {
+        clearTimeout(peerTypingClearTimerRef.current);
+        peerTypingClearTimerRef.current = null;
+      }
+    };
+
+    const joinConversation = (): void => {
+      if (!conversationId) {
+        return;
+      }
+      socket.emit('chat:join', { conversationId });
+      setIsPeerTyping(false);
+    };
+
+    const leaveCurrentConversation = (): void => {
+      if (!conversationId) {
+        return;
+      }
+      socket.emit('chat:leave', { conversationId });
+      socket.emit('chat:typing', { conversationId, isTyping: false });
+    };
+
+    const handleNewMessage = (event: ChatMessageEvent) => {
+      if (!event || event.conversationId !== conversationId) {
+        return;
+      }
+      const next = event.message;
+      if (!next?.id) {
+        return;
+      }
+      setMessages((prevMessages) => {
+        if (prevMessages.some((item) => item?.id === next.id)) {
+          return prevMessages;
+        }
+        return [...prevMessages, next];
+      });
+      setAutoScrollToBottom(true);
+    };
+
+    const handleTyping = (payload: ChatTypingEvent) => {
+      if (
+        !payload ||
+        payload.conversationId !== conversationId ||
+        payload.userId === currentUserId
+      ) {
+        return;
+      }
+      setIsPeerTyping(payload.isTyping);
+
+      if (peerTypingClearTimerRef.current) {
+        clearTimeout(peerTypingClearTimerRef.current);
+      }
+      if (payload.isTyping) {
+        peerTypingClearTimerRef.current = window.setTimeout(() => {
+          setIsPeerTyping(false);
+          peerTypingClearTimerRef.current = null;
+        }, 3500);
+      }
+    };
+
+    const handleConnect = (): void => {
+      joinConversation();
+    };
+
+    socket.on('connect', handleConnect);
+    socket.on('chat:new-message', handleNewMessage);
+    socket.on('chat:typing', handleTyping);
+    joinConversation();
+
+    clearTypingTimers();
+    setIsPeerTyping(false);
+
+    return () => {
+      leaveCurrentConversation();
+      clearTypingTimers();
+      setIsPeerTyping(false);
+      socket.off('connect', handleConnect);
+      socket.off('chat:new-message', handleNewMessage);
+      socket.off('chat:typing', handleTyping);
+    };
+  }, [conversationId, currentUserId]);
 
   useEffect(() => {
     if (!autoScrollToBottom) {
@@ -201,18 +346,113 @@ function ChatDetail({
   const handleSend = async () => {
     if (!input.trim()) return;
 
+    const trimmedInput = input.trim();
+    const socket = socketRef.current;
+    let socketFailureMessage: string | undefined;
+
+    if (socket?.connected) {
+      const socketResult = await sendMessageViaSocket(trimmedInput);
+      if (socketResult.success) {
+        setAutoScrollToBottom(true);
+        setInput('');
+        notifyTyping(false);
+        return;
+      }
+      socketFailureMessage = socketResult.error;
+      console.error('Failed to send message via WebSocket:', socketResult.error);
+    }
+
     try {
       await chatApi.sendMessage({
         conversationId,
-        content: input,
+        content: trimmedInput,
         type: 'text',
       });
       setAutoScrollToBottom(true);
       setInput('');
-      fetchMessages();
+      notifyTyping(false);
+      if (!socketRef.current?.connected) {
+        fetchMessages();
+      }
+      if (socketFailureMessage) {
+        toast.success(`已通过 HTTP 发送（网络通道回退）`);
+      }
     } catch (_error) {
       console.error('Failed to send message');
+      toast.error(socketFailureMessage || '发送失败，请重试');
     }
+  };
+
+  const sendMessageViaSocket = (content: string): Promise<SendMessageViaSocketResult> => {
+    const socket = socketRef.current;
+    if (!socket || !socket.connected || !conversationId) {
+      return Promise.resolve({ success: false, error: 'socket 未连接' });
+    }
+
+    return new Promise<SendMessageViaSocketResult>((resolve) => {
+      let finished = false;
+      const finish = (value: SendMessageViaSocketResult) => {
+        if (finished) {
+          return;
+        }
+        finished = true;
+        resolve(value);
+      };
+
+      const timeout = window.setTimeout(() => {
+        finish({ success: false, error: '发送超时' });
+      }, 2000);
+
+      socket.emit(
+        'chat:send-message',
+        {
+          conversationId,
+          content,
+          type: 'text',
+        },
+        (response?: SendMessageViaSocketResult) => {
+          clearTimeout(timeout);
+          if (response?.success) {
+            finish({ success: true });
+            return;
+          }
+          finish({
+            success: false,
+            error: response?.error || '发送失败',
+          });
+        },
+      );
+    });
+  };
+
+  const notifyTyping = (isTyping: boolean) => {
+    const socket = socketRef.current;
+    if (!socket || !socket.connected) {
+      return;
+    }
+    socket.emit('chat:typing', { conversationId, isTyping });
+  };
+
+  const handleInputChange = (value: string) => {
+    setInput(value);
+
+    if (!value.trim()) {
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = null;
+      }
+      notifyTyping(false);
+      return;
+    }
+
+    notifyTyping(true);
+    if (typingTimerRef.current) {
+      clearTimeout(typingTimerRef.current);
+    }
+    typingTimerRef.current = window.setTimeout(() => {
+      notifyTyping(false);
+      typingTimerRef.current = null;
+    }, 1200);
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -237,7 +477,14 @@ function ChatDetail({
   return (
     <>
       <div className="p-4 border-b">
-        <h2 className="font-semibold">聊天</h2>
+        <h2 className="font-semibold">
+          {conversation?.type === 'group'
+            ? (conversation.title || '群聊')
+            : getConversationDisplayName(conversation)}
+        </h2>
+        {isPeerTyping && conversation?.type !== 'group' && (
+          <p className="text-xs text-muted-foreground mt-1">对方正在输入...</p>
+        )}
       </div>
 
       <ScrollArea
@@ -261,13 +508,19 @@ function ChatDetail({
                   message.senderId === currentUserId ? 'justify-end' : 'justify-start'
                 }`}
               >
-                <Card className={`max-w-[70%] p-3 ${message.senderId === currentUserId ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}>
+                <Card
+                  className={`max-w-[70%] p-3 border ${
+                    message.senderId === currentUserId
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-foreground'
+                  }`}
+                >
                   <p className="text-sm">{message.content}</p>
                   <p
                     className={`text-xs mt-1 ${
                       message.senderId === currentUserId
                         ? 'text-blue-100'
-                        : 'text-gray-400'
+                        : 'text-muted-foreground'
                     }`}
                   >
                     {new Date(message.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
@@ -284,7 +537,7 @@ function ChatDetail({
         <div className="flex gap-2">
           <Textarea
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={e => handleInputChange(e.target.value)}
             onKeyDown={handleInputKeyDown}
             rows={2}
             placeholder="输入消息..."
@@ -297,4 +550,14 @@ function ChatDetail({
       </div>
     </>
   );
+}
+
+function getConversationDisplayName(conversation?: Conversation) {
+  if (!conversation) {
+    return '聊天';
+  }
+  if (conversation.type === 'group') {
+    return conversation.title || '群聊';
+  }
+  return conversation.peerName || conversation.title || '私聊';
 }

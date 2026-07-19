@@ -2,11 +2,14 @@ import { Module, OnModuleInit, Inject, Logger } from '@nestjs/common';
 import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
 import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
+import { ChatGateway } from './chat.gateway';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  providers: [ChatService],
+  imports: [AuthModule],
+  providers: [ChatService, ChatGateway],
   controllers: [ChatController],
-  exports: [ChatService],
+  exports: [ChatService, ChatGateway],
 })
 export class ChatModule implements OnModuleInit {
   private readonly logger: Logger = new Logger(ChatModule.name);

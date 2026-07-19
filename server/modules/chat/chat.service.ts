@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  forwardRef,
   Inject,
   Injectable,
   NotFoundException,
@@ -11,6 +12,7 @@ import {
   asc,
   desc,
   eq,
+  inArray,
   lt,
   type SQLWrapper,
   sql,
@@ -19,6 +21,8 @@ import {
 } from 'drizzle-orm';
 import { conversation, conversationMember, message, chatRequest } from '@server/database/schema';
 import { localUsers } from '@server/database/local-schema';
+import type { Conversation as SharedConversation } from '@shared/types';
+import { ChatGateway } from './chat.gateway';
 
 type MessageFilter = {
   beforeId?: string;
@@ -47,9 +51,37 @@ type ChatRequestFilter = {
   status?: ChatRequestStatus;
 };
 
+type ConversationMemberSummary = {
+  userId: string;
+  nickname?: string;
+  role: 'owner' | 'admin' | 'member';
+};
+
+type ChatServiceConversationDbRow = {
+  id: string;
+  title: string | null;
+  type: string;
+  lastMessageId: string | null;
+  lastMessageAt: Date | null;
+  createdAt: Date;
+  createdBy: string | null;
+  updatedAt: Date;
+  updatedBy: string | null;
+};
+
+type ConversationWithMembers = SharedConversation & {
+  members: ConversationMemberSummary[];
+  peerId?: string;
+  peerName?: string;
+};
+
 @Injectable()
 export class ChatService {
-  constructor(@Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase) {}
+  constructor(
+    @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
+    @Inject(forwardRef(() => ChatGateway))
+    private readonly chatGateway: ChatGateway,
+  ) {}
 
   private normalizeConversationType(value: unknown): 'private' | 'group' {
     return value === 'group' ? 'group' : 'private';
@@ -148,6 +180,93 @@ export class ChatService {
       .from(chatRequest)
       .where(directionCondition)
       .orderBy(desc(chatRequest.createdAt));
+  }
+
+  private async fetchConversationMembers(
+    conversationIds: string[],
+  ): Promise<Map<string, ConversationMemberSummary[]>> {
+    const normalizedIds = conversationIds
+      .map((id: string) => id.trim())
+      .filter(Boolean);
+    const memberMap = new Map<string, ConversationMemberSummary[]>();
+
+    if (normalizedIds.length === 0) {
+      return memberMap;
+    }
+
+    const rows = await this.db
+      .select({
+        conversationId: conversationMember.conversationId,
+        userId: sql<string>`(${conversationMember.userId}).user_id`.as('user_id'),
+        role: conversationMember.role,
+        nickname: localUsers.nickname,
+      })
+      .from(conversationMember)
+      .leftJoin(localUsers, eq(sql<string>`(${conversationMember.userId}).user_id`, localUsers.id))
+      .where(inArray(conversationMember.conversationId, normalizedIds))
+      .orderBy(conversationMember.createdAt);
+
+    for (const row of rows) {
+      const exists = memberMap.get(row.conversationId) ?? [];
+      exists.push({
+        userId: row.userId,
+        nickname: row.nickname || undefined,
+        role: row.role as 'owner' | 'admin' | 'member',
+      });
+      memberMap.set(row.conversationId, exists);
+    }
+
+    return memberMap;
+  }
+
+  private resolveConversationPeer(
+    members: ConversationMemberSummary[],
+    viewerId?: string,
+  ): ConversationMemberSummary | undefined {
+    if (members.length === 0) {
+      return undefined;
+    }
+    if (!viewerId) {
+      return members[0];
+    }
+    return members.find((member) => member.userId !== viewerId) || members[0];
+  }
+
+  private async enrichConversations(
+    rows: SharedConversation[],
+    viewerId?: string,
+  ): Promise<ConversationWithMembers[]> {
+    const conversationIds = rows.map((item) => item.id);
+    const memberMap = await this.fetchConversationMembers(conversationIds);
+
+    return rows.map((row) => {
+      const members = memberMap.get(row.id) ?? [];
+      const peer = this.resolveConversationPeer(members, viewerId);
+      const peerName = peer?.nickname || peer?.userId || '私聊';
+      const title = row.type === 'group' ? row.title || '群聊' : peerName;
+
+      return {
+        ...row,
+        members,
+        peerId: peer?.userId,
+        peerName,
+        title,
+      } as ConversationWithMembers;
+    });
+  }
+
+  private normalizeConversationRows(rows: ChatServiceConversationDbRow[]): SharedConversation[] {
+    return rows.map((row: ChatServiceConversationDbRow) => ({
+      id: row.id,
+      title: row.title ?? undefined,
+      type: row.type === 'group' ? 'group' : 'private',
+      lastMessageId: row.lastMessageId ?? undefined,
+      lastMessageAt: row.lastMessageAt ?? undefined,
+      createdAt: row.createdAt,
+      createdBy: row.createdBy ?? undefined,
+      updatedAt: row.updatedAt,
+      updatedBy: row.updatedBy ?? undefined,
+    }));
   }
 
   async createChatRequest(
@@ -312,16 +431,28 @@ export class ChatService {
   }
 
   async findAll(_userId?: string) {
-    return this.db.select().from(conversation).orderBy(desc(conversation.createdAt));
+    const list = await this.db
+      .select()
+      .from(conversation)
+      .orderBy(desc(conversation.createdAt));
+    const normalizedList = this.normalizeConversationRows(list as ChatServiceConversationDbRow[]);
+    return this.enrichConversations(normalizedList, _userId);
   }
 
-  async findOne(id: string) {
-    const result = await this.db
+  async findOne(id: string, viewerId?: string) {
+    const [result] = await this.db
       .select()
       .from(conversation)
       .where(eq(conversation.id, id))
       .limit(1);
-    return result[0] || null;
+    if (!result) {
+      return null;
+    }
+    const [enriched] = await this.enrichConversations(
+      this.normalizeConversationRows([result as ChatServiceConversationDbRow]),
+      viewerId,
+    );
+    return enriched || null;
   }
 
   async create(data: any, userId?: string) {
@@ -436,6 +567,10 @@ export class ChatService {
     if (!conversationExists) {
       throw new NotFoundException('会话不存在');
     }
+    const isMember = await this.isConversationMember(payload.conversationId, senderId);
+    if (!isMember) {
+      throw new ForbiddenException('无权在该会话发送消息');
+    }
 
     if (!payload.content?.trim() && payload.type !== 'image') {
       throw new BadRequestException('消息内容不能为空');
@@ -467,7 +602,33 @@ export class ChatService {
       })
       .where(eq(conversation.id, payload.conversationId));
 
+    this.chatGateway.broadcastNewMessage({
+      conversationId: created.conversationId,
+      message: {
+        id: created.id,
+        conversationId: created.conversationId,
+        senderId: created.senderId,
+        content: created.content ?? undefined,
+        type: created.type,
+        createdAt: created.createdAt,
+      },
+    });
+
     return created;
+  }
+
+  private async isConversationMember(conversationId: string, userId: string) {
+    const [member] = await this.db
+      .select({ id: conversationMember.id })
+      .from(conversationMember)
+      .where(
+        and(
+          eq(conversationMember.conversationId, conversationId),
+          eq(sql<string>`(${conversationMember.userId}).user_id`, userId),
+        ),
+      )
+      .limit(1);
+    return Boolean(member);
   }
 
   async markConversationRead(conversationId: string, _userId?: string) {
