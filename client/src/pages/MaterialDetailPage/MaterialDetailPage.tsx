@@ -354,10 +354,10 @@ const MaterialDetailPage: React.FC = () => {
     <PageFrame
       className="min-h-screen bg-background"
       containerClassName="app-container py-6"
-      contentClassName="space-y-0"
+      contentClassName="space-y-4"
     >
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-border">
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-border py-2">
         <div className="flex items-center gap-4">
           <motion.button
             whileTap={{ scale: 0.96 }}
