@@ -83,9 +83,10 @@ export class ScriptService {
   }
 
   private getEtherpadPadId(projectId: string): string {
-    const safePrefix = this.getEtherpadConfig().padPrefix.replace(/[^a-zA-Z0-9_-]/g, '');
-    const safeProjectId = projectId.replace(/[^a-zA-Z0-9_-]/g, '');
-    return `${safePrefix}-${safeProjectId}`.slice(0, 128);
+    const safePrefix = this.getEtherpadConfig().padPrefix
+      .replace(/[^a-zA-Z0-9_]/g, '_');
+    const safeProjectId = projectId.replace(/[^a-zA-Z0-9_]/g, '_');
+    return `${safePrefix}_${safeProjectId}`.slice(0, 128);
   }
 
   private getEtherpadPadUrl(padId: string): string {
