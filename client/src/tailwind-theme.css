@@ -157,7 +157,7 @@
   }
 
   .app-container-shell {
-    @apply app-container py-8;
+    @apply max-w-7xl mx-auto px-4 sm:px-6 py-8;
   }
 
   .app-btn-primary {
@@ -169,7 +169,7 @@
   }
 
   .app-btn-primary-lg {
-    @apply app-btn-primary py-3 px-8;
+    @apply inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:pointer-events-none;
   }
 
   .app-btn-icon {
