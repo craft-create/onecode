@@ -212,7 +212,7 @@ export class ScriptService {
 
     try {
       await this.callEtherpadApi<unknown>('createPad', {
-        padId,
+        padID: padId,
         text: latest.content || '',
       });
       this.logger.log(`Created Etherpad pad ${padId} for project ${projectId}`);
@@ -229,7 +229,7 @@ export class ScriptService {
 
   private async getPadTextFromEtherpad(padId: string): Promise<string> {
     const { text } = await this.callEtherpadApi<{ text: string }>('getText', {
-      padId,
+      padID: padId,
     });
     return text || '';
   }
