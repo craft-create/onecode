@@ -480,21 +480,22 @@ export class ChatService {
 
   async create(data: any, userId?: string) {
     const conversationType = this.normalizeConversationType(data?.type);
+    const creatorId = await this.ensureLoggedIn(userId);
     const membersFromRequest = this.normalizeMemberIds(data?.memberIds);
     const conversationData = { ...(data || {}) } as Record<string, unknown>;
     delete conversationData.memberIds;
 
     const memberIds = new Set<string>();
 
-    if (userId) {
-      memberIds.add(userId);
+    if (creatorId) {
+      memberIds.add(creatorId);
     }
     for (const memberId of membersFromRequest) {
       memberIds.add(memberId);
     }
 
-    if (conversationType === 'private' && userId) {
-      const hasTarget = Array.from(memberIds).some((memberId) => memberId !== userId);
+    if (conversationType === 'private') {
+      const hasTarget = Array.from(memberIds).some((memberId) => memberId !== creatorId);
       if (!hasTarget) {
         throw new BadRequestException('私聊至少需要一个对方用户');
       }
@@ -505,7 +506,7 @@ export class ChatService {
       .values({
         ...conversationData,
         type: conversationType,
-        createdBy: userId,
+        createdBy: creatorId,
       })
       .returning();
 
@@ -519,7 +520,7 @@ export class ChatService {
     const members = [...memberIdsToCreate].map((memberId: string) => ({
       conversationId: created.id,
       userId: memberId,
-      role: memberId === userId ? 'owner' : 'member',
+      role: memberId === creatorId ? 'owner' : 'member',
     }));
 
     if (members.length > 0) {

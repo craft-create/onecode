@@ -29,11 +29,14 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchConversations();
-  }, [conversationId]);
+  const mergeConversation = (list: Conversation[], next: Conversation | undefined) => {
+    if (!next?.id) return list;
+    const exists = list.some((item) => item.id === next.id);
+    return exists ? list : [next, ...list];
+  };
 
   const fetchConversations = async () => {
+    setLoading(true);
     try {
       const response = (await api.get<Conversation[] | { items?: Conversation[] }>('/chat/conversations')) as
         Conversation[]
@@ -41,13 +44,31 @@ export default function ChatPage() {
       const list = Array.isArray(response)
         ? response
         : response?.items ?? [];
-      setConversations(list);
+
+      let finalList = list;
+      if (conversationId) {
+        try {
+          const conversation = (await (chatApi.getConversation(conversationId) as Promise<unknown>)) as Conversation | null;
+          if (conversation) {
+            finalList = mergeConversation(finalList, conversation);
+          }
+        } catch (detailError) {
+          console.error('Failed to load active conversation detail:', detailError);
+        }
+      }
+
+      setConversations(finalList);
     } catch {
       console.error('Failed to load conversations');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    setSearchQuery('');
+    void fetchConversations();
+  }, [conversationId]);
 
   const filteredConversations = conversations.filter(c =>
     getConversationDisplayName(c).toLowerCase().includes(searchQuery.toLowerCase())
