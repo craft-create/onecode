@@ -29,9 +29,9 @@ export default function ChatPage() {
 
   const fetchConversations = async () => {
     try {
-      const { data: response } = await api.get<Conversation[] | { items?: Conversation[] }>(
-        '/chat/conversations',
-      );
+      const response = (await api.get<Conversation[] | { items?: Conversation[] }>('/chat/conversations')) as
+        Conversation[]
+        | { items?: Conversation[] };
       const list = Array.isArray(response)
         ? response
         : response?.items ?? [];
@@ -46,18 +46,19 @@ export default function ChatPage() {
   const handleCreateConversation = async () => {
     setCreatingConversation(true);
     try {
-      const { data: response } = await chatApi.createConversation({
+      const response = (await chatApi.createConversation({
         title: `会话 ${new Date().toLocaleTimeString('zh-CN', {
           hour: '2-digit',
           minute: '2-digit',
         })}`,
         type: 'private',
-      });
+      })) as { id?: string } & { data?: { id?: string } };
       const newConversationId =
-        (response as { id?: string }).id ??
-        ((response as { data?: { id?: string } }).data?.id as string | undefined);
+        response.id ??
+        response.data?.id;
 
       if (!newConversationId) {
+        console.error('Failed to create conversation: missing id in response');
         return;
       }
       await fetchConversations();
@@ -70,7 +71,7 @@ export default function ChatPage() {
   };
 
   const filteredConversations = conversations.filter(c =>
-    c.title?.toLowerCase().includes(searchQuery.toLowerCase())
+    (c.title ?? '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -217,11 +218,11 @@ function ChatDetail({
 
   const fetchMessages = async () => {
     try {
-      const { data: response } = await chatApi.getMessages({
+      const response = (await chatApi.getMessages({
         conversationId,
         page: 1,
         limit: 200,
-      });
+      })) as any[] | { items?: any[] };
       const list = Array.isArray(response)
         ? response
         : response?.items ?? [];
