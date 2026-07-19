@@ -11,6 +11,7 @@ import {
   Minimize,
 } from 'lucide-react';
 import { logger } from '@/utils/logger';
+import { analyticsApi } from '@client/src/api';
 import {
   getMaterialById,
   getRelatedMaterials,
@@ -53,6 +54,7 @@ const MaterialDetailPage: React.FC = () => {
   const [audioDuration, setAudioDuration] = useState(0);
   const [isDraggingProgress, setIsDraggingProgress] = useState(false);
   const [isDraggingVolume, setIsDraggingVolume] = useState(false);
+  const trackedMaterialRef = useRef<string | null>(null);
   const audioAnimFrameRef = useRef<number | null>(null);
   const [audioBarHeights, setAudioBarHeights] = useState<number[]>(
     Array.from({ length: 5 }, (_, i: number) => {
@@ -75,6 +77,19 @@ const MaterialDetailPage: React.FC = () => {
       .catch((err: unknown) => logger.error('获取素材详情失败:', err))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !detail || trackedMaterialRef.current === id) {
+      return;
+    }
+
+    trackedMaterialRef.current = id;
+    analyticsApi.track({
+      action: 'view',
+      resourceType: 'material',
+      resourceId: id,
+    }).catch(() => {});
+  }, [detail, id]);
 
   const handlePlayPause = useCallback(() => {
     const media = detail?.type === 'audio' ? audioRef.current : videoRef.current;

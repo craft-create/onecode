@@ -1,4 +1,9 @@
 import axios from 'axios';
+import type {
+  AnalyticsContentStatsResponse,
+  AnalyticsDashboardData,
+  AnalyticsTrackRequest,
+} from '@shared/types';
 
 // 获取配置好的 axios 实例
 export const api = axios.create({
@@ -270,15 +275,15 @@ export const settingApi = {
 // ==================== 数据分析 ====================
 export const analyticsApi = {
   // 记录用户行为
-  track: (data: { action: string; resourceType?: string; resourceId?: string; duration?: number; metadata?: string }) =>
+  track: (data: AnalyticsTrackRequest) =>
     api.post('/analytics/track', data),
 
   // 获取内容统计
-  getContentStats: (type: string, id: string, days?: number) =>
-    api.get(`/analytics/content/${type}/${id}`, { params: { days } }),
+  getContentStats: (type: string, id: string, days?: number): Promise<AnalyticsContentStatsResponse> =>
+    api.get(`/analytics/content/${type}/${id}`, { params: { days } }) as Promise<AnalyticsContentStatsResponse>,
 
   // 获取用户数据面板
-  getDashboard: () => api.get('/analytics/dashboard'),
+  getDashboard: (): Promise<AnalyticsDashboardData> => api.get('/analytics/dashboard') as Promise<AnalyticsDashboardData>,
 };
 
 // ==================== 标签 ====================

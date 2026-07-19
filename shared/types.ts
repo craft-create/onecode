@@ -192,6 +192,74 @@ export interface UserBehavior {
   createdAt: Date;
 }
 
+export interface AnalyticsTimeSeriesPoint {
+  date: string;
+  views: number;
+  likes: number;
+  downloads: number;
+  shares: number;
+}
+
+export interface AnalyticsCategoryPoint {
+  name: string;
+  value: number;
+}
+
+export interface AnalyticsTopContentItem {
+  id: string;
+  type: string;
+  title: string;
+  views: number;
+  likes: number;
+  downloads: number;
+  shares: number;
+  total: number;
+}
+
+export interface AnalyticsDashboardData {
+  totalViews: number;
+  totalLikes: number;
+  totalDownloads: number;
+  totalShares: number;
+  totalFavorites: number;
+  totalContents: number;
+  weeklyTrend: AnalyticsTimeSeriesPoint[];
+  categoryDistribution: AnalyticsCategoryPoint[];
+  topContents: AnalyticsTopContentItem[];
+}
+
+export interface AnalyticsContentPoint {
+  date: string;
+  views: number;
+  likes: number;
+  downloads: number;
+  shares: number;
+  favorites: number;
+  comments: number;
+}
+
+export interface AnalyticsContentStatsResponse {
+  resourceType: string;
+  resourceId: string;
+  total: {
+    views: number;
+    likes: number;
+    favorites: number;
+    downloads: number;
+    shares: number;
+    comments: number;
+  };
+  timeline: AnalyticsContentPoint[];
+}
+
+export interface AnalyticsTrackRequest {
+  action: string;
+  resourceType?: string;
+  resourceId?: string;
+  duration?: number;
+  metadata?: string;
+}
+
 // 分享
 export interface ShareRecord {
   id: string;

@@ -162,6 +162,27 @@ const Layout = () => {
   // 是否已登录
   const isLoggedIn = !!user;
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+  const closeAllMenus = (): void => {
+    setMobileMenuOpen(false);
+    setUserMenuOpen(false);
+    setMoreMenuOpen(false);
+  };
+
+  const closeDropdownMenus = (): void => {
+    setUserMenuOpen(false);
+    setMoreMenuOpen(false);
+  };
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        setUserMenuOpen(false);
+        setMoreMenuOpen(false);
+      }
+      return next;
+    });
+  };
 
   if (isAuthPage) {
     return (
@@ -171,6 +192,7 @@ const Layout = () => {
             <NavLink
               to="/"
               className="flex items-center gap-2 font-bold text-lg text-foreground"
+              onClick={closeAllMenus}
             >
               <Film className="w-6 h-6 text-primary" />
               <span className="hidden sm:inline">{appName || "光影工坊"}</span>
@@ -225,6 +247,7 @@ const Layout = () => {
                   key={item.path}
                   to={item.path}
                   end={item.path === "/"}
+                  onClick={closeAllMenus}
                   className={({ isActive }) =>
                     `px-3 py-2 text-sm font-medium rounded-lg transition-all ${
                       isActive
@@ -240,7 +263,10 @@ const Layout = () => {
               {/* 更多下拉菜单 */}
               <div className="relative" ref={moreMenuRef}>
                 <button
-                  onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+                  onClick={() => {
+                    setUserMenuOpen(false);
+                    setMoreMenuOpen((prev) => !prev);
+                  }}
                   className={`px-3 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5 ${
                     moreMenuOpen
                       ? "text-primary bg-primary/10"
@@ -265,7 +291,7 @@ const Layout = () => {
                         <NavLink
                           key={item.path}
                           to={item.path}
-                          onClick={() => setMoreMenuOpen(false)}
+                          onClick={closeAllMenus}
                           className={({ isActive }) =>
                             `flex items-center gap-2.5 px-4 py-2 text-sm transition-colors ${
                               isActive
@@ -293,19 +319,23 @@ const Layout = () => {
           {/* ===== 右侧：操作按钮 + 用户菜单 ===== */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* 上传素材按钮 */}
-            <NavLink
-              to="/materials/upload"
-              className="hidden sm:inline-flex app-btn-primary transition-all shadow-[0_0_12px_-2px_rgba(124_92_255_0.4)] hover:shadow-[0_0_16px_-2px_rgba(124_92_255_0.6)]"
-            >
+              <NavLink
+                to="/materials/upload"
+                onClick={closeAllMenus}
+                className="hidden sm:inline-flex app-btn-primary transition-all shadow-[0_0_12px_-2px_rgba(124_92_255_0.4)] hover:shadow-[0_0_16px_-2px_rgba(124_92_255_0.6)]"
+              >
               <Upload className="w-4 h-4" />
               <span className="hidden lg:inline">上传素材</span>
             </NavLink>
 
             {/* 用户菜单（已登录显示头像下拉，未登录显示登录按钮） */}
             {isLoggedIn ? (
-            <div className="relative" ref={userMenuRef}>
+                <div className="relative" ref={userMenuRef}>
                 <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  onClick={() => {
+                    setMoreMenuOpen(false);
+                    setUserMenuOpen((prev) => !prev);
+                  }}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all ${
                     userMenuOpen ? 'bg-accent' : 'hover:bg-accent'
                   }`}
@@ -346,7 +376,7 @@ const Layout = () => {
                       <div className="py-1">
                         <NavLink
                           to="/notifications"
-                          onClick={() => setUserMenuOpen(false)}
+                          onClick={closeDropdownMenus}
                           className={({ isActive }) =>
                             `flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
                               isActive
@@ -360,7 +390,7 @@ const Layout = () => {
                         </NavLink>
                         <NavLink
                           to="/chat"
-                          onClick={() => setUserMenuOpen(false)}
+                          onClick={closeDropdownMenus}
                           className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-accent transition-colors"
                         >
                           <MessageCircle className="w-4 h-4 text-muted-foreground" />
@@ -369,7 +399,7 @@ const Layout = () => {
                         <div className="border-t border-border my-1" />
                         <NavLink
                           to="/files"
-                          onClick={() => setUserMenuOpen(false)}
+                          onClick={closeDropdownMenus}
                           className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-accent transition-colors"
                         >
                           <FolderOpen className="w-4 h-4 text-muted-foreground" />
@@ -377,7 +407,7 @@ const Layout = () => {
                         </NavLink>
                         <NavLink
                           to="/settings"
-                          onClick={() => setUserMenuOpen(false)}
+                          onClick={closeDropdownMenus}
                           className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-accent transition-colors"
                         >
                           <Settings className="w-4 h-4 text-muted-foreground" />
@@ -385,7 +415,7 @@ const Layout = () => {
                         </NavLink>
                         <NavLink
                           to="/profile"
-                          onClick={() => setUserMenuOpen(false)}
+                          onClick={closeDropdownMenus}
                           className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-accent transition-colors"
                         >
                           <User className="w-4 h-4 text-muted-foreground" />
@@ -409,6 +439,7 @@ const Layout = () => {
               </div>
             ) : (
               <NavLink
+                onClick={closeAllMenus}
                 to="/login"
                 className="app-btn-primary transition-all shadow-[0_0_12px_-2px_rgba(124_92_255_0.4)]"
               >
@@ -418,7 +449,7 @@ const Layout = () => {
 
             {/* 移动端菜单按钮 - 始终显示 */}
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onClick={toggleMobileMenu}
               className="md:hidden p-2 hover:bg-accent rounded-lg transition-colors"
             >
               {mobileMenuOpen ? (
@@ -446,6 +477,7 @@ const Layout = () => {
                     key={item.path}
                     to={item.path}
                     end={item.path === "/"}
+                    onClick={closeAllMenus}
                     className={({ isActive }) =>
                       `block px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                         isActive
@@ -466,6 +498,7 @@ const Layout = () => {
                       key={item.path}
                       to={item.path}
                       end={item.path === "/"}
+                      onClick={closeAllMenus}
                       className={({ isActive }) =>
                         `block px-4 py-2.5 rounded-lg text-sm transition-colors ${
                           isActive
@@ -485,28 +518,28 @@ const Layout = () => {
                     <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase">个人中心</p>
                     <NavLink
                       to="/notifications"
-                      onClick={() => setMobileMenuOpen(false)}
+                      onClick={closeAllMenus}
                       className="block px-4 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                     >
                       通知中心
                     </NavLink>
                     <NavLink
                       to="/chat"
-                      onClick={() => setMobileMenuOpen(false)}
+                      onClick={closeAllMenus}
                       className="block px-4 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                     >
                       私信
                     </NavLink>
                     <NavLink
                       to="/files"
-                      onClick={() => setMobileMenuOpen(false)}
+                      onClick={closeAllMenus}
                       className="block px-4 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                     >
                       文件管理
                     </NavLink>
                     <NavLink
                       to="/settings"
-                      onClick={() => setMobileMenuOpen(false)}
+                      onClick={closeAllMenus}
                       className="block px-4 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                     >
                       账户设置

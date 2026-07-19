@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { logger } from '@/compat/client-toolkit/logger';
 import { toast } from 'sonner';
 import { useAuth } from '@client/src/hooks/useAuth';
+import { analyticsApi } from '@client/src/api';
 import {
   getLatestContent,
   getContentByVersion,
@@ -67,6 +68,7 @@ const ScriptEditorPage: React.FC = () => {
   const [likeCount, setLikeCount] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const trackedScriptRef = useRef<string | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -195,6 +197,19 @@ const ScriptEditorPage: React.FC = () => {
         .catch(() => {});
     }
   }, [fetchContent, fetchOutline, id]);
+
+  useEffect(() => {
+    if (!id || trackedScriptRef.current === id) {
+      return;
+    }
+
+    trackedScriptRef.current = id;
+    analyticsApi.track({
+      action: 'view',
+      resourceType: 'script',
+      resourceId: id,
+    }).catch(() => {});
+  }, [id]);
 
   // 清理未完成的自动保存计时器
   useEffect(() => {

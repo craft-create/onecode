@@ -1,30 +1,87 @@
-import React, { useEffect, useState } from 'react';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Eye, Heart, Download, Share2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
+import { Eye, Download, Heart, Share2 } from 'lucide-react';
 import { Card } from '@client/src/components/ui/card';
 import { Badge } from '@client/src/components/ui/badge';
 import { Skeleton } from '@client/src/components/ui/skeleton';
-import { api } from '@client/src/api';
+import { analyticsApi } from '@client/src/api';
 import { PageFrame } from '../shared/PageShell';
+import type { AnalyticsDashboardData } from '@shared/types';
+
+const chartColors = ['#6366f1', '#0ea5e9', '#ec4899', '#f59e0b', '#10b981'];
+
+const toReadableNumber = (value: number): string => {
+  const normalized = Number(value || 0);
+  return normalized.toLocaleString('zh-CN');
+};
 
 export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+  const [dashboardData, setDashboardData] = useState<AnalyticsDashboardData | null>(
+    null,
+  );
 
   useEffect(() => {
+    const fetchAnalytics = async () => {
+      setLoading(true);
+      setError('');
+
+      try {
+        const data = await analyticsApi.getDashboard();
+        setDashboardData(data);
+      } catch (_error) {
+        setError('数据加载失败，请稍后重试');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchAnalytics();
   }, []);
 
-  const fetchAnalytics = async () => {
-    try {
-      await api.get('/analytics/dashboard');
-    } catch (_error) {
-      console.error('Failed to load analytics');
-    } finally {
-      setLoading(false);
-    }
+  const defaultData: AnalyticsDashboardData = {
+    totalViews: 0,
+    totalLikes: 0,
+    totalDownloads: 0,
+    totalShares: 0,
+    totalFavorites: 0,
+    totalContents: 0,
+    weeklyTrend: [],
+    categoryDistribution: [],
+    topContents: [],
   };
+  const data = dashboardData ?? defaultData;
 
-  const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
+  if (error) {
+    return (
+      <PageFrame
+        title="数据中心"
+        description="查看您的内容表现数据"
+        className="min-h-screen bg-background"
+        containerClassName="app-container-shell"
+        contentClassName="space-y-6"
+      >
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 text-destructive px-4 py-6">
+          {error}
+        </div>
+      </PageFrame>
+    );
+  }
 
   if (loading) {
     return (
@@ -37,8 +94,8 @@ export default function AnalyticsPage() {
       >
         <Skeleton className="h-12 w-64" />
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-32" />
+          {[...Array(4)].map((_, index) => (
+            <Skeleton key={index} className="h-32" />
           ))}
         </div>
         <Skeleton className="h-96" />
@@ -47,28 +104,29 @@ export default function AnalyticsPage() {
   }
 
   const stats = [
-    { label: '总浏览量', value: '12.5K', icon: Eye, color: 'text-blue-600', bg: 'bg-blue-100' },
-    { label: '总点赞数', value: '3.2K', icon: Heart, color: 'text-red-600', bg: 'bg-red-100' },
-    { label: '总下载数', value: '856', icon: Download, color: 'text-green-600', bg: 'bg-green-100' },
-    { label: '总分享数', value: '234', icon: Share2, color: 'text-purple-600', bg: 'bg-purple-100' },
+    { label: '总浏览量', value: data.totalViews, icon: Eye, color: 'text-blue-400' },
+    { label: '总点赞数', value: data.totalLikes, icon: Heart, color: 'text-pink-400' },
+    { label: '总下载数', value: data.totalDownloads, icon: Download, color: 'text-green-400' },
+    { label: '总分享数', value: data.totalShares, icon: Share2, color: 'text-violet-400' },
   ];
 
-  const weeklyData = [
-    { name: '周一', views: 400, likes: 24, downloads: 12 },
-    { name: '周二', views: 300, likes: 18, downloads: 8 },
-    { name: '周三', views: 600, likes: 32, downloads: 20 },
-    { name: '周四', views: 800, likes: 40, downloads: 25 },
-    { name: '周五', views: 500, likes: 28, downloads: 15 },
-    { name: '周六', views: 900, likes: 50, downloads: 30 },
-    { name: '周日', views: 700, likes: 38, downloads: 22 },
-  ];
+  const weeklyData = data.weeklyTrend.map((item) => ({
+    name: item.date,
+    views: item.views,
+    likes: item.likes,
+    downloads: item.downloads,
+    shares: item.shares,
+  }));
 
-  const categoryData = [
-    { name: '视频素材', value: 35 },
-    { name: '音频素材', value: 25 },
-    { name: '剧本', value: 20 },
-    { name: '图片素材', value: 20 },
-  ];
+  const categoryData = data.categoryDistribution.map((item) => ({
+    name: item.name,
+    value: item.value,
+  }));
+
+  const topContents = data.topContents.map((item, index) => ({
+    ...item,
+    rank: index + 1,
+  }));
 
   return (
     <PageFrame
@@ -78,17 +136,16 @@ export default function AnalyticsPage() {
       containerClassName="app-container-shell"
       contentClassName="space-y-6"
     >
-
       {/* 统计卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {stats.map((stat, index) => (
           <Card key={index} className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 mb-1">{stat.label}</p>
-                <p className="text-3xl font-bold">{stat.value}</p>
+                <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
+                <p className="text-3xl font-bold">{toReadableNumber(stat.value)}</p>
               </div>
-              <div className={`p-3 rounded-full ${stat.bg}`}>
+              <div className="p-3 rounded-full bg-muted">
                 <stat.icon className={`w-6 h-6 ${stat.color}`} />
               </div>
             </div>
@@ -107,8 +164,9 @@ export default function AnalyticsPage() {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Line type="monotone" dataKey="views" stroke="#3b82f6" name="浏览量" />
-              <Line type="monotone" dataKey="likes" stroke="#ef4444" name="点赞数" />
+              <Line type="monotone" dataKey="views" stroke={chartColors[0]} name="浏览量" />
+              <Line type="monotone" dataKey="likes" stroke={chartColors[1]} name="点赞数" />
+              <Line type="monotone" dataKey="downloads" stroke={chartColors[2]} name="下载数" />
             </LineChart>
           </ResponsiveContainer>
         </Card>
@@ -128,7 +186,7 @@ export default function AnalyticsPage() {
                 dataKey="value"
               >
                 {categoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />
                 ))}
               </Pie>
               <Tooltip />
@@ -139,7 +197,7 @@ export default function AnalyticsPage() {
 
       {/* 下载趋势 */}
       <Card className="p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">下载量趋势</h2>
+        <h2 className="text-lg font-semibold mb-4">下载趋势</h2>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={weeklyData}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -147,7 +205,7 @@ export default function AnalyticsPage() {
             <YAxis />
             <Tooltip />
             <Legend />
-            <Bar dataKey="downloads" fill="#10b981" name="下载数" />
+            <Bar dataKey="downloads" fill={chartColors[3]} name="下载数" />
           </BarChart>
         </ResponsiveContainer>
       </Card>
@@ -156,24 +214,37 @@ export default function AnalyticsPage() {
       <Card className="p-6">
         <h2 className="text-lg font-semibold mb-4">热门内容</h2>
         <div className="space-y-4">
-          {[1, 2, 3, 4, 5].map((_, i) => (
-            <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Badge variant="secondary">#{i + 1}</Badge>
-                <span className="font-medium">示例内容 {i + 1}</span>
+          {topContents.length === 0 && (
+            <div className="py-8 text-center text-muted-foreground">
+              暂无内容行为数据
+            </div>
+          )}
+          {topContents.map((item) => (
+            <div
+              key={`${item.type}-${item.id}`}
+              className="flex items-center justify-between p-3 bg-muted rounded-lg"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <Badge variant="secondary">#{item.rank}</Badge>
+                <div className="min-w-0">
+                  <p className="font-medium truncate" title={item.title}>
+                    {item.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{item.type}</p>
+                </div>
               </div>
-              <div className="flex items-center gap-4 text-sm text-gray-500">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Eye className="w-4 h-4" />
-                  {Math.floor(Math.random() * 1000)}
+                  {toReadableNumber(item.views)}
                 </span>
                 <span className="flex items-center gap-1">
                   <Heart className="w-4 h-4" />
-                  {Math.floor(Math.random() * 100)}
+                  {toReadableNumber(item.likes)}
                 </span>
                 <span className="flex items-center gap-1">
                   <Download className="w-4 h-4" />
-                  {Math.floor(Math.random() * 50)}
+                  {toReadableNumber(item.downloads)}
                 </span>
               </div>
             </div>
