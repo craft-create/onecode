@@ -8,9 +8,10 @@ import { useAuth } from '@client/src/hooks/useAuth';
 
 interface FollowButtonProps {
   userId: string;
+  className?: string;
 }
 
-const FollowButton: React.FC<FollowButtonProps> = ({ userId }) => {
+const FollowButton: React.FC<FollowButtonProps> = ({ userId, className }) => {
   const { user } = useAuth();
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -65,7 +66,7 @@ const FollowButton: React.FC<FollowButtonProps> = ({ userId }) => {
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       disabled={loading}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+      className={`${className || ''} inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
         isFollowing
           ? hovering
             ? 'bg-destructive/10 text-destructive border border-destructive/30'

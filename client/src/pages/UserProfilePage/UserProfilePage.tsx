@@ -176,7 +176,7 @@ const UserProfilePage: React.FC = () => {
                     影视创作者
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {user && user.userId !== userId && (
                     <button
                       type="button"
@@ -196,7 +196,7 @@ const UserProfilePage: React.FC = () => {
                       <span>{startingChat ? '处理中...' : '发起聊天'}</span>
                     </button>
                   )}
-                  <FollowButton userId={userId} />
+                  <FollowButton userId={userId} className="ml-1" />
                 </div>
               </div>
 

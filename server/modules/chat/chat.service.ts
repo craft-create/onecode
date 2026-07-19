@@ -431,9 +431,24 @@ export class ChatService {
   }
 
   async findAll(_userId?: string) {
+    if (!_userId) {
+      return [];
+    }
+
+    const myConversationIdsRows = await this.db
+      .select({ conversationId: conversationMember.conversationId })
+      .from(conversationMember)
+      .where(eq(sql<string>`(${conversationMember.userId}).user_id`, _userId));
+
+    const uniqueConversationIds = [...new Set(myConversationIdsRows.map((row) => row.conversationId))];
+    if (uniqueConversationIds.length === 0) {
+      return [];
+    }
+
     const list = await this.db
       .select()
       .from(conversation)
+      .where(inArray(conversation.id, uniqueConversationIds))
       .orderBy(desc(conversation.createdAt));
     const normalizedList = this.normalizeConversationRows(list as ChatServiceConversationDbRow[]);
     return this.enrichConversations(normalizedList, _userId);
@@ -448,6 +463,14 @@ export class ChatService {
     if (!result) {
       return null;
     }
+
+    if (viewerId) {
+      const isMember = await this.isConversationMember(id, viewerId);
+      if (!isMember) {
+        return null;
+      }
+    }
+
     const [enriched] = await this.enrichConversations(
       this.normalizeConversationRows([result as ChatServiceConversationDbRow]),
       viewerId,

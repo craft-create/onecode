@@ -375,7 +375,7 @@ const MaterialDetailPage: React.FC = () => {
 
   const creatorFollowActionNode = detail?.creator_id && user?.userId && detail.creator_id !== user.userId
     ? (
-      <div className="space-y-2">
+      <div className="space-y-3">
         <button
           type="button"
           onClick={handleStartChatWithCreator}
@@ -393,7 +393,7 @@ const MaterialDetailPage: React.FC = () => {
           )}
           <span>{startingChat ? '处理中...' : '发起聊天'}</span>
         </button>
-        <FollowButton userId={detail.creator_id} />
+        <FollowButton userId={detail.creator_id} className="ml-1" />
       </div>
     )
     : null;
