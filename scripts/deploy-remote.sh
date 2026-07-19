@@ -5,6 +5,22 @@ APP_DIR="/opt/onecode"
 REPO_URL="https://github.com/craft-create/onecode.git"
 BRANCH="${DEPLOY_BRANCH:-main}"
 PERSISTENT_DATA_DIR="$APP_DIR/data"
+NODE24_BIN_DIR="/opt/node24/bin"
+NPM_BIN="$NODE24_BIN_DIR/npm"
+NODE_BIN="$NODE24_BIN_DIR/node"
+
+if [ ! -x "$NODE_BIN" ]; then
+  echo "[deploy] 未检测到 /opt/node24/bin/node，请确认 Node 24 已安装" >&2
+  exit 1
+fi
+
+if [ ! -x "$NPM_BIN" ]; then
+  echo "[deploy] 未检测到 /opt/node24/bin/npm，请确认 Node 24 安装完整" >&2
+  exit 1
+fi
+
+export PATH="$NODE24_BIN_DIR:$PATH"
+echo "[deploy] Node: $($NODE_BIN -v), npm: $($NPM_BIN -v)"
 if ! git ls-remote --exit-code --heads "$REPO_URL" "$BRANCH" >/dev/null 2>&1; then
   if [ "$BRANCH" != "master" ] && git ls-remote --exit-code --heads "$REPO_URL" "master" >/dev/null 2>&1; then
     BRANCH="master"
@@ -87,17 +103,17 @@ mkdir -p "$NPM_CACHE_DIR"
 if [ -f "package-lock.json" ]; then
   if [ -f "node_modules/.package-lock.sha256" ] && [ "$CURRENT_LOCK_SHA" = "$(cat node_modules/.package-lock.sha256 2>/dev/null || true)" ]; then
     echo "[deploy] package-lock 未变，跳过 npm ci（提升部署速度）"
-    npm install --prefer-offline --no-audit --no-fund
+    "$NPM_BIN" install --prefer-offline --no-audit --no-fund
   else
     echo "[deploy] package-lock 已变或首次部署，执行 npm ci"
-    npm ci --no-audit --no-fund --cache "$NPM_CACHE_DIR"
+    "$NPM_BIN" ci --no-audit --no-fund --cache "$NPM_CACHE_DIR"
     echo "$CURRENT_LOCK_SHA" > node_modules/.package-lock.sha256
   fi
 else
-  npm ci --no-audit --no-fund --cache "$NPM_CACHE_DIR"
+  "$NPM_BIN" ci --no-audit --no-fund --cache "$NPM_CACHE_DIR"
 fi
 
-npm run build:prod
+"$NPM_BIN" run build:prod
 
 if command -v sudo >/dev/null 2>&1; then
   if [ -z "${SUDO_PASSWORD:-}" ]; then
