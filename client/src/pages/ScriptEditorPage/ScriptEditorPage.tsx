@@ -11,6 +11,9 @@ import {
   AlertTriangle,
   RefreshCw,
   MessageSquare,
+  Lock,
+  Users,
+  RefreshCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +29,8 @@ import {
   getVersions,
   revertVersion,
   getScriptLikeStatus,
+  getScriptCollaborationConfig,
+  syncScriptFromCollaboration,
 } from '@/api/scripts';
 import LikeButton from '@client/src/components/LikeButton';
 import FavoriteButton from '@client/src/components/FavoriteButton';
@@ -34,6 +39,7 @@ import type {
   ScriptContentLatest,
   ScriptOutlineItem,
   ScriptVersionItem,
+  ScriptCollaborationConfig,
 } from '@shared/script.interface';
 
 const ScriptEditorPage: React.FC = () => {
@@ -68,9 +74,17 @@ const ScriptEditorPage: React.FC = () => {
   const [likeCount, setLikeCount] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [collaborationConfig, setCollaborationConfig] =
+    useState<ScriptCollaborationConfig | null>(null);
+  const [collabSyncing, setCollabSyncing] = useState(false);
   const trackedScriptRef = useRef<string | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isCollaborationMode =
+    collaborationConfig?.enabled && collaborationConfig.mode === 'etherpad';
+  const isCollaborationEditable =
+    isCollaborationMode && collaborationConfig?.can_edit;
 
   // 未登录时重定向到登录页
   useEffect(() => {
@@ -99,7 +113,7 @@ const ScriptEditorPage: React.FC = () => {
 
   const doSave = useCallback(
     async (text: string) => {
-      if (!id) return;
+      if (!id || isCollaborationMode) return;
       setSaveStatus('saving');
       try {
         const res = await saveContent(id, {
@@ -115,10 +129,11 @@ const ScriptEditorPage: React.FC = () => {
         toast.error('自动保存失败，请手动保存');
       }
     },
-    [id],
+    [id, isCollaborationMode],
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (isCollaborationMode) return;
     const newContent = e.target.value;
     setContent(newContent);
     computeStats(newContent);
@@ -131,7 +146,7 @@ const ScriptEditorPage: React.FC = () => {
   };
 
   const handleManualSave = async () => {
-    if (!id) return;
+    if (!id || (isCollaborationMode && !isCollaborationEditable)) return;
     setSaving(true);
     try {
       const res = await saveContent(id, {
@@ -185,9 +200,27 @@ const ScriptEditorPage: React.FC = () => {
     }
   }, [id]);
 
+  const fetchCollaboration = useCallback(async () => {
+    if (!id) return;
+    try {
+      const config = await getScriptCollaborationConfig(id);
+      setCollaborationConfig(config);
+    } catch (err: unknown) {
+      logger.error('Failed to load collaboration config:', String(err));
+      setCollaborationConfig({
+        enabled: false,
+        mode: 'local',
+        pad_id: '',
+        pad_url: '',
+        can_edit: false,
+      });
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchContent();
     fetchOutline();
+    fetchCollaboration();
     if (id) {
       getScriptLikeStatus(id)
         .then((status) => {
@@ -196,7 +229,7 @@ const ScriptEditorPage: React.FC = () => {
         })
         .catch(() => {});
     }
-  }, [fetchContent, fetchOutline, id]);
+  }, [fetchContent, fetchOutline, fetchCollaboration, id]);
 
   useEffect(() => {
     if (!id || trackedScriptRef.current === id) {
@@ -223,20 +256,21 @@ const ScriptEditorPage: React.FC = () => {
   // Warn before leaving with unsaved content
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (saveStatus === 'unsaved') {
+      if (saveStatus === 'unsaved' && !isCollaborationMode) {
         e.preventDefault();
         e.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [saveStatus]);
+  }, [saveStatus, isCollaborationMode]);
 
   useEffect(() => {
     if (historyOpen) fetchVersions();
   }, [historyOpen, fetchVersions]);
 
   const scrollToPosition = (pos: number) => {
+    if (isCollaborationMode || !textareaRef.current) return;
     if (textareaRef.current) {
       textareaRef.current.focus();
       textareaRef.current.setSelectionRange(pos, pos);
@@ -270,6 +304,26 @@ const ScriptEditorPage: React.FC = () => {
       logger.error('Revert failed:', String(err));
     } finally {
       setReverting(false);
+    }
+  };
+
+  const handleSyncCollaboration = async () => {
+    if (!id || !isCollaborationEditable) return;
+    setCollabSyncing(true);
+    try {
+      const res = await syncScriptFromCollaboration(id);
+      if (res.changed) {
+        await fetchContent();
+        toast.success(`已同步最新协作内容，版本：${res.version || ''}`);
+      } else {
+        toast.success('协作内容与当前版本一致');
+      }
+      setSaveStatus('saved');
+    } catch (err: unknown) {
+      logger.error('Sync failed:', String(err));
+      toast.error('同步失败，请重试');
+    } finally {
+      setCollabSyncing(false);
     }
   };
 
@@ -354,6 +408,20 @@ const ScriptEditorPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {isCollaborationMode && (
+            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] border border-[hsl(228_12%_18%)] bg-[hsl(228_14%_12%)] text-[hsl(220_10%_55%)]">
+              <Users className="size-3.5" />
+              Etherpad 协作编辑
+              {isCollaborationEditable ? (
+                <span className="text-[hsl(152_65%_45%)]">（可编辑）</span>
+              ) : (
+                <>
+                  <Lock className="size-3.5" />
+                  <span className="text-[hsl(38_90%_55%)]">只读</span>
+                </>
+              )}
+            </span>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -398,6 +466,17 @@ const ScriptEditorPage: React.FC = () => {
             <Download className="size-3.5" />
             导出
           </Button>
+          {isCollaborationMode && isCollaborationEditable && (
+            <Button
+              size="sm"
+              onClick={handleSyncCollaboration}
+              disabled={collabSyncing}
+              className="app-btn-primary-compact"
+            >
+              <RefreshCcw className="size-3.5" />
+              {collabSyncing ? '同步中...' : '同步协作内容'}
+            </Button>
+          )}
           <div className="flex items-center gap-1.5">
             <LikeButton
               targetId={id}
@@ -405,17 +484,19 @@ const ScriptEditorPage: React.FC = () => {
               initialLiked={isLiked}
               initialCount={likeCount}
             />
-            <FavoriteButton targetId={id} targetType="script" />
-          </div>
-          <Button
-            size="sm"
-            onClick={handleManualSave}
-            disabled={saving}
-            className="app-btn-primary-compact"
-          >
-            <Save className="size-3.5" />
-            {saving ? '保存中...' : '保存'}
-          </Button>
+              <FavoriteButton targetId={id} targetType="script" />
+            </div>
+          {!isCollaborationMode && (
+            <Button
+              size="sm"
+              onClick={handleManualSave}
+              disabled={saving}
+              className="app-btn-primary-compact"
+            >
+              <Save className="size-3.5" />
+              {saving ? '保存中...' : '保存'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -423,15 +504,29 @@ const ScriptEditorPage: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Editor */}
         <div className="flex-1 flex flex-col min-w-0">
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            placeholder="开始编写剧本...&#10;&#10;1. INT. 办公室 - 白天&#10;&#10;角色名&#10;对话内容..."
-            className="flex-1 w-full resize-none bg-[hsl(228_15%_8%)] text-[hsl(220_15%_90%)] p-8 font-['JetBrains_Mono','Courier_New',monospace] text-sm leading-6 outline-none placeholder:text-[hsl(220_10%_30%)]"
-            spellCheck={false}
-          />
+          {isCollaborationMode ? (
+            collaborationConfig?.pad_url ? (
+              <iframe
+                title="script-collaboration-pad"
+                src={collaborationConfig.pad_url}
+                className="w-full flex-1 border-0 min-h-0 bg-white/5"
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-[hsl(220_10%_55%)]">
+                协作链接不可用
+              </div>
+            )
+          ) : (
+            <textarea
+              ref={textareaRef}
+              value={content}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              placeholder="开始编写剧本...&#10;&#10;1. INT. 办公室 - 白天&#10;&#10;角色名&#10;对话内容..."
+              className="flex-1 w-full resize-none bg-[hsl(228_15%_8%)] text-[hsl(220_15%_90%)] p-8 font-['JetBrains_Mono','Courier_New',monospace] text-sm leading-6 outline-none placeholder:text-[hsl(220_10%_30%)]"
+              spellCheck={false}
+            />
+          )}
 
           {/* Status bar */}
           <div className="flex items-center justify-between px-6 py-2 border-t border-[hsl(228_12%_18%)] bg-[hsl(228_14%_12%)] text-xs text-[hsl(220_10%_55%)]">
@@ -442,7 +537,11 @@ const ScriptEditorPage: React.FC = () => {
               <span className="text-[hsl(220_10%_40%)]">|</span>
               <span>预估时长: ~{estimatedMinutes}分钟</span>
             </div>
-            <span>Ctrl+S 保存</span>
+            <span>
+              {isCollaborationMode
+                ? '协作模式：多人实时编辑'
+                : 'Ctrl+S 保存'}
+            </span>
           </div>
 
           {/* Comments panel */}

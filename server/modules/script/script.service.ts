@@ -4,7 +4,14 @@
  * 包括：项目列表、搜索、创建、删除、详情、内容保存、版本管理、
  *       大纲、评论、角色分析、协作者、导出、下载、点赞等
  */
-import { Injectable, Logger, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Inject,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
 import JSZip from 'jszip';
 import PDFDocument from 'pdfkit';
@@ -49,6 +56,8 @@ import type {
   ExportScriptRequest,
   ExportScriptResponse,
   ScriptLikeStatusResponse,
+  ScriptCollaborationConfig,
+  ScriptCollaborationSyncResult,
 } from '@shared/script.interface';
 
 @Injectable()
@@ -57,6 +66,173 @@ export class ScriptService {
   private readonly logger = new Logger(ScriptService.name);
   private chineseFontPathCache: string | null | undefined;
   private chineseFontWarned = false;
+  // 外置协同编辑服务配置
+  private getEtherpadConfig() {
+    const apiUrl = (process.env.ETHERPAD_API_URL || '').trim();
+    const apiKey = (process.env.ETHERPAD_API_KEY || '').trim();
+    const publicUrl = (process.env.ETHERPAD_PUBLIC_URL || '').trim();
+    const padPrefix = (process.env.ETHERPAD_PAD_PREFIX || 'onecode-script').trim();
+
+    return {
+      apiUrl,
+      apiKey,
+      publicUrl,
+      padPrefix,
+      enabled: Boolean(apiUrl && apiKey && publicUrl),
+    };
+  }
+
+  private getEtherpadPadId(projectId: string): string {
+    const safePrefix = this.getEtherpadConfig().padPrefix.replace(/[^a-zA-Z0-9_-]/g, '');
+    const safeProjectId = projectId.replace(/[^a-zA-Z0-9_-]/g, '');
+    return `${safePrefix}-${safeProjectId}`.slice(0, 128);
+  }
+
+  private getEtherpadPadUrl(padId: string): string {
+    const { publicUrl } = this.getEtherpadConfig();
+    const normalized = publicUrl.replace(/\/+$/, '');
+    return `${normalized}/p/${encodeURIComponent(padId)}`;
+  }
+
+  private async callEtherpadApi<T>(action: string, params: Record<string, string>): Promise<T> {
+    const { apiUrl, apiKey, enabled } = this.getEtherpadConfig();
+    if (!enabled || !apiUrl || !apiKey) {
+      throw new BadRequestException('Etherpad 未配置');
+    }
+
+    const endpoint = new URL(`${apiUrl.replace(/\/+$/, '')}/${action}`);
+    endpoint.searchParams.set('apikey', apiKey);
+    Object.entries(params).forEach(([key, value]) => {
+      endpoint.searchParams.set(key, value);
+    });
+
+    const res = await fetch(endpoint.toString(), {
+      method: 'POST',
+    });
+
+    const payloadText = await res.text();
+    if (!res.ok) {
+      this.logger.error(`Etherpad API request failed: ${res.status} ${payloadText}`);
+      throw new BadRequestException('Etherpad API 请求失败');
+    }
+
+    let payload: { code: number; message?: string; data?: T };
+    try {
+      payload = JSON.parse(payloadText) as { code: number; message?: string; data?: T };
+    } catch (error) {
+      this.logger.error('Etherpad API response parse failed', error as Error);
+      throw new BadRequestException('Etherpad 响应解析失败');
+    }
+
+    if (payload.code !== 0) {
+      const message = payload.message || 'unknown error';
+      this.logger.error(`Etherpad API error ${payload.code}: ${message}`);
+      throw new BadRequestException(`Etherpad 响应错误: ${message}`);
+    }
+
+    return payload.data ?? ({} as T);
+  }
+
+  private async getLatestContentText(projectId: string): Promise<{ id: string; content: string; version: string }> {
+    const [content] = await this.db
+      .select({
+        id: scriptContent.id,
+        content: scriptContent.content,
+        version: scriptContent.version,
+      })
+      .from(scriptContent)
+      .where(eq(scriptContent.projectId, projectId))
+      .orderBy(desc(scriptContent.createdAt))
+      .limit(1);
+
+    return content
+      ? { ...content, content: content.content || '' }
+      : { id: '', content: '', version: 'v0' };
+  }
+
+  private async getProjectMembership(
+    projectId: string,
+    userId?: string,
+  ): Promise<{
+    createdBy: string | null;
+    isCollaborator: boolean;
+  }> {
+    const collaboratorSql = userId
+      ? sql<boolean>`EXISTS (
+        SELECT 1
+        FROM unnest(${scriptProject.collaborators}) AS c
+        WHERE (c).user_id = CAST(${userId} AS uuid)
+      )`
+      : sql<boolean>`false`;
+
+    const [project] = await this.db
+      .select({
+        createdBy: sql<string>`(${scriptProject.createdBy}).user_id`,
+        isCollaborator: collaboratorSql,
+      })
+      .from(scriptProject)
+      .where(eq(scriptProject.id, projectId))
+      .limit(1);
+
+    if (!project) {
+      throw new NotFoundException(`剧本项目 ${projectId} 不存在`);
+    }
+
+    return {
+      createdBy: project.createdBy || null,
+      isCollaborator: project.isCollaborator || false,
+    };
+  }
+
+  private async ensureCanEditProject(projectId: string, userId?: string): Promise<boolean> {
+    if (!userId) {
+      return false;
+    }
+
+    const isSuper = await this.isSuperUser(userId);
+    if (isSuper) {
+      return true;
+    }
+
+    const membership = await this.getProjectMembership(projectId, userId);
+    if (membership.createdBy === userId) {
+      return true;
+    }
+
+    return membership.isCollaborator;
+  }
+
+  private async getOrCreatePad(projectId: string): Promise<string> {
+    const padId = this.getEtherpadPadId(projectId);
+    const latest = await this.getLatestContentText(projectId);
+    const { enabled } = this.getEtherpadConfig();
+    if (!enabled) {
+      throw new BadRequestException('Etherpad 未配置');
+    }
+
+    try {
+      await this.callEtherpadApi<unknown>('createPad', {
+        padId,
+        text: latest.content || '',
+      });
+      this.logger.log(`Created Etherpad pad ${padId} for project ${projectId}`);
+    } catch (error) {
+      const message = (error as Error).message || '';
+      if (!message.includes('already exists') && !message.includes('already exist')) {
+        throw error;
+      }
+      this.logger.log(`Etherpad pad ${padId} already exists for project ${projectId}`);
+    }
+
+    return padId;
+  }
+
+  private async getPadTextFromEtherpad(padId: string): Promise<string> {
+    const { text } = await this.callEtherpadApi<{ text: string }>('getText', {
+      padId,
+    });
+    return text || '';
+  }
 
   /**
    * 构造函数：注入数据库实例
@@ -447,6 +623,110 @@ export class ScriptService {
   }
 
   /**
+   * 获取脚本协作配置
+   * @param projectId - 项目ID
+   * @param userId - 当前用户ID（可选）
+   * @returns 协作配置（未配置时返回本地模式）
+   */
+  async getCollaborationConfig(
+    projectId: string,
+    userId?: string,
+  ): Promise<ScriptCollaborationConfig> {
+    await this.getProjectMembership(projectId);
+
+    const cfg = this.getEtherpadConfig();
+    if (!cfg.enabled) {
+      return {
+        enabled: false,
+        mode: 'local',
+        pad_id: '',
+        pad_url: '',
+        can_edit: false,
+      };
+    }
+
+    const canEdit = await this.ensureCanEditProject(projectId, userId);
+    const padId = await this.getOrCreatePad(projectId);
+
+    return {
+      enabled: true,
+      mode: 'etherpad',
+      pad_id: padId,
+      pad_url: this.getEtherpadPadUrl(padId),
+      can_edit: canEdit,
+    };
+  }
+
+  /**
+   * 从 Etherpad 同步当前协作文本到版本库
+   * @param projectId - 项目ID
+   * @param userId - 当前用户ID
+   * @returns 是否产生新版本
+   */
+  async syncProjectFromCollaboration(
+    projectId: string,
+    userId: string,
+  ): Promise<ScriptCollaborationSyncResult> {
+    const canEdit = await this.ensureCanEditProject(projectId, userId);
+    if (!canEdit) {
+      throw new ForbiddenException('你没有编辑该剧本的权限');
+    }
+
+    const cfg = this.getEtherpadConfig();
+    if (!cfg.enabled) {
+      throw new BadRequestException('Etherpad 未配置');
+    }
+
+    const padId = await this.getOrCreatePad(projectId);
+    const padText = await this.getPadTextFromEtherpad(padId);
+    const latest = await this.getLatestContentText(projectId);
+    if (padText === latest.content) {
+      return {
+        changed: false,
+        pad_id: padId,
+        synced_content_length: padText.length,
+        version: latest.version,
+      };
+    }
+
+    const version = await this.createNewVersion(projectId, padText, '从协作编辑同步');
+
+    return {
+      changed: true,
+      version,
+      pad_id: padId,
+      synced_content_length: padText.length,
+    };
+  }
+
+  private async createNewVersion(
+    projectId: string,
+    content: string,
+    snapshotSummary: string,
+  ): Promise<string> {
+    const latest = await this.db
+      .select({ version: scriptContent.version })
+      .from(scriptContent)
+      .where(eq(scriptContent.projectId, projectId))
+      .orderBy(desc(scriptContent.createdAt))
+      .limit(1);
+
+    const currentVer = latest.length > 0
+      ? parseInt(latest[0].version.replace('v', ''), 10)
+      : 0;
+    const newVersion = `v${currentVer + 1}`;
+
+    await this.db.insert(scriptContent).values({
+      projectId,
+      content,
+      version: newVersion,
+      snapshotSummary,
+    });
+
+    return newVersion;
+  }
+
+  /**
    * 保存剧本内容（自动生成新版本）
    * 每次保存都创建一个新版本记录，不覆盖旧版本，实现版本历史
    * @param projectId - 项目ID
@@ -457,31 +737,13 @@ export class ScriptService {
     projectId: string,
     dto: SaveScriptContentRequest,
   ): Promise<SaveScriptContentResponse> {
-    // 查询最新版本号
-    const latest = await this.db
-      .select({ version: scriptContent.version })
-      .from(scriptContent)
-      .where(eq(scriptContent.projectId, projectId))
-      .orderBy(desc(scriptContent.createdAt))
-      .limit(1);
-
-    // 版本号递增：v1 → v2 → v3 ...
-    const currentVer = latest.length > 0
-      ? parseInt(latest[0].version.replace('v', ''), 10)
-      : 0;
-    const newVersion = `v${currentVer + 1}`;
-
-    // 插入新版本记录（INSERT而非UPDATE，保留历史）
-    await this.db.insert(scriptContent).values({
+    const newVersion = await this.createNewVersion(
       projectId,
-      content: dto.content,
-      version: newVersion,
-      snapshotSummary: dto.snapshot_summary || null,
-    });
-
-    this.logger.log(
-      `Saved content for project ${projectId}, version ${newVersion}`,
+      dto.content,
+      dto.snapshot_summary || '本地保存',
     );
+
+    this.logger.log(`Saved content for project ${projectId}, version ${newVersion}`);
     return { version: newVersion };
   }
 
@@ -724,26 +986,11 @@ export class ScriptService {
       throw new NotFoundException(`Version ${versionId} not found`);
     }
 
-    // 获取当前最新版本号
-    const latest = await this.db
-      .select({ version: scriptContent.version })
-      .from(scriptContent)
-      .where(eq(scriptContent.projectId, projectId))
-      .orderBy(desc(scriptContent.createdAt))
-      .limit(1);
-
-    const currentVer = latest.length > 0
-      ? parseInt(latest[0].version.replace('v', ''), 10)
-      : 0;
-    const newVersion = `v${currentVer + 1}`;
-
-    // 以旧内容创建新版本（保留版本历史的完整性）
-    await this.db.insert(scriptContent).values({
+    const newVersion = await this.createNewVersion(
       projectId,
-      content: target.content,
-      version: newVersion,
-      snapshotSummary: `回退至版本 ${target.version}`,
-    });
+      target.content,
+      `回退至版本 ${target.version}`,
+    );
 
     this.logger.log(
       `Reverted project ${projectId} to version ${target.version}, new: ${newVersion}`,

@@ -26,6 +26,8 @@ import type {
   ExportScriptRequest,
   ExportScriptResponse,
   ScriptLikeStatusResponse,
+  ScriptCollaborationConfig,
+  ScriptCollaborationSyncResult,
 } from '@shared/script.interface';
 
 /**
@@ -142,6 +144,36 @@ export async function getLatestContent(
   const { data } = await axiosForBackend({
     url: `/api/script-projects/${projectId}/content/latest`,
     method: 'GET',
+  });
+  return data;
+}
+
+/**
+ * 获取剧本协作配置
+ * 未配置 Etherpad 时返回本地模式
+ * @param projectId - 项目ID
+ */
+export async function getScriptCollaborationConfig(
+  projectId: string,
+): Promise<ScriptCollaborationConfig> {
+  const { data } = await axiosForBackend({
+    url: `/api/script-projects/${projectId}/collaboration`,
+    method: 'GET',
+  });
+  return data;
+}
+
+/**
+ * 从 Etherpad 回写最新文本到版本库
+ * 仅编辑者可用
+ * @param projectId - 项目ID
+ */
+export async function syncScriptFromCollaboration(
+  projectId: string,
+): Promise<ScriptCollaborationSyncResult> {
+  const { data } = await axiosForBackend({
+    url: `/api/script-projects/${projectId}/collaboration/sync`,
+    method: 'POST',
   });
   return data;
 }

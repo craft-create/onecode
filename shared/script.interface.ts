@@ -139,6 +139,38 @@ export interface SaveScriptContentResponse {
   version: string;
 }
 
+/**
+ * 协作编辑配置
+ */
+export type ScriptCollaborationMode = 'etherpad' | 'local';
+
+export interface ScriptCollaborationConfig {
+  /** 是否开启协作编辑 */
+  enabled: boolean;
+  /** 协作模式 */
+  mode: ScriptCollaborationMode;
+  /** Etherpad padId */
+  pad_id: string;
+  /** Etherpad 访问链接 */
+  pad_url: string;
+  /** 当前用户是否可编辑 */
+  can_edit: boolean;
+}
+
+/**
+ * Etherpad 回写结果
+ */
+export interface ScriptCollaborationSyncResult {
+  /** 是否产生新版本 */
+  changed: boolean;
+  /** 新版本号（changed 为 false 时可能为空） */
+  version?: string;
+  /** 同步后文本长度 */
+  synced_content_length: number;
+  /** 同步来源 padId */
+  pad_id: string;
+}
+
 // ========================================
 // 剧本大纲
 // ========================================

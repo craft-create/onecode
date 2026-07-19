@@ -51,6 +51,8 @@ import type {
   InviteCollaboratorRequest,
   ExportScriptRequest,
   ScriptLikeStatusResponse,
+  ScriptCollaborationConfig,
+  ScriptCollaborationSyncResult,
 } from '@shared/script.interface';
 
 @Controller('api/script-projects')
@@ -157,6 +159,40 @@ export class ScriptController {
   @Get(':id/content/latest')
   async getLatestContent(@Param('id') id: string) {
     return this.scriptService.getLatestContent(id);
+  }
+
+  /**
+   * GET /api/script-projects/:id/collaboration - 获取协作编辑配置
+   * 未配置时返回本地模式
+   * @param id - 项目ID
+   * @param req - 请求对象
+   */
+  @Get(':id/collaboration')
+  async getCollaborationConfig(
+    @Param('id') id: string,
+    @Req() req: Request,
+  ): Promise<ScriptCollaborationConfig> {
+    const userId: string | undefined = getLocalUserId(req);
+    return this.scriptService.getCollaborationConfig(id, userId);
+  }
+
+  /**
+   * POST /api/script-projects/:id/collaboration/sync - 回写 Etherpad 内容到版本库
+   * 仅可编辑者可执行
+   * @param id - 项目ID
+   * @param req - 请求对象
+   */
+  @NeedLogin()
+  @Post(':id/collaboration/sync')
+  async syncCollaborationContent(
+    @Param('id') id: string,
+    @Req() req: Request,
+  ): Promise<ScriptCollaborationSyncResult> {
+    const userId: string | undefined = getLocalUserId(req);
+    if (!userId) {
+      throw new UnauthorizedException('请先登录');
+    }
+    return this.scriptService.syncProjectFromCollaboration(id, userId);
   }
 
   /**
