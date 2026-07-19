@@ -205,7 +205,7 @@ export class ScriptService {
             FROM script_project sp,
             UNNEST(sp.collaborators) AS c
             WHERE sp.id = ${safeProjectId}
-              AND (c).user_id = ${safeUserId}::uuid
+              AND (c).user_id = ${safeUserId}
           ) AS "isCollaborator"
         `,
       );
