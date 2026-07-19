@@ -153,15 +153,15 @@
   .no-default-active-elevate {}
 
   .app-container {
-    @apply max-w-7xl mx-auto px-4 sm:px-6;
+    @apply w-full;
   }
 
   .app-container-shell {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 py-8;
+    @apply max-w-7xl mx-auto px-0 sm:px-6 py-8;
   }
 
   .app-shell {
-    @apply w-full max-w-7xl mx-auto px-4 sm:px-6;
+    @apply w-full max-w-7xl mx-auto px-0 sm:px-6;
   }
 
   .app-btn-primary {
