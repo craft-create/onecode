@@ -9,6 +9,8 @@ import axios from 'axios';
 export interface UploadResponse {
   url: string;
   thumbnailUrl?: string;
+  duration?: number;
+  resolution?: string;
   filename: string;
   originalName: string;
   size: number;

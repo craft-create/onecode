@@ -30,6 +30,10 @@ interface FileEntry {
   uploadedUrl?: string;
   /** 视频上传成功后服务端生成的封面 URL */
   thumbnailUrl?: string;
+  /** 视频时长（秒） */
+  duration?: number;
+  /** 视频分辨率（如 1920x1080） */
+  resolution?: string;
 }
 
 const MaterialUploadPage: React.FC = () => {
@@ -128,7 +132,15 @@ const MaterialUploadPage: React.FC = () => {
       setFiles((prev) =>
         prev.map((f) =>
           f.id === entry.id
-            ? { ...f, progress: 100, status: 'done' as const, uploadedUrl: res.url, thumbnailUrl: res.thumbnailUrl }
+            ? {
+                ...f,
+                progress: 100,
+                status: 'done' as const,
+                uploadedUrl: res.url,
+                thumbnailUrl: res.thumbnailUrl,
+                duration: res.duration,
+                resolution: res.resolution,
+              }
             : f,
         ),
       );
@@ -188,6 +200,8 @@ const MaterialUploadPage: React.FC = () => {
     const isVideo = file.file.type.startsWith('video/');
     const url = file.uploadedUrl || '';
     const autoCoverUrl = isImage ? url : file.thumbnailUrl || '';
+    const videoDuration: number = isVideo ? Math.round(file.duration || 0) : 0;
+    const videoResolution: string = isVideo ? file.resolution || '' : '';
 
     // 释放旧封面预览
     if (coverPreviewUrlRef.current) {
@@ -199,8 +213,8 @@ const MaterialUploadPage: React.FC = () => {
       title: file.file.name.replace(/\.[^.]+$/, ''),
       description: '',
       type: isVideo ? 'video' : file.file.type.startsWith('audio/') ? 'audio' : 'sound',
-      resolution: '',
-      duration: 0,
+      resolution: videoResolution,
+      duration: videoDuration,
       format: file.file.name.split('.').pop() || '',
       file_size: file.file.size,
       device: '',
@@ -591,7 +605,7 @@ const MaterialUploadPage: React.FC = () => {
                     className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                       类型
@@ -634,6 +648,24 @@ const MaterialUploadPage: React.FC = () => {
                         }))
                       }
                       placeholder="如 1920x1080"
+                      className="w-full h-9 px-3 rounded-lg bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                      时长（秒）
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.duration}
+                      onChange={(e) =>
+                        setFormData((p) => ({
+                          ...p,
+                          duration: Math.max(0, Number(e.target.value || 0)),
+                        }))
+                      }
+                      placeholder="自动识别"
                       className="w-full h-9 px-3 rounded-lg bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
                     />
                   </div>

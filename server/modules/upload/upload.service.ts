@@ -15,46 +15,85 @@ export class UploadService {
   private readonly logger = new Logger(UploadService.name);
   private readonly uploadBaseDir: string = resolveUploadBaseDir();
   private ffmpegPath: string = process.env.FFMPEG_PATH || 'ffmpeg';
+  private ffprobePath: string = process.env.FFPROBE_PATH || 'ffprobe';
 
   constructor(@Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase) {
     this.ensureBaseDir();
     this.ensureFfmpegAvailable();
+    this.ensureFfprobeAvailable();
   }
 
   private ensureFfmpegAvailable(): void {
-    // Check if ffmpeg is available in PATH or use absolute path
-    try {
-      const ffmpegWhich = execSync('which ffmpeg', { stdio: 'pipe' }).toString().trim();
-      if (ffmpegWhich) {
-        this.ffmpegPath = ffmpegWhich;
-        this.logger.log(`FFmpeg found at: ${this.ffmpegPath}`);
-      } else {
-        this.tryCommonFfmpegPaths();
-      }
-    } catch (_error) {
-      // ffmpeg not in PATH, try common locations
-      this.tryCommonFfmpegPaths();
-    }
-  }
-
-  private tryCommonFfmpegPaths(): void {
-    const commonPaths = [
-      path.join(process.env.HOME || '', 'bin', 'ffmpeg'),
-      '/usr/local/bin/ffmpeg',
-      '/opt/homebrew/bin/ffmpeg',
-    ];
-    for (const ffmpegPath of commonPaths) {
-      try {
-        if (existsSync(ffmpegPath)) {
-          this.ffmpegPath = ffmpegPath;
-          this.logger.log(`FFmpeg found at: ${this.ffmpegPath}`);
-          return;
-        }
-      } catch (_error) {
-        // Continue to next path
-      }
+    const detectedPath: string | undefined = this.detectBinaryPath(
+      'ffmpeg',
+      this.ffmpegPath,
+      process.env.FFMPEG_PATH,
+    );
+    if (detectedPath) {
+      this.ffmpegPath = detectedPath;
+      this.logger.log(`FFmpeg found at: ${this.ffmpegPath}`);
+      return;
     }
     this.logger.warn('FFmpeg not found in PATH. Video thumbnail generation will not work.');
+  }
+
+  private ensureFfprobeAvailable(): void {
+    const detectedPath: string | undefined = this.detectBinaryPath(
+      'ffprobe',
+      this.ffprobePath,
+      process.env.FFPROBE_PATH,
+    );
+    if (detectedPath) {
+      this.ffprobePath = detectedPath;
+      this.logger.log(`FFprobe found at: ${this.ffprobePath}`);
+      return;
+    }
+    this.logger.warn('FFprobe not found in PATH. Video metadata extraction may not work.');
+  }
+
+  private detectBinaryPath(
+    binaryName: string,
+    fallback: string,
+    envPath?: string,
+  ): string | undefined {
+    const candidatePaths: string[] = [];
+
+    if (envPath) {
+      candidatePaths.push(envPath);
+      if (existsSync(envPath)) {
+        return envPath;
+      }
+    }
+
+    try {
+      const whichPath = execSync(`which ${binaryName}`, { stdio: 'pipe' })
+        .toString()
+        .trim();
+      if (whichPath) {
+        return whichPath;
+      }
+    } catch (_error) {
+      // continue to common paths
+    }
+
+    if (fallback && fallback !== binaryName && existsSync(fallback)) {
+      return fallback;
+    }
+
+    const homeDir = process.env.HOME || '';
+    candidatePaths.push(
+      path.join(homeDir, 'bin', binaryName),
+      '/usr/local/bin/' + binaryName,
+      '/opt/homebrew/bin/' + binaryName,
+    );
+
+    for (const binaryPath of candidatePaths) {
+      if (existsSync(binaryPath)) {
+        return binaryPath;
+      }
+    }
+
+    return undefined;
   }
 
   private ensureBaseDir(): void {
@@ -67,6 +106,8 @@ export class UploadService {
   async saveFile(file: Express.Multer.File): Promise<{
     url: string;
     thumbnailUrl?: string;
+    duration?: number;
+    resolution?: string;
     filename: string;
     size: number;
     mimeType: string;
@@ -83,17 +124,74 @@ export class UploadService {
     this.logger.log(`File saved: ${filePath}`);
 
     const url: string = `/uploads/${dateDir}/${uniqueName}`;
-    const thumbnailUrl = file.mimetype.startsWith('video/')
+    const isVideo: boolean = file.mimetype.startsWith('video/');
+    const videoMetadata = isVideo ? await this.extractVideoMetadata(filePath) : {};
+    const thumbnailUrl = isVideo
       ? await this.generateVideoThumbnail(filePath, dateDir)
       : undefined;
+    const duration: number | undefined = videoMetadata.duration;
+    const resolution: string | undefined = videoMetadata.resolution;
 
     return {
       url,
       thumbnailUrl,
+      duration,
+      resolution,
       filename: uniqueName,
       size: file.size,
       mimeType: file.mimetype,
     };
+  }
+
+  private async extractVideoMetadata(
+    videoPath: string,
+  ): Promise<{ duration?: number; resolution?: string }> {
+    try {
+      const { stdout } = await execFileAsync(this.ffprobePath, [
+        '-v',
+        'quiet',
+        '-print_format',
+        'json',
+        '-show_format',
+        '-show_streams',
+        videoPath,
+      ]);
+      const parsedOutput = JSON.parse(stdout) as {
+        format?: {
+          duration?: string;
+        };
+        streams?: Array<{
+          codec_type?: string;
+          width?: number;
+          height?: number;
+          duration?: string;
+        }>;
+      };
+      const videoStream = (parsedOutput.streams || []).find(
+        (stream): boolean => stream.codec_type === 'video',
+      );
+      const width: number = Number(videoStream?.width);
+      const height: number = Number(videoStream?.height);
+      const resolution: string | undefined =
+        Number.isFinite(width) &&
+        Number.isFinite(height) &&
+        width > 0 &&
+        height > 0
+          ? `${width}x${height}`
+          : undefined;
+
+      const rawDuration = Number(parsedOutput.format?.duration || videoStream?.duration);
+      const duration = Number.isFinite(rawDuration) ? Math.round(rawDuration) : undefined;
+
+      if (duration === undefined && resolution === undefined) {
+        return {};
+      }
+
+      return { duration, resolution };
+    } catch (_error) {
+      this.logger.warn(`Failed to extract video metadata: ${videoPath}`);
+      return {};
+    }
   }
 
   private async generateVideoThumbnail(
