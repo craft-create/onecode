@@ -5,6 +5,7 @@ import {
   FileAudio,
   FileType,
   FileVideo,
+  Bookmark,
   HardDrive,
   Heart,
   Monitor,
@@ -95,11 +96,11 @@ export const MaterialDetailSidePanel = memo(({
             onClick={onFavorite}
             className={`flex items-center justify-center w-10 h-10 rounded-lg border transition-all ${
               isFavorited
-                ? 'border-red-500/40 bg-red-500/10 text-red-400'
+                ? 'border-primary/50 bg-primary/10 text-primary'
                 : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
             }`}
           >
-            <Heart className="w-4 h-4" fill={isFavorited ? 'currentColor' : 'none'} />
+            <Bookmark className="w-4 h-4" fill={isFavorited ? 'currentColor' : 'none'} />
           </motion.button>
         </div>
 

@@ -375,7 +375,16 @@ export class MaterialService {
         previewUrl: material.previewUrl,
         coverUrl: material.coverUrl,
         downloadCount: material.downloadCount,
-        createdBy: material.createdBy,
+        createdBy: sql<string>`(${material.createdBy}).user_id`,
+        uploadCreatorId: sql<string | null>`
+          (
+            SELECT (user_id).user_id
+            FROM user_material
+            WHERE material_id = ${id}::uuid
+              AND relation_type = 'upload'
+            LIMIT 1
+          )
+        `,
       })
       .from(material)
       .where(eq(material.id, id));
@@ -407,7 +416,7 @@ export class MaterialService {
       cover_url: result.coverUrl || '',
       download_count: result.downloadCount ?? 0,
       like_count: likeCount,
-      creator_id: result.createdBy || '',
+      creator_id: result.createdBy || result.uploadCreatorId || '',
     };
   }
 
