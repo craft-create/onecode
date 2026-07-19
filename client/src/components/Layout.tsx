@@ -21,6 +21,11 @@ import { AUTH_EXPIRED_EVENT } from "@client/src/api";
 // 图标组件
 import {
   Film,
+  LayoutTemplate,
+  Users,
+  Briefcase,
+  ClipboardList,
+  BarChart3,
   User,
   Menu,
   X,
@@ -58,11 +63,11 @@ const primaryNavItems: NavItem[] = [
 
 // 次要导航项（收纳在"更多"下拉菜单）
 const secondaryNavItems: NavItem[] = [
-  { path: "/templates", label: "模板市场" },
-  { path: "/teams", label: "团队协作" },
-  { path: "/projects", label: "项目工作台" },
-  { path: "/requirements", label: "需求大厅" },
-  { path: "/analytics", label: "数据中心" },
+  { path: "/templates", label: "模板市场", icon: LayoutTemplate },
+  { path: "/teams", label: "团队协作", icon: Users },
+  { path: "/projects", label: "项目工作台", icon: Briefcase },
+  { path: "/requirements", label: "需求大厅", icon: ClipboardList },
+  { path: "/analytics", label: "数据中心", icon: BarChart3 },
   { path: "/files", label: "文件管理", icon: FolderOpen },
 ];
 
@@ -520,8 +525,12 @@ const Layout = () => {
                             : "text-muted-foreground hover:text-foreground hover:bg-accent"
                         }`
                       }
+                      
                     >
-                      {item.label}
+                      <span className="inline-flex items-center gap-2">
+                        {item.icon && <item.icon className="w-4 h-4 text-muted-foreground" />}
+                        {item.label}
+                      </span>
                     </NavLink>
                   ))}
                 </div>
