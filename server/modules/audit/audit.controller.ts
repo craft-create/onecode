@@ -2,7 +2,7 @@ import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Req } fro
 import { AuditService } from './audit.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@Controller('audits')
+@Controller('api/audit')
 @UseGuards(JwtAuthGuard)
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}

@@ -2,7 +2,7 @@ import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Req } fro
 import { AiService } from './ai.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@Controller('ais')
+@Controller('api/ai')
 @UseGuards(JwtAuthGuard)
 export class AiController {
   constructor(private readonly aiService: AiService) {}

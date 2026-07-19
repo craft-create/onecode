@@ -2,7 +2,7 @@ import { Controller, Get, Post, Patch, Delete, Body, Param, Req } from '@nestjs/
 import { ShareService } from './share.service';
 
 
-@Controller('shares')
+@Controller('api/share')
 
 export class ShareController {
   constructor(private readonly shareService: ShareService) {}

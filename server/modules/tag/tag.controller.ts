@@ -2,7 +2,7 @@ import { Controller, Get, Post, Patch, Delete, Body, Param, Req } from '@nestjs/
 import { TagService } from './tag.service';
 
 
-@Controller('tags')
+@Controller('api/tags')
 
 export class TagController {
   constructor(private readonly tagService: TagService) {}

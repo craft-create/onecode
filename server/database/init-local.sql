@@ -200,6 +200,6 @@ CREATE TABLE IF NOT EXISTS notification (
   _updated_by user_profile DEFAULT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_notification_user ON notification (((user_id).user_id));
+CREATE INDEX IF NOT EXISTS idx_notification_user ON notification (((notification.user_id).user_id));
 CREATE INDEX IF NOT EXISTS idx_notification_is_read ON notification (is_read);
 CREATE INDEX IF NOT EXISTS idx_notification_created_at ON notification (_created_at);

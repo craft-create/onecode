@@ -64,9 +64,20 @@ const normalizeDashboardData = (value: unknown): AnalyticsDashboardData => {
 export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [dashboardData, setDashboardData] = useState<AnalyticsDashboardData | null>(
-    null,
-  );
+  const defaultData: AnalyticsDashboardData = {
+    totalViews: 0,
+    totalLikes: 0,
+    totalDownloads: 0,
+    totalShares: 0,
+    totalFavorites: 0,
+    totalContents: 0,
+    weeklyTrend: [],
+    categoryDistribution: [],
+    topContents: [],
+  };
+
+  const [dashboardData, setDashboardData] =
+    useState<AnalyticsDashboardData>(defaultData);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -86,17 +97,6 @@ export default function AnalyticsPage() {
     fetchAnalytics();
   }, []);
 
-  const defaultData: AnalyticsDashboardData = {
-    totalViews: 0,
-    totalLikes: 0,
-    totalDownloads: 0,
-    totalShares: 0,
-    totalFavorites: 0,
-    totalContents: 0,
-    weeklyTrend: [],
-    categoryDistribution: [],
-    topContents: [],
-  };
   const data = dashboardData ?? defaultData;
 
   if (error) {
@@ -142,21 +142,26 @@ export default function AnalyticsPage() {
     { label: '总分享数', value: data.totalShares, icon: Share2, color: 'text-violet-400' },
   ];
 
-  const weeklyData = data.weeklyTrend.map((item) => ({
-    name: item.date,
-    views: item.views,
-    likes: item.likes,
-    downloads: item.downloads,
-    shares: item.shares,
+  const safeWeeklyTrend = toArray<AnalyticsTimeSeriesPoint>(data.weeklyTrend);
+  const safeCategoryDistribution = toArray<AnalyticsCategoryPoint>(data.categoryDistribution);
+  const safeTopContents = toArray<AnalyticsTopContentItem>(data.topContents);
+
+  const weeklyData = safeWeeklyTrend.map((item) => ({
+    name: String(item.date),
+    views: toNumber(item.views),
+    likes: toNumber(item.likes),
+    downloads: toNumber(item.downloads),
+    shares: toNumber(item.shares),
   }));
 
-  const categoryData = data.categoryDistribution.map((item) => ({
-    name: item.name,
-    value: item.value,
+  const categoryData = safeCategoryDistribution.map((item) => ({
+    name: String(item.name),
+    value: toNumber(item.value),
   }));
 
-  const topContents = data.topContents.map((item, index) => ({
+  const topContents = safeTopContents.map((item, index) => ({
     ...item,
+    title: item.title || '未命名内容',
     rank: index + 1,
   }));
 

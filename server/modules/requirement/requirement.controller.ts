@@ -2,7 +2,7 @@ import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Req } fro
 import { RequirementService } from './requirement.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@Controller('requirements')
+@Controller('api/requirements')
 @UseGuards(JwtAuthGuard)
 export class RequirementController {
   constructor(private readonly requirementService: RequirementService) {}

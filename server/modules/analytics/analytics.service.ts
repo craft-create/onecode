@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Inject } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Inject,
+  Logger,
+} from '@nestjs/common';
 import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat/fullstack-nestjs-core';
 import { and, count, desc, eq, gte, inArray, isNotNull, sql, type SQL } from 'drizzle-orm';
 import { contentStat, material, scriptProject, userBehavior } from '@server/database/schema';
@@ -24,44 +29,87 @@ interface TopContentRow {
 
 @Injectable()
 export class AnalyticsService {
+  private readonly logger: Logger = new Logger(AnalyticsService.name);
+
   constructor(@Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase) {}
 
   async getDashboard(userId?: string): Promise<AnalyticsDashboardData> {
     const conditions = this.getUserConditions(userId);
 
-    const [
-      totalViews,
-      totalLikes,
-      totalDownloads,
-      totalShares,
-      totalFavorites,
-      totalContents,
-      weeklyRows,
-      categoryRows,
-      topRows,
-    ] = await Promise.all([
-      this.countAction(conditions, 'view'),
-      this.countAction(conditions, 'like'),
-      this.countAction(conditions, 'download'),
-      this.countAction(conditions, 'share'),
-      this.countAction(conditions, 'favorite'),
-      this.getContentTypeCount(userId),
-      this.getWeeklyBehaviorTrend(conditions),
-      this.getCategoryDistribution(userId),
-      this.getTopContents(conditions),
-    ]);
+    try {
+      const [
+        totalViews,
+        totalLikes,
+        totalDownloads,
+        totalShares,
+        totalFavorites,
+        totalContents,
+        weeklyRows,
+        categoryRows,
+        topRows,
+      ] = await Promise.all([
+        this.countAction(conditions, 'view'),
+        this.countAction(conditions, 'like'),
+        this.countAction(conditions, 'download'),
+        this.countAction(conditions, 'share'),
+        this.countAction(conditions, 'favorite'),
+        this.getContentTypeCount(userId),
+        this.getWeeklyBehaviorTrend(conditions),
+        this.getCategoryDistribution(userId),
+        this.getTopContents(conditions),
+      ]);
 
+      return {
+        totalViews,
+        totalLikes,
+        totalDownloads,
+        totalShares,
+        totalFavorites,
+        totalContents,
+        weeklyTrend: weeklyRows,
+        categoryDistribution: categoryRows,
+        topContents: topRows,
+      };
+    } catch (error) {
+      if (this.isRelationMissingError(error)) {
+        this.logger.error(
+          `analytics 仪表盘查询失败，回退到空报表: ${this.stringifyError(error)}`,
+        );
+        return this.buildEmptyDashboardData();
+      }
+
+      this.logger.error(`analytics 仪表盘查询失败: ${this.stringifyError(error)}`);
+      throw error;
+    }
+  }
+
+  private buildEmptyDashboardData(): AnalyticsDashboardData {
     return {
-      totalViews,
-      totalLikes,
-      totalDownloads,
-      totalShares,
-      totalFavorites,
-      totalContents,
-      weeklyTrend: weeklyRows,
-      categoryDistribution: categoryRows,
-      topContents: topRows,
+      totalViews: 0,
+      totalLikes: 0,
+      totalDownloads: 0,
+      totalShares: 0,
+      totalFavorites: 0,
+      totalContents: 0,
+      weeklyTrend: [],
+      categoryDistribution: [],
+      topContents: [],
     };
+  }
+
+  private isRelationMissingError(error: unknown): boolean {
+    const candidate = error as { code?: string };
+    return candidate?.code === '42P01';
+  }
+
+  private stringifyError(error: unknown): string {
+    if (error instanceof Error) {
+      return `${error.name}: ${error.message}`;
+    }
+    if (typeof error === 'object' && error !== null) {
+      return JSON.stringify(error);
+    }
+    return String(error);
   }
 
   async getContentStats(

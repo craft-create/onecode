@@ -7,6 +7,39 @@ import type {
 
 export const AUTH_EXPIRED_EVENT = 'onecode:auth-expired';
 
+const toNumber = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const toArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? value : []);
+
+const normalizeDashboardResponse = (
+  value: unknown,
+): AnalyticsDashboardData => {
+  const payload =
+    value && typeof value === 'object' && 'data' in value
+      ? (value as { data?: unknown }).data
+      : value;
+
+  const source =
+    typeof payload === 'object' && payload !== null
+      ? (payload as Partial<AnalyticsDashboardData>)
+      : {};
+
+  return {
+    totalViews: toNumber(source.totalViews),
+    totalLikes: toNumber(source.totalLikes),
+    totalDownloads: toNumber(source.totalDownloads),
+    totalShares: toNumber(source.totalShares),
+    totalFavorites: toNumber(source.totalFavorites),
+    totalContents: toNumber(source.totalContents),
+    weeklyTrend: toArray(source.weeklyTrend),
+    categoryDistribution: toArray(source.categoryDistribution),
+    topContents: toArray(source.topContents),
+  };
+};
+
 // 获取配置好的 axios 实例
 export const api = axios.create({
   baseURL: '/api',
@@ -287,7 +320,10 @@ export const analyticsApi = {
     api.get(`/analytics/content/${type}/${id}`, { params: { days } }) as Promise<AnalyticsContentStatsResponse>,
 
   // 获取用户数据面板
-  getDashboard: (): Promise<AnalyticsDashboardData> => api.get('/analytics/dashboard') as Promise<AnalyticsDashboardData>,
+  getDashboard: async (): Promise<AnalyticsDashboardData> => {
+    const response = await api.get<unknown>('/analytics/dashboard');
+    return normalizeDashboardResponse(response);
+  },
 };
 
 // ==================== 标签 ====================

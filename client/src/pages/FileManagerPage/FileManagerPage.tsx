@@ -248,7 +248,13 @@ const FileManagerPage: React.FC = () => {
         await fileApi.createFile({
           name: file.name,
           originalName: file.name,
-          type: file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'file',
+          type: file.type.startsWith('image/')
+            ? 'image'
+            : file.type.startsWith('video/')
+              ? 'video'
+              : file.type.startsWith('audio/')
+                ? 'audio'
+                : 'file',
           mimeType: file.type,
           size: uploadData.size,
           url: uploadData.url,
@@ -311,6 +317,8 @@ const FileManagerPage: React.FC = () => {
   // ========== Render Helpers ==========
   const getFileIcon = (type: string, mimeType?: string) => {
     if (type === 'folder') return <Folder className="w-8 h-8 text-blue-500" />;
+    if (type === 'audio') return <Music className="w-8 h-8 text-yellow-500" />;
+    if (type === 'video' && !mimeType?.startsWith('video/')) return <Film className="w-8 h-8 text-purple-500" />;
     if (mimeType?.startsWith('image/')) return <Image className="w-8 h-8 text-green-500" />;
     if (mimeType?.startsWith('video/')) return <Film className="w-8 h-8 text-purple-500" />;
     if (mimeType?.startsWith('audio/')) return <Music className="w-8 h-8 text-yellow-500" />;
@@ -319,14 +327,91 @@ const FileManagerPage: React.FC = () => {
     return <File className="w-8 h-8 text-gray-500" />;
   };
 
-  const getFilePreviewUrl = (file: FileItem): string | null => {
-    if (file.mimeType?.startsWith('image/')) {
-      return file.thumbnailUrl || file.url;
+  const isImageFile = (file: FileItem) => {
+    return file.mimeType?.startsWith('image/') || file.type === 'image';
+  };
+
+  const isVideoFile = (file: FileItem) => {
+    return file.mimeType?.startsWith('video/') || file.type === 'video';
+  };
+
+  const isAudioFile = (file: FileItem) => {
+    return file.mimeType?.startsWith('audio/') || file.type === 'audio';
+  };
+
+  const renderGridPreview = (file: FileItem) => {
+    if (isImageFile(file)) {
+      const imageUrl = file.thumbnailUrl || file.url;
+      return (
+        <img src={imageUrl} alt={file.name} className="w-full h-full object-cover" />
+      );
     }
-    if (file.type === 'video' && file.thumbnailUrl) {
-      return file.thumbnailUrl;
+
+    if (isVideoFile(file)) {
+      const poster = file.thumbnailUrl || undefined;
+      return (
+        <video
+          src={file.url}
+          poster={poster}
+          controls
+          className="w-full h-full object-cover"
+          onClick={(event) => event.stopPropagation()}
+        >
+          您的浏览器不支持视频播放
+        </video>
+      );
+    }
+
+    if (isAudioFile(file)) {
+      return (
+        <audio
+          src={file.url}
+          controls
+          className="w-full px-3"
+          onClick={(event) => event.stopPropagation()}
+        >
+          您的浏览器不支持音频播放
+        </audio>
+      );
     }
     return null;
+  };
+
+  const renderListPreview = (file: FileItem) => {
+    if (isImageFile(file)) {
+      const imageUrl = file.thumbnailUrl || file.url;
+      return (
+        <img src={imageUrl} alt={file.name} className="w-10 h-10 object-cover rounded" />
+      );
+    }
+
+    if (isVideoFile(file)) {
+      return (
+        <video
+          src={file.url}
+          controls
+          className="w-20 h-10 rounded object-cover"
+          onClick={(event) => event.stopPropagation()}
+        >
+          您的浏览器不支持视频播放
+        </video>
+      );
+    }
+
+    if (isAudioFile(file)) {
+      return (
+        <audio
+          src={file.url}
+          controls
+          className="w-48"
+          onClick={(event) => event.stopPropagation()}
+        >
+          您的浏览器不支持音频播放
+        </audio>
+      );
+    }
+
+    return getFileIcon(file.type, file.mimeType);
   };
 
   const formatSize = (bytes?: number) => {
@@ -537,12 +622,10 @@ const FileManagerPage: React.FC = () => {
                                 className="aspect-square bg-accent/30 flex items-center justify-center relative"
                                 onClick={() => window.open(file.url, '_blank')}
                               >
-                                {getFilePreviewUrl(file) ? (
-                                  <img
-                                    src={getFilePreviewUrl(file) as string}
-                                    alt={file.name}
-                                    className="w-full h-full object-cover"
-                                  />
+                                {renderGridPreview(file) ? (
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    {renderGridPreview(file)}
+                                  </div>
                                 ) : (
                                   getFileIcon(file.type, file.mimeType)
                                 )}
@@ -629,7 +712,7 @@ const FileManagerPage: React.FC = () => {
                               onCheckedChange={() => toggleSelect(file.id)}
                               onClick={(e) => e.stopPropagation()}
                             />
-                            {getFileIcon(file.type, file.mimeType)}
+                            {renderListPreview(file)}
                             <span className="flex-1 font-medium truncate">{file.name}</span>
                             <span className="text-sm text-muted-foreground">{formatSize(Number(file.size))}</span>
                             <DropdownMenu>

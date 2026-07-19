@@ -2,7 +2,7 @@ import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Req } fro
 import { TemplateService } from './template.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@Controller('templates')
+@Controller('api/templates')
 @UseGuards(JwtAuthGuard)
 export class TemplateController {
   constructor(private readonly templateService: TemplateService) {}
