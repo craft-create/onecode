@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { lazy } from "react";
 import { Route, Routes } from "react-router-dom";
 
 import Layout from "./components/Layout";
@@ -48,44 +48,36 @@ const FileManagerPage = lazy(() => import("./pages/FileManagerPage/FileManagerPa
 
 const RoutesComponent = () => {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-[60vh] w-full flex items-center justify-center text-sm text-slate-400">
-          页面加载中...
-        </div>
-      }
-    >
-      <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<HomePage />} />
-          <Route path="materials" element={<MaterialsPage />} />
-          <Route path="materials/upload" element={<MaterialUploadPage />} />
-          <Route path="materials/:id" element={<MaterialDetailPage />} />
-          <Route path="account/materials" element={<AccountMaterialsPage />} />
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="files" element={<FileManagerPage />} />
-          <Route path="scripts" element={<ScriptsPage />} />
-          <Route path="scripts/:id" element={<ScriptEditorPage />} />
-          <Route path="scripts/:id/export" element={<ScriptExportPage />} />
-          <Route path="account/favorites" element={<FavoritesPage />} />
-          <Route path="user/:userId" element={<UserProfilePage />} />
-          <Route path="login" element={<LoginPage />} />
-          <Route path="register" element={<RegisterPage />} />
-          <Route path="notifications" element={<NotificationsPage />} />
-          <Route path="chat" element={<ChatPage />} />
-          <Route path="chat/:conversationId" element={<ChatPage />} />
-          <Route path="teams" element={<TeamsPage />} />
-          <Route path="teams/:teamId" element={<TeamDetailPage />} />
-          <Route path="projects" element={<ProjectsPage />} />
-          <Route path="projects/:projectId" element={<ProjectDetailPage />} />
-          <Route path="templates" element={<TemplatesPage />} />
-          <Route path="requirements" element={<RequirementsPage />} />
-          <Route path="analytics" element={<AnalyticsPage />} />
-        </Route>
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Suspense>
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<HomePage />} />
+        <Route path="materials" element={<MaterialsPage />} />
+        <Route path="materials/upload" element={<MaterialUploadPage />} />
+        <Route path="materials/:id" element={<MaterialDetailPage />} />
+        <Route path="account/materials" element={<AccountMaterialsPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="files" element={<FileManagerPage />} />
+        <Route path="scripts" element={<ScriptsPage />} />
+        <Route path="scripts/:id" element={<ScriptEditorPage />} />
+        <Route path="scripts/:id/export" element={<ScriptExportPage />} />
+        <Route path="account/favorites" element={<FavoritesPage />} />
+        <Route path="user/:userId" element={<UserProfilePage />} />
+        <Route path="login" element={<LoginPage />} />
+        <Route path="register" element={<RegisterPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="chat" element={<ChatPage />} />
+        <Route path="chat/:conversationId" element={<ChatPage />} />
+        <Route path="teams" element={<TeamsPage />} />
+        <Route path="teams/:teamId" element={<TeamDetailPage />} />
+        <Route path="projects" element={<ProjectsPage />} />
+        <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+        <Route path="templates" element={<TemplatesPage />} />
+        <Route path="requirements" element={<RequirementsPage />} />
+        <Route path="analytics" element={<AnalyticsPage />} />
+      </Route>
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 };
 

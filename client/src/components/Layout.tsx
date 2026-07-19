@@ -8,7 +8,7 @@
  *   - 回到顶部按钮
  *   - 子路由内容渲染（Outlet）
  */
-import { useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 // 平台Hook：获取应用信息
@@ -578,7 +578,15 @@ const Layout = () => {
       {/* ===== 页面主内容区域 ===== */}
       <main className="pt-16">
         {/* Outlet渲染子路由的内容 */}
-        <Outlet />
+        <Suspense
+          fallback={
+            <div className="min-h-[calc(100vh-4rem)] w-full flex items-center justify-center text-sm text-slate-400">
+              页面加载中...
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </main>
 
       {/* 回到顶部按钮 */}
