@@ -535,49 +535,6 @@ const Layout = () => {
                   ))}
                 </div>
 
-                {/* 用户相关 */}
-                {isLoggedIn && (
-                  <div className="border-t border-border my-2 pt-2">
-                    <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase">个人中心</p>
-                    <NavLink
-                      to="/notifications"
-                      onClick={closeAllMenus}
-                      className="block px-4 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                    >
-                      通知中心
-                    </NavLink>
-                    <NavLink
-                      to="/chat"
-                      onClick={closeAllMenus}
-                      className="block px-4 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                    >
-                      私信
-                    </NavLink>
-                    <NavLink
-                      to="/files"
-                      onClick={closeAllMenus}
-                      className="block px-4 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                    >
-                      文件管理
-                    </NavLink>
-                    <NavLink
-                      to="/settings"
-                      onClick={closeAllMenus}
-                      className="block px-4 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                    >
-                      账户设置
-                    </NavLink>
-                    <button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        handleLogout();
-                      }}
-                      className="w-full text-left px-4 py-2.5 rounded-lg text-sm text-destructive hover:bg-accent transition-colors"
-                    >
-                      退出登录
-                    </button>
-                  </div>
-                )}
               </nav>
             </motion.div>
           )}
