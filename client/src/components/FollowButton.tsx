@@ -1,9 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/compat/client-toolkit/logger';
-import { toggleFollow } from '@client/src/api/follow';
+import { getFollowStatus, toggleFollow } from '@client/src/api/follow';
 import { useAuth } from '@client/src/hooks/useAuth';
 
 interface FollowButtonProps {
@@ -15,6 +15,30 @@ const FollowButton: React.FC<FollowButtonProps> = ({ userId }) => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [hovering, setHovering] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    if (!user || !userId || user.userId === userId) {
+      return;
+    }
+
+    const loadStatus = async () => {
+      try {
+        const status = await getFollowStatus(userId);
+        if (alive) {
+          setIsFollowing(status.is_following);
+        }
+      } catch (err: unknown) {
+        logger.error('获取关注状态失败:', err);
+      }
+    };
+
+    void loadStatus();
+
+    return () => {
+      alive = false;
+    };
+  }, [user, userId]);
 
   const handleToggle = useCallback(async () => {
     if (!userId) return;
@@ -31,8 +55,8 @@ const FollowButton: React.FC<FollowButtonProps> = ({ userId }) => {
     }
   }, [userId]);
 
-  // 未登录时不渲染按钮
-  if (!user) return null;
+  // 自己或未登录时不渲染按钮
+  if (!user || user.userId === userId) return null;
 
   return (
     <motion.button
