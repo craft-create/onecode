@@ -186,7 +186,6 @@ export class ScriptService {
     const [project] = await this.db
       .select({
         createdBy: sql<string>`(${scriptProject.createdBy}).user_id`,
-        collaborators: scriptProject.collaborators,
       })
       .from(scriptProject)
       .where(eq(scriptProject.id, safeProjectId))
@@ -196,9 +195,29 @@ export class ScriptService {
       throw new NotFoundException(`剧本项目 ${projectId} 不存在`);
     }
 
-    const isCollaborator = safeUserId
-      ? (project.collaborators || []).includes(safeUserId)
-      : false;
+    let isCollaborator = false;
+    if (safeUserId) {
+      const [membershipRow] =
+        await this.db.execute<{ isCollaborator: boolean | string | number }>(
+        sql`
+          SELECT EXISTS (
+            SELECT 1
+            FROM script_project sp,
+            UNNEST(sp.collaborators) AS c
+            WHERE sp.id = ${safeProjectId}
+              AND (c).user_id = ${safeUserId}::uuid
+          ) AS "isCollaborator"
+        `,
+      );
+
+      const raw = membershipRow?.isCollaborator;
+      isCollaborator =
+        raw === true ||
+        raw === 1 ||
+        raw === 't' ||
+        raw === 'true' ||
+        raw === 'TRUE';
+    }
 
     return {
       createdBy: project.createdBy || null,
