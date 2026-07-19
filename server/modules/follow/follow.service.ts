@@ -6,6 +6,7 @@ import type {
   FollowUserItem,
   FollowListResponse,
 } from '@shared/follow.interface';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class FollowService {
@@ -13,6 +14,7 @@ export class FollowService {
 
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async toggleFollow(
@@ -37,6 +39,19 @@ export class FollowService {
         INSERT INTO user_follow (follower_id, following_id)
         VALUES (ROW(${userId})::user_profile, ROW(${targetUserId})::user_profile)
       `);
+      try {
+        await this.notificationService.create({
+          userId: targetUserId,
+          type: 'follow',
+          title: '新关注',
+          content: '有人关注了你',
+          sourceType: 'user',
+          sourceId: userId,
+          fromUserId: userId,
+        });
+      } catch (error) {
+        this.logger.error(`关注通知发送失败: ${String(error)}`, error instanceof Error ? error.stack : undefined);
+      }
       this.logger.log(`用户 ${userId} 关注 ${targetUserId}`);
     }
 
