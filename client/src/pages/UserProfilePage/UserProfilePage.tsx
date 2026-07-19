@@ -19,6 +19,7 @@ import {
   getFollowers,
   getFollowing,
 } from '@client/src/api/follow';
+import { getUserById, type PublicUser } from '@client/src/api/auth';
 import { chatApi } from '@client/src/api';
 import { getUserUploadsByUserId } from '@client/src/api/user-materials';
 import { listProjects } from '@client/src/api/scripts';
@@ -49,6 +50,9 @@ const UserProfilePage: React.FC = () => {
   const [scriptCount, setScriptCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [startingChat, setStartingChat] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileNotFound, setProfileNotFound] = useState(false);
+  const [profile, setProfile] = useState<PublicUser | null>(null);
 
   const [materials, setMaterials] = useState<UserMaterialItem[]>([]);
   const [scripts, setScripts] = useState<ScriptProjectItem[]>([]);
@@ -56,8 +60,45 @@ const UserProfilePage: React.FC = () => {
   const [following, setFollowing] = useState<FollowUserItem[]>([]);
   const [tabLoading, setTabLoading] = useState(false);
 
-  const fetchStats = useCallback(async () => {
+  const buildUnknownProfile = useCallback((id: string): PublicUser => ({
+    id,
+    nickname: `未知用户 ${id}`,
+    avatarUrl: null,
+    createdAt: null,
+  }), []);
+
+  const isNotFoundError = useCallback((error: unknown): boolean => {
+    return (error as { response?: { status?: number } })?.response?.status === 404;
+  }, []);
+
+  const fetchProfile = useCallback(async () => {
     if (!userId) return;
+    setProfileLoading(true);
+    setProfileNotFound(false);
+    try {
+      const userInfo = await getUserById(userId);
+      setProfile(userInfo);
+      setProfileNotFound(false);
+    } catch (err: unknown) {
+      logger.error('获取用户资料失败:', err);
+      if (isNotFoundError(err)) {
+        setProfile(buildUnknownProfile(userId));
+        setProfileNotFound(false);
+      } else {
+        setProfileNotFound(true);
+        setProfile(null);
+      }
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [buildUnknownProfile, isNotFoundError, userId]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  const fetchStats = useCallback(async () => {
+    if (!userId || !profile) return;
     setLoading(true);
     try {
       const [statusRes, uploadsRes, scriptsRes] = await Promise.all([
@@ -74,14 +115,14 @@ const UserProfilePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, profile]);
 
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
 
   const fetchTabContent = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || !profile) return;
     setTabLoading(true);
     try {
       switch (activeTab) {
@@ -112,7 +153,7 @@ const UserProfilePage: React.FC = () => {
     } finally {
       setTabLoading(false);
     }
-  }, [userId, activeTab]);
+  }, [userId, activeTab, profile]);
 
   useEffect(() => {
     fetchTabContent();
@@ -153,7 +194,7 @@ const UserProfilePage: React.FC = () => {
     }
   }, [navigate, startingChat, user, userId]);
 
-  if (!userId) {
+  if (!userId || profileNotFound) {
     return (
       <div className="min-h-screen bg-[hsl(228_15%_8%)] flex items-center justify-center">
         <p className="text-[hsl(220_10%_55%)]">用户不存在</p>
@@ -161,17 +202,33 @@ const UserProfilePage: React.FC = () => {
     );
   }
 
+  if (profileLoading || !profile) {
+    return (
+      <div className="min-h-screen bg-[hsl(228_15%_8%)] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const profileDisplay = [
+    {
+      user_id: profile.id,
+      name: profile.nickname || '未知用户',
+      avatar: profile.avatarUrl || '',
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-[hsl(228_15%_8%)]">
       <div className="app-container-shell">
         {/* Profile header */}
         <div className="bg-[hsl(228_14%_12%)] border border-[hsl(228_12%_18%)] rounded-lg p-6 mb-6">
           <div className="flex items-start gap-5">
-            <UserDisplay value={[userId]} size="large" showLabel={false} />
+            <UserDisplay value={profileDisplay} size="large" showLabel={false} />
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <UserDisplay value={[userId]} size="large" />
+                  <UserDisplay value={profileDisplay} size="large" />
                   <p className="text-sm text-[hsl(220_10%_55%)] mt-1">
                     影视创作者
                   </p>
@@ -408,7 +465,11 @@ const UserProfilePage: React.FC = () => {
                           }
                         >
                           <UserDisplay
-                            value={[user.user_id]}
+                            value={[{
+                              user_id: user.user_id,
+                              name: user.name,
+                              avatar: user.avatar_url,
+                            }]}
                             size="medium"
                             showLabel={false}
                           />
@@ -446,7 +507,11 @@ const UserProfilePage: React.FC = () => {
                           }
                         >
                           <UserDisplay
-                            value={[user.user_id]}
+                            value={[{
+                              user_id: user.user_id,
+                              name: user.name,
+                              avatar: user.avatar_url,
+                            }]}
                             size="medium"
                             showLabel={false}
                           />

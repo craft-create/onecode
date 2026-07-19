@@ -33,8 +33,12 @@ export interface PopularScript {
   cover_url: string;
   /** 点赞数量 */
   like_count: number;
+  /** 作者ID */
+  author_id?: string;
   /** 作者名称/ID */
   author_name: string;
+  /** 作者头像 */
+  author_avatar_url?: string;
 }
 
 /**

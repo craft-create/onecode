@@ -342,7 +342,7 @@ export class ScriptService {
       id: row.id,
       version: row.version,
       snapshot_summary: row.snapshotSummary || '',
-      author_name: row.createdBy ? (authorNames.get(row.createdBy) || row.createdBy) : '',
+      author_name: row.createdBy ? (authorNames.get(row.createdBy) || '') : '',
       created_at: this.toIsoDate(row.createdAt),
     };
   }
@@ -359,7 +359,7 @@ export class ScriptService {
       id: row.id,
       position: row.position,
       comment: row.comment,
-      author_name: row.author ? (authorNames.get(row.author) || row.author) : '',
+      author_name: row.author ? (authorNames.get(row.author) || '') : '',
       author_avatar: '',
       status: row.status,
       created_at: this.toIsoDate(row.createdAt),

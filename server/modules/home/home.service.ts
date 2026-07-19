@@ -78,7 +78,7 @@ export class HomeService {
         type: scriptProject.type,
         coverUrl: scriptProject.coverUrl,
         // 提取创建者的user_id（user_profile类型需要特殊SQL语法）
-        authorName: sql<string>`(${scriptProject.createdBy}).user_id`,
+        authorId: sql<string>`(${scriptProject.createdBy}).user_id`,
       })
       .from(scriptProject)
       // 过滤掉创建者为空的记录
@@ -88,7 +88,7 @@ export class HomeService {
 
     // 字段名转换
     const authorIds = rows
-      .map((row) => row.authorName)
+      .map((row) => row.authorId)
       .filter((id): id is string => !!id);
     if (authorIds.length === 0) {
       return rows.map((row) => ({
@@ -97,14 +97,15 @@ export class HomeService {
         type: row.type ?? '',
         cover_url: row.coverUrl ?? '',
         like_count: 0,
+        author_id: row.authorId,
         author_name: '',
       }));
     }
     const idList = authorIds.map(id => `'${id.replace(/'/g, "''")}'::uuid`).join(', ');
-    const userRows = await this.db.execute<{ id: string; nickname: string }>(sql.raw(
-      `SELECT id, nickname FROM local_users WHERE id IN (${idList})`
+    const userRows = await this.db.execute<{ id: string; nickname: string; avatarUrl: string | null }>(sql.raw(
+      `SELECT id, nickname, avatar_url FROM local_users WHERE id IN (${idList})`
     ));
-    const userMap = new Map(userRows.map((u) => [u.id, u.nickname]));
+    const userMap = new Map(userRows.map((u) => [u.id, { nickname: u.nickname, avatarUrl: u.avatarUrl }]));
 
     return rows.map((row) => ({
       id: row.id,
@@ -112,7 +113,11 @@ export class HomeService {
       type: row.type ?? '',
       cover_url: row.coverUrl ?? '',
       like_count: 0, // 预留字段，目前暂未统计点赞数
-      author_name: userMap.get(row.authorName) || row.authorName,
+      author_id: row.authorId,
+      author_name: row.authorId
+        ? userMap.get(row.authorId)?.nickname || '未知用户'
+        : '',
+      author_avatar_url: row.authorId ? userMap.get(row.authorId)?.avatarUrl || '' : '',
     }));
   }
 

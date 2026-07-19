@@ -31,6 +31,7 @@ type UnifiedComment = {
   content: string;
   author: string;
   authorName: string;
+  authorAvatarUrl?: string;
   likeCount: number;
   isLiked: boolean;
   replies: UnifiedComment[];
@@ -88,24 +89,26 @@ const CommentSection: React.FC<CommentSectionProps> = ({ targetId, targetType })
         const res: MaterialCommentListResponse = await getMaterialComments(targetId);
         const unified: UnifiedComment[] = (res.items ?? []).map(
           (item: MaterialCommentItem): UnifiedComment => ({
-            id: item.id,
-            parentId: item.parent_id,
-            content: item.content,
-            author: item.author,
-            authorName: item.author_name ?? item.author,
-            likeCount: item.like_count,
-            isLiked: item.is_liked,
-            replies: (item.replies ?? []).map(
-              (reply: MaterialCommentItem): UnifiedComment => ({
-                id: reply.id,
-                parentId: reply.parent_id,
-                content: reply.content,
-                author: reply.author,
-                authorName: reply.author_name ?? reply.author,
-                likeCount: reply.like_count,
-                isLiked: reply.is_liked,
-                replies: [],
-                createdAt: reply.created_at,
+                id: item.id,
+                parentId: item.parent_id,
+                content: item.content,
+                author: item.author,
+                authorName: item.author_name ?? item.author,
+                authorAvatarUrl: item.author_avatar_url,
+                likeCount: item.like_count,
+                isLiked: item.is_liked,
+                replies: (item.replies ?? []).map(
+                  (reply: MaterialCommentItem): UnifiedComment => ({
+                    id: reply.id,
+                    parentId: reply.parent_id,
+                    content: reply.content,
+                    author: reply.author,
+                    authorName: reply.author_name ?? reply.author,
+                    authorAvatarUrl: reply.author_avatar_url,
+                    likeCount: reply.like_count,
+                    isLiked: reply.is_liked,
+                    replies: [],
+                    createdAt: reply.created_at,
               }),
             ),
             createdAt: item.created_at,
@@ -119,12 +122,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({ targetId, targetType })
             id: item.id,
             parentId: null,
             content: item.comment,
-            author: item.author_name,
-            authorName: item.author_name,
-            likeCount: 0,
-            isLiked: false,
-            replies: [],
-            createdAt: item.created_at,
+                author: item.author_name,
+                authorName: item.author_name,
+                authorAvatarUrl: undefined,
+                likeCount: 0,
+                isLiked: false,
+                replies: [],
+                createdAt: item.created_at,
           }),
         );
         setComments(unified);
@@ -256,6 +260,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({ targetId, targetType })
 
   const renderComment = (comment: UnifiedComment, isReply: boolean = false) => {
     const isOwn = currentUserId && comment.author === currentUserId;
+    const commentAuthor = comment.author
+      ? {
+          user_id: comment.author,
+          name: comment.authorName || comment.author,
+          avatar: comment.authorAvatarUrl,
+        }
+      : undefined;
 
     return (
       <motion.div
@@ -266,7 +277,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ targetId, targetType })
       >
         <div className="flex gap-3 py-3">
           <UserDisplay
-            value={[comment.author]}
+            value={commentAuthor ? [commentAuthor] : []}
             size="small"
             showLabel={false}
           />

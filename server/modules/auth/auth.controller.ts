@@ -2,6 +2,8 @@ import {
   Controller,
   Post,
   Get,
+  Param,
+  NotFoundException,
   Body,
   Req,
   Res,
@@ -129,4 +131,20 @@ export class AuthController {
 
     return { avatarUrl };
   }
+
+  @Get('users/:userId')
+  async getUser(@Param('userId') userId: string) {
+    const user = await this.authService.getUserById(userId);
+    if (!user) {
+      throw new NotFoundException('用户不存在');
+    }
+
+    return {
+      id: user.id,
+      nickname: user.nickname,
+      avatarUrl: user.avatarUrl,
+      createdAt: user.createdAt,
+    };
+  }
+
 }

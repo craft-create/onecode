@@ -9,7 +9,7 @@ import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@server/common/compat
 import { material, materialComment, materialLike, favoriteFolderItem, userMaterial } from '@server/database/schema';
 import { localUsers } from '@server/database/local-schema';
 // 导入Drizzle ORM的查询操作符
-import { eq, and, gte, lte, like, desc, count, sql } from 'drizzle-orm';
+import { eq, and, inArray, gte, lte, like, desc, count, sql } from 'drizzle-orm';
 // 导入TypeScript类型定义
 import type {
   MaterialItem,
@@ -120,6 +120,8 @@ export class MaterialService {
     parent_id: string | null;
     content: string;
     author: string;
+    author_name?: string;
+    author_avatar_url?: string;
     like_count: number;
     created_at: Date;
     is_liked: boolean;
@@ -130,6 +132,8 @@ export class MaterialService {
       parent_id: row.parent_id,
       content: row.content,
       author: row.author,
+      author_name: row.author_name,
+      author_avatar_url: row.author_avatar_url,
       like_count: row.like_count,
       is_liked: Boolean(row.is_liked),
       replies: [],
@@ -739,10 +743,30 @@ export class MaterialService {
       ORDER BY mc._created_at ASC
     `);
 
-    // 转换字段格式
-    const allComments: MaterialCommentItem[] = rows.map((row) =>
-      this.mapMaterialCommentItem(row),
+    const authorIds = [...new Set(rows.map((row) => row.author).filter((id): id is string => Boolean(id)))];
+    const authorRows = authorIds.length
+      ? await this.db
+          .select({
+            id: localUsers.id,
+            nickname: localUsers.nickname,
+            avatarUrl: localUsers.avatarUrl,
+          })
+          .from(localUsers)
+          .where(inArray(localUsers.id, authorIds))
+      : [];
+    const authorMap = new Map(
+      authorRows.map((row) => [row.id, { nickname: row.nickname, avatarUrl: row.avatarUrl }]),
     );
+
+    // 转换字段格式
+    const allComments: MaterialCommentItem[] = rows.map((row) => {
+      const authorProfile = authorMap.get(row.author);
+      return this.mapMaterialCommentItem({
+        ...row,
+        author_name: authorProfile?.nickname || undefined,
+        author_avatar_url: authorProfile?.avatarUrl || undefined,
+      });
+    });
 
     return this.buildCommentTree(allComments);
   }

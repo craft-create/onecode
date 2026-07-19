@@ -318,6 +318,8 @@ export interface MaterialCommentItem {
   author: string;
   /** 作者名称（可选，展示用） */
   author_name?: string;
+  /** 作者头像（可选，展示用） */
+  author_avatar_url?: string;
   /** 点赞数量 */
   like_count: number;
   /** 当前用户是否已点赞 */

@@ -52,7 +52,13 @@ const TopCreators: React.FC<TopCreatorsProps> = ({ items }) => {
           className="bg-card rounded-xl border border-border p-4 flex flex-col items-center text-center hover:border-primary/30 transition-colors duration-300 cursor-pointer"
         >
           <UserDisplay
-            value={item.id ? [item.id] : []}
+            value={item.id
+              ? [{
+                  user_id: item.id,
+                  name: item.name,
+                  avatar: item.avatar_url,
+                }]
+              : []}
             size="large"
             showLabel={true}
           />

@@ -19,6 +19,14 @@ export interface CurrentUser {
   nickname: string;
   avatarUrl: string | null;
 }
+
+export interface PublicUser {
+  id: string;
+  nickname: string;
+  avatarUrl: string | null;
+  createdAt: string | null;
+}
+
 export interface LoginResponse {
   token: string;
   user: UserInfo;
@@ -69,6 +77,18 @@ export async function getMe(): Promise<CurrentUser | null> {
     url: '/api/auth/me',
     method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  return data;
+}
+
+/**
+ * 获取用户公开资料
+ * 用于用户主页展示昵称与头像
+ */
+export async function getUserById(userId: string): Promise<PublicUser> {
+  const { data } = await axiosForBackend({
+    url: `/api/auth/users/${userId}`,
+    method: 'GET',
   });
   return data;
 }

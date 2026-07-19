@@ -23,6 +23,8 @@ export interface UserInfo {
 @Injectable()
 export class AuthService {
   private readonly logger: Logger = new Logger(AuthService.name);
+  private readonly uuidRegExp: RegExp =
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
   constructor(@Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase) {}
 
@@ -99,10 +101,16 @@ export class AuthService {
   }
 
   async getUserById(userId: string): Promise<UserInfo | null> {
+    const normalizedUserId = userId.trim();
+
+    if (!this.uuidRegExp.test(normalizedUserId)) {
+      return null;
+    }
+
     const [user] = await this.db
       .select()
       .from(localUsers)
-      .where(eq(localUsers.id, userId))
+      .where(eq(localUsers.id, normalizedUserId))
       .limit(1);
 
     if (!user) return null;

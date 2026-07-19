@@ -235,7 +235,7 @@ const makeFallbackUserInfo = (source: {
 };
 
 const createUnknownUserInfo = (id: string): UserInfo => {
-  const name = `未知用户 ${id}`;
+  const name = '未知用户';
   return {
     userID: id,
     name: normalizeText(name) as string,

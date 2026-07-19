@@ -120,7 +120,7 @@ export class FollowService {
     return {
       items: items.map((item) => ({
         ...item,
-        name: userMap.get(item.user_id)?.nickname || item.user_id,
+        name: userMap.get(item.user_id)?.nickname || '未知用户',
         avatar_url: userMap.get(item.user_id)?.avatarUrl || '',
         is_following: false,
       })) as FollowUserItem[],
@@ -159,7 +159,7 @@ export class FollowService {
     return {
       items: items.map((item) => ({
         ...item,
-        name: userMap.get(item.user_id)?.nickname || item.user_id,
+        name: userMap.get(item.user_id)?.nickname || '未知用户',
         avatar_url: userMap.get(item.user_id)?.avatarUrl || '',
         is_following: false,
       })) as FollowUserItem[],

@@ -84,7 +84,13 @@ const PopularScripts: React.FC<PopularScriptsProps> = ({ items }) => {
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
                 <UserDisplay
-                  value={item.author_name ? [item.author_name] : []}
+                  value={item.author_id
+                    ? [{
+                        user_id: item.author_id,
+                        name: item.author_name,
+                        avatar: item.author_avatar_url,
+                      }]
+                    : []}
                   size="small"
                   showLabel={true}
                 />
