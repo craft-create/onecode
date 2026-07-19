@@ -36,6 +36,8 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
   UnauthorizedException,
+  Logger,
+  HttpException,
 } from '@nestjs/common';
 // 平台登录鉴权装饰器
 import { NeedLogin } from '@server/common/compat/fullstack-nestjs-core';
@@ -57,6 +59,8 @@ import type {
 
 @Controller('api/script-projects')
 export class ScriptController {
+  private readonly logger = new Logger(ScriptController.name);
+
   /**
    * 构造函数：注入剧本服务
    */
@@ -173,7 +177,35 @@ export class ScriptController {
     @Req() req: Request,
   ): Promise<ScriptCollaborationConfig> {
     const userId: string | undefined = getLocalUserId(req);
-    return this.scriptService.getCollaborationConfig(id, userId);
+    try {
+      return await this.scriptService.getCollaborationConfig(id, userId);
+    } catch (error) {
+      if (error instanceof HttpException && error.getStatus() === 404) {
+        throw error;
+      }
+
+      this.logger.error(
+        `Failed to load collaboration config. projectId=${id}, userId=${userId ?? 'guest'}, ` +
+          `ip=${req.ip}, referer=${req.headers.referer ?? ''}, hasAuth=${
+            Boolean(req.headers.authorization)
+          }, cookieAuth=${Boolean(req.headers.cookie)}, userAgent=${
+            req.headers['user-agent'] ?? 'unknown'
+          }`,
+      );
+      this.logger.error(
+        error instanceof Error
+          ? `${error.message}${error.stack ? `\n${error.stack}` : ''}`
+          : String(error),
+      );
+
+      return {
+        enabled: false,
+        mode: 'local',
+        pad_id: '',
+        pad_url: '',
+        can_edit: false,
+      };
+    }
   }
 
   /**
