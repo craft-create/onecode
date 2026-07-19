@@ -102,9 +102,109 @@ const MaterialUploadPage: React.FC = () => {
 
     // 立即对每个文件发起上传（异步，不阻塞 UI）
     entries.forEach((entry) => {
+      if (entry.file.type.startsWith('video/')) {
+        void fillVideoPreviewInfo(entry);
+      }
       void doUpload(entry);
     });
   }, []);
+
+  const fillVideoPreviewInfo = useCallback(async (entry: FileEntry): Promise<void> => {
+    try {
+      const metadata = await extractVideoMetadata(entry.file);
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === entry.id
+            ? {
+                ...f,
+                duration: metadata.duration ?? f.duration,
+                resolution: metadata.resolution ?? f.resolution,
+                thumbnailUrl: f.thumbnailUrl || metadata.thumbnailUrl,
+              }
+            : f,
+        ),
+      );
+    } catch (_error) {
+      logger.error(`本地视频元数据读取失败: ${entry.file.name}`);
+    }
+  }, []);
+
+  const extractVideoMetadata = async (
+    file: File,
+  ): Promise<{
+    duration?: number;
+    resolution?: string;
+    thumbnailUrl?: string;
+  }> => {
+    const objectUrl: string = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    const pending = (ms: number): Promise<void> =>
+      new Promise((resolve) => setTimeout(resolve, ms));
+
+    try {
+      const metadata = await new Promise<{ duration: number; width: number; height: number }>((resolve, reject) => {
+        const onMetadata = (): void => {
+          if (video.videoWidth > 0 && video.videoHeight > 0) {
+            const duration = Number.isFinite(video.duration) && video.duration > 0
+              ? Math.round(video.duration)
+              : undefined;
+            resolve({ duration: duration || 0, width: video.videoWidth, height: video.videoHeight });
+          } else {
+            reject(new Error('无效视频信息'));
+          }
+        };
+        const onError = (): void => {
+          reject(new Error('视频元数据读取失败'));
+        };
+
+        video.addEventListener('loadedmetadata', onMetadata, { once: true });
+        video.addEventListener('error', onError, { once: true });
+        video.preload = 'metadata';
+        video.muted = true;
+        video.src = objectUrl;
+        video.load();
+      });
+
+      let thumbnailUrl: string | undefined;
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const seekTarget = Math.min(0.2, Math.max(0.001, metadata.duration > 0 ? 0.2 : 0));
+          const onSeeked = (): void => resolve();
+          const onError = (): void => reject(new Error('视频封面提取失败'));
+          video.addEventListener('seeked', onSeeked, { once: true });
+          video.addEventListener('error', onError, { once: true });
+          video.currentTime = seekTarget;
+        });
+
+        const maxWidth = 640;
+        const maxHeight = 360;
+        const scale = Math.min(1, maxWidth / metadata.width, maxHeight / metadata.height);
+        const drawWidth = Math.max(1, Math.round(metadata.width * scale));
+        const drawHeight = Math.max(1, Math.round(metadata.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = drawWidth;
+        canvas.height = drawHeight;
+        const ctx = canvas.getContext('2d');
+
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, drawWidth, drawHeight);
+          thumbnailUrl = canvas.toDataURL('image/jpeg', 0.82);
+        }
+      } catch (_error) {
+        await pending(200);
+      }
+
+      return {
+        duration: metadata.duration || undefined,
+        resolution: `${metadata.width}x${metadata.height}`,
+        thumbnailUrl,
+      };
+    } finally {
+      video.pause();
+      video.src = '';
+      URL.revokeObjectURL(objectUrl);
+    }
+  };
 
   /**
    * 执行文件上传
@@ -137,9 +237,9 @@ const MaterialUploadPage: React.FC = () => {
                 progress: 100,
                 status: 'done' as const,
                 uploadedUrl: res.url,
-                thumbnailUrl: res.thumbnailUrl,
-                duration: res.duration,
-                resolution: res.resolution,
+                thumbnailUrl: res.thumbnailUrl || f.thumbnailUrl,
+                duration: res.duration ?? f.duration,
+                resolution: res.resolution ?? f.resolution,
               }
             : f,
         ),
@@ -553,7 +653,16 @@ const MaterialUploadPage: React.FC = () => {
                   />
                 </div>
               )}
-              {editingFile.localPreviewUrl && isVideoFile(editingFile.file) && (
+              {editingFile.thumbnailUrl && isVideoFile(editingFile.file) && (
+                <div className="mb-4 rounded-lg overflow-hidden border border-border bg-accent/30">
+                  <img
+                    src={editingFile.thumbnailUrl}
+                    alt="视频封面"
+                    className="w-full max-h-48 object-cover"
+                  />
+                </div>
+              )}
+              {(!editingFile.thumbnailUrl && editingFile.localPreviewUrl && isVideoFile(editingFile.file)) && (
                 <div className="mb-4 rounded-lg overflow-hidden border border-border bg-accent/30">
                   <video
                     src={editingFile.localPreviewUrl}
