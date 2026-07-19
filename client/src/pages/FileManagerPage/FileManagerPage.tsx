@@ -4,37 +4,18 @@
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Folder,
-  FolderOpen,
-  Star,
-  Trash2,
-  Share2,
-  Download,
-  MoreVertical,
-  Plus,
-  Upload,
-  Home,
-  Grid3X3,
-  List,
-  Loader2,
-} from 'lucide-react';
+import { Folder, Plus, Upload, Home, Grid3X3, List, Loader2, Trash2, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { logger } from '@/utils/logger';
+import { formatBytes } from '@/utils/formatBytes';
 import { PageFrame } from '../shared/PageShell';
 import { fileApi } from '@/api';
-import {
-  FileAssetPreview,
-  getFileAssetIcon,
-  getFileAssetMediaKind,
-} from '@/components/media/FileAssetPreview';
+import FileManagerFileItem from '@/components/file/FileManagerFileItem';
+import FileManagerFolderItem from '@/components/file/FileManagerFolderItem';
 
 type ViewMode = 'grid' | 'list';
 
@@ -85,10 +66,6 @@ const FileManagerPage: React.FC = () => {
 
   const isStarred = (value: number | boolean | string) => {
     return value === 1 || value === true || value === '1' || value === 'true';
-  };
-
-  const stopMenuPropagation = (event: React.MouseEvent) => {
-    event.stopPropagation();
   };
 
   // ========== Load Data ==========
@@ -203,7 +180,7 @@ const FileManagerPage: React.FC = () => {
   const handleShare = async () => {
     if (!shareItem) return;
 
-      try {
+    try {
       const { data: shareRes } = await fileApi.shareFile({
         fileId: shareItem.id,
         expiresIn: shareExpiresIn,
@@ -311,65 +288,6 @@ const FileManagerPage: React.FC = () => {
       logger.error('批量删除失败:', err);
       toast.error(`删除失败: ${msg}`);
     }
-  };
-
-  // ========== Render Helpers ==========
-  const renderFileActions = (file: FileItem, triggerVariant: 'secondary' | 'ghost') => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant={triggerVariant}
-          size="icon"
-          className="w-8 h-8"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <MoreVertical className="w-4 h-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={(event) => handleToggleStar(file.id, event)}>
-          <Star className="w-4 h-4 mr-2" />
-          {isStarred(file.isStarred) ? '取消收藏' : '收藏'}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={(event) => {
-            stopMenuPropagation(event);
-            setShareItem(file);
-            setShareDialogOpen(true);
-          }}
-        >
-          <Share2 className="w-4 h-4 mr-2" />
-          分享
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={(event) => {
-            stopMenuPropagation(event);
-            window.open(file.url, '_blank');
-          }}
-        >
-          <Download className="w-4 h-4 mr-2" />
-          下载
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={(event) => {
-            stopMenuPropagation(event);
-            handleDelete(file);
-          }}
-          className="text-destructive"
-        >
-          <Trash2 className="w-4 h-4 mr-2" />
-          删除
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-
-  const formatSize = (bytes?: number) => {
-    if (!bytes) return '-';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   };
 
   return (
@@ -483,69 +401,33 @@ const FileManagerPage: React.FC = () => {
           ) : (
             <>
               {/* Folders */}
-              {folders.length > 0 && (
+                  {folders.length > 0 && (
                 <div className="mb-6">
                   <h2 className="text-lg font-semibold mb-3">文件夹</h2>
                   {viewMode === 'grid' ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                       {folders.map((folder) => (
-                        <motion.div
+                        <FileManagerFolderItem
                           key={folder.id}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.9 }}
-                          className="relative group"
-                        >
-                          <Card
-                            className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md"
-                            onClick={() => navigateToFolder(folder)}
-                          >
-                            <CardContent className="p-4">
-                              <div className="flex flex-col items-center text-center">
-                                <div
-                                  className="w-12 h-12 rounded-lg flex items-center justify-center mb-2"
-                                  style={{ backgroundColor: `${folder.color}20` }}
-                                >
-                                  {folder.isStarred ? (
-                                    <FolderOpen className="w-6 h-6" style={{ color: folder.color }} />
-                                  ) : (
-                                    <Folder className="w-6 h-6" style={{ color: folder.color }} />
-                                  )}
-                                </div>
-                                <p className="text-sm font-medium truncate w-full">{folder.name}</p>
-                                <p className="text-xs text-muted-foreground">{folder.itemCount} 项</p>
-                              </div>
-                            </CardContent>
-                          </Card>
-                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Checkbox
-                              checked={selectedItems.has(folder.id)}
-                              onCheckedChange={() => toggleSelect(folder.id)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </div>
-                        </motion.div>
+                          folder={folder}
+                          viewMode={viewMode}
+                          selected={selectedItems.has(folder.id)}
+                          onNavigate={navigateToFolder}
+                          onToggleSelect={toggleSelect}
+                        />
                       ))}
                     </div>
                   ) : (
                     <div className="space-y-2">
                       {folders.map((folder) => (
-                        <Card
+                        <FileManagerFolderItem
                           key={folder.id}
-                          className="cursor-pointer hover:border-primary/50 transition-all"
-                          onClick={() => navigateToFolder(folder)}
-                        >
-                          <CardContent className="p-3 flex items-center gap-3">
-                            <Checkbox
-                              checked={selectedItems.has(folder.id)}
-                              onCheckedChange={() => toggleSelect(folder.id)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <Folder className="w-5 h-5 text-blue-500" />
-                            <span className="flex-1 font-medium">{folder.name}</span>
-                            <span className="text-sm text-muted-foreground">{folder.itemCount} 项</span>
-                          </CardContent>
-                        </Card>
+                          folder={folder}
+                          viewMode={viewMode}
+                          selected={selectedItems.has(folder.id)}
+                          onNavigate={navigateToFolder}
+                          onToggleSelect={toggleSelect}
+                        />
                       ))}
                     </div>
                   )}
@@ -559,85 +441,59 @@ const FileManagerPage: React.FC = () => {
                   {viewMode === 'grid' ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                       {files.map((file) => (
-                        <motion.div
+                        <FileManagerFileItem
                           key={file.id}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.9 }}
-                          className="relative group"
-                        >
-                          <Card className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md overflow-hidden">
-                            <CardContent className="p-0">
-                              <div
-                                className="aspect-square bg-accent/30 flex items-center justify-center relative"
-                                onClick={() => window.open(file.url, '_blank')}
-                              >
-                                {getFileAssetMediaKind(file) === 'image' ||
-                                getFileAssetMediaKind(file) === 'video' ||
-                                getFileAssetMediaKind(file) === 'audio' ? (
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                                    <FileAssetPreview
-                                      file={file}
-                                      mode="grid"
-                                      stopMediaEvent={true}
-                                    />
-                                  </div>
-                                ) : (
-                                  getFileAssetIcon(file.type, file.mimeType)
-                                )}
-                                {isStarred(file.isStarred) && (
-                                  <Star className="absolute top-2 right-2 w-4 h-4 text-yellow-500 fill-yellow-500" />
-                                )}
-                              </div>
-                              <div className="p-3">
-                                <p className="text-sm font-medium truncate">{file.name}</p>
-                                <p className="text-xs text-muted-foreground">{formatSize(Number(file.size))}</p>
-                              </div>
-                            </CardContent>
-                          </Card>
-                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                            <Checkbox
-                              checked={selectedItems.has(file.id)}
-                              onCheckedChange={() => toggleSelect(file.id)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </div>
-                          <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                            {renderFileActions(file, 'secondary')}
-                          </div>
-                        </motion.div>
+                          file={file}
+                          viewMode={viewMode}
+                          selected={selectedItems.has(file.id)}
+                          onOpen={(targetFile) => window.open(targetFile.url, '_blank')}
+                          onToggleSelect={toggleSelect}
+                          onToggleStar={(event) => handleToggleStar(file.id, event)}
+                          onShare={(event) => {
+                            event.stopPropagation();
+                            setShareItem(file);
+                            setShareDialogOpen(true);
+                          }}
+                          onDownload={(event) => {
+                            event.stopPropagation();
+                            window.open(file.url, '_blank');
+                          }}
+                          onDelete={(event) => {
+                            event.stopPropagation();
+                            handleDelete(file);
+                          }}
+                          formatSize={formatBytes}
+                          isStarred={isStarred(file.isStarred)}
+                        />
                       ))}
                     </div>
                   ) : (
                     <div className="space-y-2">
                       {files.map((file) => (
-                        <Card
+                        <FileManagerFileItem
                           key={file.id}
-                          className="cursor-pointer hover:border-primary/50 transition-all"
-                            onClick={() => window.open(file.url, '_blank')}
-                          >
-                          <CardContent className="p-3 flex items-center gap-3">
-                            <Checkbox
-                              checked={selectedItems.has(file.id)}
-                              onCheckedChange={() => toggleSelect(file.id)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            {getFileAssetMediaKind(file) === 'image' ||
-                            getFileAssetMediaKind(file) === 'video' ||
-                            getFileAssetMediaKind(file) === 'audio' ? (
-                              <FileAssetPreview
-                                file={file}
-                                mode="list"
-                                stopMediaEvent={true}
-                              />
-                            ) : (
-                              getFileAssetIcon(file.type, file.mimeType)
-                            )}
-                            <span className="flex-1 font-medium truncate">{file.name}</span>
-                            <span className="text-sm text-muted-foreground">{formatSize(Number(file.size))}</span>
-                            {renderFileActions(file, 'ghost')}
-                          </CardContent>
-                        </Card>
+                          file={file}
+                          viewMode={viewMode}
+                          selected={selectedItems.has(file.id)}
+                          onOpen={(targetFile) => window.open(targetFile.url, '_blank')}
+                          onToggleSelect={toggleSelect}
+                          onToggleStar={(event) => handleToggleStar(file.id, event)}
+                          onShare={(event) => {
+                            event.stopPropagation();
+                            setShareItem(file);
+                            setShareDialogOpen(true);
+                          }}
+                          onDownload={(event) => {
+                            event.stopPropagation();
+                            window.open(file.url, '_blank');
+                          }}
+                          onDelete={(event) => {
+                            event.stopPropagation();
+                            handleDelete(file);
+                          }}
+                          formatSize={formatBytes}
+                          isStarred={isStarred(file.isStarred)}
+                        />
                       ))}
                     </div>
                   )}

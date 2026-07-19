@@ -1,29 +1,23 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Upload,
-  X,
-  Plus,
-  Check,
-  Image,
-  Loader2,
-} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Upload } from 'lucide-react';
 import { logger } from '@/utils/logger';
+import { formatBytes } from '@/utils/formatBytes';
 import { createMaterial } from '@client/src/api/materials';
 import { uploadFile } from '@client/src/api/upload';
 import { useAuth } from '@client/src/hooks/useAuth';
 import type { CreateMaterialRequest } from '@shared/material.interface';
 import { PageFrame } from '../shared/PageShell';
 import {
-  UploadEntryMediaPreview,
   UploadFormMediaPreview,
   getMaterialType,
-  getUploadFileIcon,
   isAudioFile,
   isImageFile,
   isVideoFile,
 } from '@client/src/components/media/MaterialUploadPreview';
+import MaterialUploadEntryItem from '@client/src/components/material/MaterialUploadEntryItem';
+import MaterialUploadFormDialog from '@client/src/components/material/MaterialUploadFormDialog';
 
 interface FileEntry {
   id: string;
@@ -414,12 +408,13 @@ const MaterialUploadPage: React.FC = () => {
     }
   };
 
-  const formatSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024)
-      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  const handleRetryUpload = (entry: FileEntry) => {
+    setFiles((prev) =>
+      prev.map((f) =>
+        f.id === entry.id ? { ...f, status: 'pending' as const, progress: 0 } : f,
+      ),
+    );
+    void doUpload(entry);
   };
 
   return (
@@ -488,102 +483,21 @@ const MaterialUploadPage: React.FC = () => {
         </motion.div>
 
         {/* File List */}
-            {files.length > 0 && (
+        {files.length > 0 && (
           <div className="mt-6 space-y-3">
             <h2 className="text-sm font-medium text-foreground">
               上传列表 ({files.length})
             </h2>
             {files.map((entry) => {
-              const hasMediaPreview = isImageFile(entry.file) || isVideoFile(entry.file) || isAudioFile(entry.file);
               return (
-                <div
+                <MaterialUploadEntryItem
                   key={entry.id}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border"
-                >
-                  {/* 预览区域：图片缩略图 / 视频首帧 / 文件图标 */}
-                  <div className="w-14 h-14 rounded-lg bg-accent flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {hasMediaPreview ? (
-                      <UploadEntryMediaPreview entry={entry} />
-                    ) : (
-                      getUploadFileIcon(entry.file)
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-foreground truncate">
-                      {entry.file.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatSize(entry.file.size)}
-                      {entry.uploadedUrl && (
-                        <span className="ml-2 text-success">· 已上传</span>
-                      )}
-                    </p>
-                    {entry.status === 'uploading' && (
-                      <div className="mt-1.5 flex items-center gap-2">
-                        <div className="flex-1 h-1 rounded-full bg-accent overflow-hidden">
-                          <motion.div
-                            className="h-full bg-primary rounded-full"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${entry.progress}%` }}
-                            transition={{ duration: 0.3 }}
-                          />
-                        </div>
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          {entry.progress}%
-                        </span>
-                      </div>
-                    )}
-                    {entry.status === 'error' && (
-                      <p className="text-xs text-destructive mt-1">上传失败，点击重试</p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    {entry.status === 'done' ? (
-                      <>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openForm(entry);
-                          }}
-                          title="填写素材信息"
-                          className="p-1.5 rounded-lg hover:bg-accent text-success hover:text-foreground transition-colors"
-                        >
-                          <Check className="w-4 h-4" />
-                        </button>
-                      </>
-                    ) : entry.status === 'uploading' ? (
-                      <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                    ) : entry.status === 'error' ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setFiles((prev) =>
-                            prev.map((f) =>
-                              f.id === entry.id ? { ...f, status: 'pending' as const, progress: 0 } : f,
-                            ),
-                          );
-                          void doUpload(entry);
-                        }}
-                        className="p-1.5 rounded-lg hover:bg-accent text-destructive hover:text-foreground transition-colors"
-                      >
-                        <Upload className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeFile(entry.id);
-                      }}
-                      className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
+                  entry={entry}
+                  formatSize={formatBytes}
+                  onOpenForm={openForm}
+                  onRetry={handleRetryUpload}
+                  onRemove={removeFile}
+                />
               );
             })}
           </div>
@@ -591,225 +505,50 @@ const MaterialUploadPage: React.FC = () => {
       </div>
 
       {/* Upload Form Dialog */}
-      <AnimatePresence>
-        {showForm && editingFile && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowForm(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg mx-4 bg-card border border-border rounded-xl p-6 max-h-[80vh] overflow-y-auto"
-            >
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-base font-semibold text-foreground">
-                  素材信息
-                </h2>
-                <button
-                  onClick={() => setShowForm(false)}
-                  className="p-1 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* 文件预览区 */}
-              <UploadFormMediaPreview entry={editingFile} />
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                    标题
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => {
-                      setFormData((p) => ({ ...p, title: e.target.value }));
-                      if (e.target.value.trim()) {
-                        setFormErrors((prev) => ({ ...prev, title: undefined }));
-                      }
-                    }}
-                    className={`w-full h-9 px-3 rounded-lg bg-background border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 ${
-                      formErrors.title
-                        ? 'border-destructive ring-1 ring-destructive'
-                        : 'border-border'
-                    }`}
-                  />
-                  {formErrors.title && (
-                    <p className="text-xs text-destructive mt-1">
-                      {formErrors.title}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                    描述
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData((p) => ({
-                        ...p,
-                        description: e.target.value,
-                      }))
-                    }
-                    rows={3}
-                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
-                  />
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                      类型
-                    </label>
-                    <select
-                      value={formData.type}
-                      onChange={(e) => {
-                        setFormData((p) => ({ ...p, type: e.target.value }));
-                        if (e.target.value) {
-                          setFormErrors((prev) => ({ ...prev, type: undefined }));
-                        }
-                      }}
-                      className={`w-full h-9 px-3 rounded-lg bg-background border text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 ${
-                        formErrors.type
-                          ? 'border-destructive ring-1 ring-destructive'
-                          : 'border-border'
-                      }`}
-                    >
-                      <option value="video">视频</option>
-                      <option value="audio">音频</option>
-                      <option value="sound">音效</option>
-                    </select>
-                    {formErrors.type && (
-                      <p className="text-xs text-destructive mt-1">
-                        {formErrors.type}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                      分辨率
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.resolution}
-                      onChange={(e) =>
-                        setFormData((p) => ({
-                          ...p,
-                          resolution: e.target.value,
-                        }))
-                      }
-                      placeholder="如 1920x1080"
-                      className="w-full h-9 px-3 rounded-lg bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                      时长（秒）
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.duration}
-                      onChange={(e) =>
-                        setFormData((p) => ({
-                          ...p,
-                          duration: Math.max(0, Number(e.target.value || 0)),
-                        }))
-                      }
-                      placeholder="自动识别"
-                      className="w-full h-9 px-3 rounded-lg bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                    标签（逗号分隔）
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.tags}
-                    onChange={(e) =>
-                      setFormData((p) => ({ ...p, tags: e.target.value }))
-                    }
-                    placeholder="如 风景, 城市, 航拍"
-                    className="w-full h-9 px-3 rounded-lg bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-                  />
-                </div>
-
-                {/* 封面上传 */}
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                    封面图片（视频素材已自动截取，可按需更换）
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <label className="flex-1 h-9 px-3 rounded-lg bg-background border border-border text-sm text-foreground cursor-pointer hover:border-primary/50 transition-colors flex items-center">
-                      <Image className="w-4 h-4 mr-2 text-muted-foreground" />
-                      {coverFile || formData.cover_url ? '更换封面' : '选择封面图片'}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleCoverSelect}
-                        className="hidden"
-                      />
-                    </label>
-                    {(coverPreviewUrl || formData.cover_url) && (
-                      <img
-                        src={coverPreviewUrl || formData.cover_url}
-                        alt="封面预览"
-                        className="w-9 h-9 rounded object-cover border border-border"
-                      />
-                    )}
-                  </div>
-                </div>
-
-                {/* 文件 URL 信息（只读展示） */}
-                {editingFile.uploadedUrl && (
-                  <div className="rounded-lg bg-accent/30 border border-border p-3">
-                    <p className="text-xs text-muted-foreground mb-1">文件地址（上传成功）</p>
-                    <p className="text-xs text-foreground break-all font-mono">
-                      {editingFile.uploadedUrl}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => setShowForm(false)}
-                  className="flex-1 h-10 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting || !formData.title.trim()}
-                  className="flex-1 app-btn-primary disabled:opacity-50 disabled:cursor-not-allowed gap-2"
-                >
-                  {submitting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      提交中...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4" />
-                      确认创建
-                    </>
-                  )}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <MaterialUploadFormDialog
+        open={showForm}
+        previewNode={editingFile ? <UploadFormMediaPreview entry={editingFile} /> : null}
+        showSubmitPreviewUrl={editingFile?.uploadedUrl}
+        formData={{
+          title: formData.title,
+          description: formData.description,
+          type: formData.type,
+          resolution: formData.resolution,
+          duration: formData.duration,
+          tags: formData.tags,
+          cover_url: formData.cover_url,
+        }}
+        formErrors={formErrors}
+        submitting={submitting}
+        coverPreviewUrl={coverPreviewUrl}
+        onClose={() => setShowForm(false)}
+        onSubmit={handleSubmit}
+        onTitleChange={(title) => {
+          setFormData((p) => ({ ...p, title }));
+          if (title.trim()) {
+            setFormErrors((prev) => ({ ...prev, title: undefined }));
+          }
+        }}
+        onDescriptionChange={(description) => {
+          setFormData((p) => ({ ...p, description }));
+        }}
+        onTypeChange={(type) => {
+          setFormData((p) => ({ ...p, type }));
+          if (type) {
+            setFormErrors((prev) => ({ ...prev, type: undefined }));
+          }
+        }}
+        onResolutionChange={(resolution) => {
+          setFormData((p) => ({ ...p, resolution }));
+        }}
+        onDurationChange={(duration) => {
+          setFormData((p) => ({ ...p, duration }));
+        }}
+        onTagsChange={(tags) => {
+          setFormData((p) => ({ ...p, tags }));
+        }}
+        onCoverSelect={handleCoverSelect}
+      />
     </PageFrame>
   );
 };
