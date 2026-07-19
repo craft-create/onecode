@@ -8,16 +8,19 @@ import { Avatar } from '@client/src/components/ui/avatar';
 import { ScrollArea } from '@client/src/components/ui/scroll-area';
 import { Separator } from '@client/src/components/ui/separator';
 import { Skeleton } from '@client/src/components/ui/skeleton';
-import { api } from '@client/src/api';
+import { api, chatApi } from '@client/src/api';
 import type { Conversation } from '@shared/types';
+import { useAuth } from '@client/src/hooks/useAuth';
 import { PageFrame } from '../shared/PageShell';
 
 export default function ChatPage() {
   const navigate = useNavigate();
   const { conversationId } = useParams();
+  const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [creatingConversation, setCreatingConversation] = useState(false);
 
   useEffect(() => {
     fetchConversations();
@@ -25,12 +28,43 @@ export default function ChatPage() {
 
   const fetchConversations = async () => {
     try {
-      const res = await api.get<Conversation[]>('/chat/conversations');
-      setConversations(Array.isArray(res) ? res : []);
+      const { data: response } = await api.get<Conversation[] | { items?: Conversation[] }>(
+        '/chat/conversations',
+      );
+      const list = Array.isArray(response)
+        ? response
+        : response?.items ?? [];
+      setConversations(list);
     } catch {
       console.error('Failed to load conversations');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateConversation = async () => {
+    setCreatingConversation(true);
+    try {
+      const { data: response } = await chatApi.createConversation({
+        title: `会话 ${new Date().toLocaleTimeString('zh-CN', {
+          hour: '2-digit',
+          minute: '2-digit',
+        })}`,
+        type: 'private',
+      });
+      const newConversationId =
+        (response as { id?: string }).id ??
+        ((response as { data?: { id?: string } }).data?.id as string | undefined);
+
+      if (!newConversationId) {
+        return;
+      }
+      await fetchConversations();
+      navigate(`/chat/${newConversationId}`);
+    } catch (_error) {
+      console.error('Failed to create conversation');
+    } finally {
+      setCreatingConversation(false);
     }
   };
 
@@ -55,7 +89,12 @@ export default function ChatPage() {
               <MessageCircle className="w-5 h-5" />
               消息
             </h2>
-            <Button size="sm" variant="ghost">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleCreateConversation}
+              disabled={creatingConversation}
+            >
               <Plus className="w-4 h-4" />
             </Button>
           </div>
@@ -122,7 +161,10 @@ export default function ChatPage() {
       {/* 聊天窗口 */}
       <div className="flex-1 border rounded-lg flex flex-col">
         {conversationId ? (
-          <ChatDetail conversationId={conversationId} />
+          <ChatDetail
+            conversationId={conversationId}
+            currentUserId={user?.userId}
+          />
         ) : (
           <div className="flex-1 flex items-center justify-center text-gray-400">
             <div className="text-center">
@@ -137,7 +179,13 @@ export default function ChatPage() {
   );
 }
 
-function ChatDetail({ conversationId }: { conversationId: string }) {
+function ChatDetail({
+  conversationId,
+  currentUserId,
+}: {
+  conversationId: string;
+  currentUserId?: string;
+}) {
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
@@ -153,8 +201,15 @@ function ChatDetail({ conversationId }: { conversationId: string }) {
 
   const fetchMessages = async () => {
     try {
-      const { data } = await api.get<{ items?: any[] }>(`/chat/conversations/${conversationId}/messages`);
-      setMessages(data?.items || []);
+      const { data: response } = await chatApi.getMessages({
+        conversationId,
+        page: 1,
+        limit: 200,
+      });
+      const list = Array.isArray(response)
+        ? response
+        : response?.items ?? [];
+      setMessages(list);
     } catch (_error) {
       console.error('Failed to load messages');
     } finally {
@@ -166,7 +221,7 @@ function ChatDetail({ conversationId }: { conversationId: string }) {
     if (!input.trim()) return;
 
     try {
-      await api.post('/chat/messages', {
+      await chatApi.sendMessage({
         conversationId,
         content: input,
         type: 'text',
@@ -194,17 +249,27 @@ function ChatDetail({ conversationId }: { conversationId: string }) {
         ) : (
           <div className="space-y-4">
             {messages.map(message => (
+              message && (
               <div
                 key={message.id}
-                className={`flex ${message.senderId === 'current-user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${
+                  message.senderId === currentUserId ? 'justify-end' : 'justify-start'
+                }`}
               >
-                <Card className={`max-w-[70%] p-3 ${message.senderId === 'current-user' ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}>
+                <Card className={`max-w-[70%] p-3 ${message.senderId === currentUserId ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}>
                   <p className="text-sm">{message.content}</p>
-                  <p className={`text-xs mt-1 ${message.senderId === 'current-user' ? 'text-blue-100' : 'text-gray-400'}`}>
+                  <p
+                    className={`text-xs mt-1 ${
+                      message.senderId === currentUserId
+                        ? 'text-blue-100'
+                        : 'text-gray-400'
+                    }`}
+                  >
                     {new Date(message.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </Card>
               </div>
+              )
             ))}
             <div ref={messagesEndRef} />
           </div>
@@ -216,7 +281,13 @@ function ChatDetail({ conversationId }: { conversationId: string }) {
           <Input
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSend()}
+            onKeyDown={e => {
+              if (e.key !== 'Enter') {
+                return;
+              }
+              e.preventDefault();
+              handleSend();
+            }}
             placeholder="输入消息..."
             className="flex-1"
           />
