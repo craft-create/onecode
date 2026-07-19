@@ -89,6 +89,18 @@ export class ScriptService {
     return `${safePrefix}_${safeProjectId}`.slice(0, 128);
   }
 
+  private normalizeUserId(userId?: string): string | undefined {
+    if (!userId) {
+      return undefined;
+    }
+
+    const isUuidLike =
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+        userId,
+      );
+    return isUuidLike ? userId : undefined;
+  }
+
   private getEtherpadPadUrl(padId: string): string {
     const { publicUrl } = this.getEtherpadConfig();
     const normalized = publicUrl.replace(/\/+$/, '');
@@ -107,9 +119,15 @@ export class ScriptService {
       endpoint.searchParams.set(key, value);
     });
 
-    const res = await fetch(endpoint.toString(), {
-      method: 'POST',
-    });
+    let res: Response;
+    try {
+      res = await fetch(endpoint.toString(), {
+        method: 'POST',
+      });
+    } catch (error) {
+      this.logger.error('Etherpad API request failed', error as Error);
+      throw new BadRequestException('Etherpad API 请求失败');
+    }
 
     const payloadText = await res.text();
     if (!res.ok) {
@@ -158,11 +176,18 @@ export class ScriptService {
     createdBy: string | null;
     isCollaborator: boolean;
   }> {
-    const collaboratorSql = userId
+    const safeProjectId = this.normalizeUserId(projectId);
+    if (!safeProjectId) {
+      throw new NotFoundException(`剧本项目 ${projectId} 不存在`);
+    }
+
+    const safeUserId = this.normalizeUserId(userId);
+
+    const collaboratorSql = safeUserId
       ? sql<boolean>`EXISTS (
         SELECT 1
         FROM unnest(${scriptProject.collaborators}) AS c
-        WHERE (c).user_id = CAST(${userId} AS uuid)
+        WHERE (c).user_id = CAST(${safeUserId} AS uuid)
       )`
       : sql<boolean>`false`;
 
@@ -172,7 +197,7 @@ export class ScriptService {
         isCollaborator: collaboratorSql,
       })
       .from(scriptProject)
-      .where(eq(scriptProject.id, projectId))
+      .where(eq(scriptProject.id, safeProjectId))
       .limit(1);
 
     if (!project) {
@@ -249,11 +274,13 @@ export class ScriptService {
    * @returns 是否为超级账户
    */
   async isSuperUser(userId: string): Promise<boolean> {
-    if (!userId) return false;
+    const safeUserId = this.normalizeUserId(userId);
+    if (!safeUserId) return false;
+
     const [user] = await this.db
       .select({ nickname: localUsers.nickname })
       .from(localUsers)
-      .where(eq(localUsers.id, userId))
+      .where(eq(localUsers.id, safeUserId))
       .limit(1);
     return user?.nickname === 'zrc';
   }
