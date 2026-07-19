@@ -8,6 +8,7 @@ import { Avatar } from '@client/src/components/ui/avatar';
 import { ScrollArea } from '@client/src/components/ui/scroll-area';
 import { Separator } from '@client/src/components/ui/separator';
 import { Skeleton } from '@client/src/components/ui/skeleton';
+import { Textarea } from '@client/src/components/ui/textarea';
 import { api, chatApi } from '@client/src/api';
 import type { Conversation } from '@shared/types';
 import { useAuth } from '@client/src/hooks/useAuth';
@@ -189,15 +190,30 @@ function ChatDetail({
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const messagesViewportRef = React.useRef<HTMLDivElement>(null);
+  const [autoScrollToBottom, setAutoScrollToBottom] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
+    setAutoScrollToBottom(true);
     fetchMessages();
   }, [conversationId]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!autoScrollToBottom) {
+      return;
+    }
+
+    const viewport = messagesViewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    viewport.scrollTo({
+      top: viewport.scrollHeight,
+      behavior: 'smooth',
+    });
+  }, [messages, autoScrollToBottom]);
 
   const fetchMessages = async () => {
     try {
@@ -226,11 +242,31 @@ function ChatDetail({
         content: input,
         type: 'text',
       });
+      setAutoScrollToBottom(true);
       setInput('');
       fetchMessages();
     } catch (_error) {
       console.error('Failed to send message');
     }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key !== 'Enter' || e.shiftKey) {
+      return;
+    }
+    e.preventDefault();
+    void handleSend();
+  };
+
+  const handleMessageAreaScroll = () => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    const distanceToBottom =
+      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+    setAutoScrollToBottom(distanceToBottom <= 48);
   };
 
   return (
@@ -239,7 +275,11 @@ function ChatDetail({
         <h2 className="font-semibold">聊天</h2>
       </div>
 
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea
+        className="flex-1 p-4"
+        viewportRef={messagesViewportRef}
+        onScroll={handleMessageAreaScroll}
+      >
         {loading ? (
           <div className="space-y-3">
             {[...Array(10)].map((_, i) => (
@@ -271,23 +311,17 @@ function ChatDetail({
               </div>
               )
             ))}
-            <div ref={messagesEndRef} />
           </div>
         )}
       </ScrollArea>
 
       <div className="p-4 border-t">
         <div className="flex gap-2">
-          <Input
+          <Textarea
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => {
-              if (e.key !== 'Enter') {
-                return;
-              }
-              e.preventDefault();
-              handleSend();
-            }}
+            onKeyDown={handleInputKeyDown}
+            rows={2}
             placeholder="输入消息..."
             className="flex-1"
           />
