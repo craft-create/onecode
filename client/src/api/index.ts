@@ -5,6 +5,8 @@ import type {
   AnalyticsTrackRequest,
 } from '@shared/types';
 
+export const AUTH_EXPIRED_EVENT = 'onecode:auth-expired';
+
 // 获取配置好的 axios 实例
 export const api = axios.create({
   baseURL: '/api',
@@ -31,7 +33,9 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
+      }
     }
     return Promise.reject(error);
   }

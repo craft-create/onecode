@@ -17,6 +17,7 @@ import { logger } from "@/compat/client-toolkit/logger";
 // 认证Hook + 登出API
 import { useAuth } from "@client/src/hooks/useAuth";
 import { logout } from "@client/src/api/auth";
+import { AUTH_EXPIRED_EVENT } from "@client/src/api";
 // 图标组件
 import {
   Film,
@@ -104,6 +105,19 @@ const Layout = () => {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    const handleAuthExpired = (): void => {
+      if (location.pathname !== "/login") {
+        navigate("/login", { replace: true });
+      }
+    };
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    return () => {
+      window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    };
+  }, [location.pathname, navigate]);
 
   /**
    * 点击用户菜单外部时关闭下拉菜单
